@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `.markdownlintignore` and `.markdownlint.json` mirroring `cygnus-player` standards to ignore AI artifact files (`implementation_plan.md`, `walkthrough.md`) and configure markdownlint rules.
+- Added `FesterUO/MiningAuto.py`: Automated roaming mining script that loads the "Mining" dress profile, scans nearby mountain land tiles, cave floors/walls, rock outcroppings, boulders, and ore nodes using the complete 200+ tile ServUO mining definition, filters candidate deposits by current Mining skill tier, pathfinds within reach, swings pickaxe or shovel with automatic click-target fallback until depleted, remembers the last 30 visited veins, and tracks veins mined, ores mined, live Mining skill, and STR/DEX on an interactive control Gump with Pause/Resume and Stop buttons.
+- Added an interactive control Gump to `FesterUO/Fish.py` featuring:
+  - An interactive "Start" button to initiate the water targeting selector and automated fishing loop.
+  - Toggling button state to "Stop" during casting to allow safe early cancellation of the current fishing spot.
+  - Current activity status (`Ready`, `Click water to fish...`, `Fishing (Cast #N)...`, `Spot Depleted`, `Stopped`).
+  - Spot cast counter that restarts at zero whenever "Start" is clicked.
+  - Persistent running totals of regular Fish, Small Fish, and Junk caught while the Gump remains open across spots.
+  - Live Fishing skill value/cap tracking with automatic skill gain announcements.
+  - Multi-source catch detection utilizing both backpack delta checks and client journal parsing.
+
+### Fixed
+
+- Fixed mountain land tile targeting in `FesterUO/MiningAuto.py` by distinguishing land tiles from statics and invoking `API.TargetLandRel(dx, dy)` / `API.Target(tx, ty, tz)` (omitting the static graphic parameter for terrain tiles) to prevent repeatedly re-popping `"Where do you wish to dig?"`.
+- Fixed vein depletion tracking in `FesterUO/MiningAuto.py` by storing depleted vein center points and checking distance rather than pushing 169 individual tile coordinates into a fixed-size FIFO queue, preventing premature cache eviction that previously caused the miner to bounce back and forth between two spots.
+- Fixed mountain pathfinding in `FesterUO/MiningAuto.py` by using direct native pathfinding (`distance=1` and `distance=2`) along mountain edges with a walkable perimeter stand fallback rather than prematurely filtering deposits out of candidate discovery.
+- Added instant vein smelting detection in `FesterUO/MiningAuto.py` by parsing journal messages (`"You instantly smelt the vein into X ingots and stow them."`) to accurately increment the ores mined count when ore is immediately smelted.
+- Fixed `'LegionAPI' object has no attribute 'GetAllItems'` in `FesterUO/MiningAuto.py` by replacing the non-existent method call with `API.FindTypeAll` on mineable ground graphics and focusing on static tile scanning via `API.GetStaticsInArea`.
+- Fixed `UnboundLocalError: local variable 'start_requested' referenced before assignment` in `FesterUO/Fish.py` by properly declaring `global start_requested, is_stopped, is_fishing` inside `main()`.
+
 ## [1.0.0] - 2026-09-19
 
 ### Added
@@ -51,7 +73,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed `SystemError: MakeGenericType on non-generic type` in TazUO Legion's PythonNet runtime by removing PEP 604 pipe union type annotations from `FesterUO/TrainChivalry.py`.
 - Re-architected `FesterUO/Fish.py` to directly mirror the proven `ChopTree.py` loop structure: prompt for target, lock coordinates, cast with configurable timing (`FISHING_DELAY = 2.0s`), retry on cursor latency, and added dual-layer case-insensitive and unicode apostrophe-safe depletion detection (`is_spot_depleted`) so messages like `"The fish don't seem to be biting here."` reliably halt execution.
-
-[Unreleased]: https://github.com/FesterHead/LegionScripts/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/FesterHead/LegionScripts/releases/tag/v1.0.0
-

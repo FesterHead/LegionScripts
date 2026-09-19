@@ -109,6 +109,19 @@ An automated roaming lumberjacking script that scans for nearby trees, navigates
 - **Pause & Stop Controls:** Includes interactive **Pause/Resume** and **Stop** buttons right on the Gump.
 - **Configurable Settings:** Includes settings for `SWING_DELAY`, `SEARCH_RADIUS`, `TREE_HISTORY_LIMIT`, `MAX_WEIGHT_CHECK`, `DRESS_PROFILE`, and `DEBUG` logging.
 
+#### [MiningAuto.py](FesterUO/MiningAuto.py)
+
+An automated roaming mining script designed for caves, mountainsides, and ore nodes with an interactive control Gump:
+
+- **Mining Dress Profile:** Automatically applies the saved `"Mining"` dress profile at startup.
+- **Skill-Tier Deposit Filtering:** Scans nearby cave tiles, rock outcroppings, boulders, and ore nodes within `SEARCH_RADIUS`, filtering candidate deposits to match your player's current Mining skill tier (Valorite, Verite, Agapite, Gold, Bronze, Copper, Shadow, Dull Copper, Iron).
+- **Autonomous Navigation & Pathfinding:** Intelligently pathfinds adjacent to candidate ore veins within reach (distance <= 2) using TazUO's native pathfinder.
+- **History Tracking:** Remembers the last 30 visited veins (`DEPOSIT_HISTORY_LIMIT`) to prevent repeatedly revisiting depleted spots.
+- **Tool Detection & Auto-Recovery:** Supports pickaxes and shovels (in hands or backpack), detecting broken tools and switching to spares automatically.
+- **Capacity & Weight Protection:** Automatically monitors player weight and halts execution safely before becoming overburdened (`MAX_WEIGHT_CHECK`).
+- **Interactive Control Gump:** Displays real-time status, total veins mined counter, total ores mined counter, live Mining skill (`XX.X / XXX.X`), and STR/DEX stats with gain announcements.
+- **Pause & Stop Controls:** Interactive on-screen **Pause/Resume** and **Stop** buttons.
+
 #### [TrainAnatomy.py](FesterUO/TrainAnatomy.py)
 
 An automated Anatomy skill training script with configurable skill cooldowns, automatic self-targeting, and skill cap tracking:
@@ -120,14 +133,16 @@ An automated Anatomy skill training script with configurable skill cooldowns, au
 
 #### [Fish.py](FesterUO/Fish.py)
 
-An automated fishing script that prompts the player to select a target water location and repeatedly fishes until the spot is empty:
+An automated fishing script featuring an interactive on-screen control Gump, dynamic water target selector, and persistent catch statistics:
 
-- **Interactive Water Targeting:** Uses the fishing pole to pop the targeting cursor, prompting the player with `"Click the water where you want to fish..."`.
+- **Interactive Control Gump:** Displays real-time status (`Ready`, `Click water to fish...`, `Fishing (Cast #N)...`, `Spot Depleted`), cast counts, running catch totals, and live Fishing skill tracking (`XX.X / XXX.X`).
+- **Start / Stop Selector Button:** Features an interactive "Start" button that prompts the player with `"Click the water where you want to fish..."` and begins automated fishing on that spot. Toggles to "Stop" during active casting to permit early cancellation.
+- **Spot Cast Counter:** Accurately counts casts made at the current fishing spot and automatically resets to zero whenever "Start" is clicked.
+- **Persistent Catch Totals:** Maintains running totals of standard **Fish**, **Small Fish**, and **Junk** caught across multiple spots for the entire duration the Gump remains open.
+- **Multi-Source Catch Detection:** Detects catches using both backpack inventory deltas and client journal parsing.
 - **Coordinate & Graphic Locking:** Captures `API.LastTargetPos` and `API.LastTargetGraphic` to repeatedly target the exact water tile.
-- **Automated Fishing Loop:** Continuously fishes the locked water tile using `FISHING_DELAY` (default `8.0s` matching standard UO fishing time) until depletion messages are observed.
-- **Depletion Detection:** Clears and monitors the client journal for depletion messages (`"the fish don't seem to be biting here"`, `"there are no fish here"`, etc.) and halts cleanly.
-- **Pole Detection:** Automatically detects equipped fishing poles or finds one inside your backpack.
-- **Dress Profile Support:** Optional `DRESS_PROFILE` to automatically equip saved fishing outfits at startup.
+- **Depletion Detection:** Monitors the client journal for spot exhaustion messages (`"the fish don't seem to be biting here"`, `"there are no fish here"`, etc.) and finishes cleanly.
+- **Pole Detection & Outfits:** Automatically detects equipped fishing poles or finds one inside your backpack, with optional `DRESS_PROFILE` support.
 
 #### [FishAuto.py](FesterUO/FishAuto.py)
 
