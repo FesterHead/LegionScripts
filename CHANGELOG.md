@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added live catch statistics to the control Gump: tracks and displays **Fish Caught** and **Junk Caught** totals in real-time alongside Live Skill, Status, and Enemies Defeated counters.
   - Added configurable TazUO Organizer agent execution (`RUN_ORGANIZER = True`, `ORGANIZER_NAME = "FishOrganizer"`) triggered automatically via journal detection (`"you pull out"`, `"you catch"`) whenever any fish (raw fish, named fish like amberjack, or steaks) is caught.
   - Streamlined catch detection to rely directly on in-game system messages, eliminating the need for hardcoded raw fish graphic IDs.
+  - Simplified resource depletion and tool breakage detection across `FesterUO/FishAuto.py`, `FesterUO/Fish.py`, `FesterUO/MiningAuto.py`, `FesterUO/ChopTree.py`, and `FesterUO/ChopTreeAuto.py`:
+    - Replaced redundant uppercase/lowercase string duplicates and punctuation permutations with concise, case-insensitive keyword root lists (`DEPLETED_KEYWORDS`, `TOOL_BROKEN_KEYWORDS`).
+    - Standardized depletion and tool breaking checks to scan lowercased recent journal entries with an `InJournal` fallback.
   - Updated in-code docstrings, usage instructions, and `README.md` to reflect dual-side railing harvesting, 8-step navigation, and automatic fish organizing.
 
 ### Fixed

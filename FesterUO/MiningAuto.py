@@ -139,39 +139,28 @@ BOULDER_GRAPHICS: List[int] = [
 
 MINEABLE_GRAPHICS = set(SERVUO_MINEABLE_TILES + BOULDER_GRAPHICS)
 
-# Journal messages indicating an ore deposit has been exhausted or cannot be mined
-DEPLETED_MESSAGES: List[str] = [
-    "there is no metal here to mine",
-    "There is no metal here to mine.",
+# Journal keywords indicating an ore deposit has been exhausted or cannot be mined (matched case-insensitively)
+DEPLETED_KEYWORDS: List[str] = [
     "no metal here to mine",
     "not enough metal here",
     "no ore here to mine",
-    "there is no ore here to mine",
     "not enough ore here",
     "nothing here to mine",
     "cannot see that",
-    "Cannot see that",
-    "can't reach that",
-    "Can't reach that",
+    "can't reach",
     "too far away",
-    "Too far away",
-    "that is too far away",
-    "That is too far away",
     "can't mine that",
     "cannot mine that",
-    "you can't mine there",
-    "You can't mine there.",
+    "can't mine there",
     "target cannot be seen",
-    "Target cannot be seen."
 ]
 
-# Journal messages indicating a tool broke
-TOOL_BROKEN_MESSAGES: List[str] = [
-    "you have worn out your tool",
-    "You have worn out your tool!",
-    "you destroyed the item : pickaxe",
-    "you destroyed the item : shovel",
-    "your tool has broken"
+# Journal keywords indicating a tool broke (matched case-insensitively)
+TOOL_BROKEN_KEYWORDS: List[str] = [
+    "worn out your tool",
+    "destroyed the item : pickaxe",
+    "destroyed the item : shovel",
+    "tool has broken",
 ]
 
 # ==============================================================================
@@ -780,19 +769,22 @@ def mine_deposit(tool, deposit) -> None:
                         found_smelt = True
                         break
 
+        entries = API.GetJournalEntries(SWING_DELAY + 2.0)
+        recent_text = [str(e.Text).lower() for e in entries] if entries else []
+
         if not found_smelt:
             after_ore = get_backpack_ore_count()
             delta = max(0, after_ore - before_ore)
             if delta > 0:
                 increment_ores_mined(delta)
-            elif API.InJournal("You dig some") or API.InJournal("you dig some"):
+            elif any("dig some" in t for t in recent_text) or API.InJournal("dig some"):
                 increment_ores_mined(1)
 
         # Check if mining tool broke
         tool_broken = False
-        for msg in TOOL_BROKEN_MESSAGES:
-            if API.InJournal(msg):
-                API.SysMsg(f"Tool broke: '{msg}'")
+        for kw in TOOL_BROKEN_KEYWORDS:
+            if any(kw in t for kw in recent_text) or API.InJournal(kw):
+                API.SysMsg(f"Tool broke: '{kw}'")
                 tool_broken = True
                 break
 
@@ -805,9 +797,9 @@ def mine_deposit(tool, deposit) -> None:
 
         # Check depletion journal messages
         depleted = False
-        for msg in DEPLETED_MESSAGES:
-            if API.InJournal(msg):
-                API.SysMsg(f"Deposit depleted: '{msg}'")
+        for kw in DEPLETED_KEYWORDS:
+            if any(kw in t for kw in recent_text) or API.InJournal(kw):
+                API.SysMsg(f"Deposit depleted: '{kw}'")
                 depleted = True
                 break
 

@@ -117,52 +117,23 @@ JUNK_KEYWORDS: List[str] = [
 # Journal keywords indicating junk was fished up (e.g. 'You pull out an item : shoes' or server auto-toss)
 JUNK_JOURNAL_KEYWORDS: List[str] = [
     "waterlogged junk",
-    "pull out an item",
-    "an item :",
-    "an item:",
     "toss waterlogged",
     "fish up some junk",
     "fished up some junk",
 ]
 
-# Depletion and unreachable journal messages
-DEPLETED_MESSAGES: List[str] = [
+# Depletion and unreachable journal keywords (matched case-insensitively)
+DEPLETED_KEYWORDS: List[str] = [
     "biting here",
-    "Biting here",
-    "The fish don't seem to be biting here",
-    "the fish don't seem to be biting here",
-    "The fish don’t seem to be biting here",
-    "the fish don’t seem to be biting here",
-    "There are no fish here to bite",
-    "there are no fish here to bite",
-    "There are no fish here",
-    "there are no fish here",
     "no fish here",
-    "No fish here",
-    "target cannot be seen",
-    "Target cannot be seen",
     "cannot be seen",
-    "Cannot be seen",
-    "cannot see that",
-    "Cannot see that",
-    "can't see that",
-    "Can't see that",
     "can't be seen",
-    "Can't be seen",
-    "obstructed",
-    "Obstructed",
-    "that is obstructed",
-    "That is obstructed",
-    "target is obstructed",
-    "Target is obstructed",
-    "can't reach that",
-    "Can't reach that",
+    "cannot see that",
+    "can't see that",
+    "obstruct",
+    "can't reach",
     "too far away",
-    "Too far away",
-    "that is too far away",
-    "That is too far away",
     "closer to the water",
-    "Closer to the water"
 ]
 
 # ==============================================================================
@@ -440,29 +411,20 @@ def get_fishing_pole():
 
 def is_spot_depleted() -> Tuple[bool, str]:
     """
-    Checks if the current fishing spot is depleted using direct InJournal
-    and recent journal entry string scanning.
+    Checks if the current fishing spot is depleted or unreachable by inspecting
+    recent journal entries with case-insensitive matching.
     """
-    for msg in DEPLETED_MESSAGES:
-        if API.InJournal(msg):
-            return True, msg
-
     entries = API.GetJournalEntries(4.0)
     if entries:
         for entry in entries:
             text = str(entry.Text).lower()
-            if "biting here" in text:
-                return True, entry.Text
-            if "no fish here" in text:
-                return True, entry.Text
-            if "cannot be seen" in text or "can't be seen" in text or "cannot see" in text or "can't see" in text:
-                return True, entry.Text
-            if "obstruct" in text:
-                return True, entry.Text
-            if "cannot see that" in text or "can't reach" in text or "too far away" in text:
-                return True, entry.Text
-            if "closer to the water" in text:
-                return True, entry.Text
+            for kw in DEPLETED_KEYWORDS:
+                if kw in text:
+                    return True, entry.Text
+
+    for kw in DEPLETED_KEYWORDS:
+        if API.InJournal(kw):
+            return True, kw
 
     return False, ""
 

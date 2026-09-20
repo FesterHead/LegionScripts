@@ -71,30 +71,14 @@ JUNK_KEYWORDS: List[str] = [
     "seaweed", "kelp", "twigs", "twig", "bones", "footwear"
 ]
 
-# Journal messages indicating that the current fishing spot is depleted or unreachable.
-DEPLETED_MESSAGES: List[str] = [
+# Journal keywords indicating that the current fishing spot is depleted or unreachable (matched case-insensitively)
+DEPLETED_KEYWORDS: List[str] = [
     "biting here",
-    "Biting here",
-    "The fish don't seem to be biting here",
-    "the fish don't seem to be biting here",
-    "The fish don’t seem to be biting here",
-    "the fish don’t seem to be biting here",
-    "There are no fish here to bite",
-    "there are no fish here to bite",
-    "There are no fish here",
-    "there are no fish here",
     "no fish here",
-    "No fish here",
     "cannot see that",
-    "Cannot see that",
-    "can't reach that",
-    "Can't reach that",
+    "can't reach",
     "too far away",
-    "Too far away",
-    "that is too far away",
-    "That is too far away",
     "closer to the water",
-    "Closer to the water"
 ]
 
 # ==============================================================================
@@ -367,28 +351,20 @@ def process_catch(before_counts: Tuple[int, int, int]) -> None:
 
 def is_spot_depleted() -> Tuple[bool, str]:
     """
-    Checks if the current fishing spot is depleted.
-    Combines direct InJournal checks with case-insensitive journal entry scanning
-    to guard against capitalizations or unicode apostrophe (' vs ’) discrepancies.
+    Checks if the current fishing spot is depleted or unreachable.
+    Uses case-insensitive inspection of recent journal entries with an InJournal fallback.
     """
-    # 1. Direct API.InJournal check
-    for msg in DEPLETED_MESSAGES:
-        if API.InJournal(msg):
-            return True, msg
-
-    # 2. Case-insensitive inspection of recent journal entries
     entries = API.GetJournalEntries(4.0)
     if entries:
         for entry in entries:
             text = str(entry.Text).lower()
-            if "biting here" in text:
-                return True, entry.Text
-            if "no fish here" in text:
-                return True, entry.Text
-            if "cannot see that" in text or "can't reach" in text or "too far away" in text:
-                return True, entry.Text
-            if "closer to the water" in text:
-                return True, entry.Text
+            for kw in DEPLETED_KEYWORDS:
+                if kw in text:
+                    return True, entry.Text
+
+    for kw in DEPLETED_KEYWORDS:
+        if API.InJournal(kw):
+            return True, kw
 
     return False, ""
 
