@@ -114,6 +114,17 @@ JUNK_KEYWORDS: List[str] = [
     "shoes", "boots", "sandals", "seaweed", "kelp", "twigs"
 ]
 
+# Journal keywords indicating junk was fished up (e.g. 'You pull out an item : shoes' or server auto-toss)
+JUNK_JOURNAL_KEYWORDS: List[str] = [
+    "waterlogged junk",
+    "pull out an item",
+    "an item :",
+    "an item:",
+    "toss waterlogged",
+    "fish up some junk",
+    "fished up some junk",
+]
+
 # Depletion and unreachable journal messages
 DEPLETED_MESSAGES: List[str] = [
     "biting here",
@@ -456,10 +467,12 @@ def is_spot_depleted() -> Tuple[bool, str]:
     return False, ""
 
 
-def dispose_junk() -> None:
+def dispose_junk(already_counted: bool = False) -> None:
     """
     Scans the player's backpack for junk items (boots, shoes, seaweed, etc.)
     and tosses them back into the water (2 tiles to the Northeast).
+    If already_counted is True, avoids double-counting junk already registered
+    via journal messages.
     """
     items = API.ItemsInContainer(API.Backpack)
     if not items:
@@ -479,7 +492,8 @@ def dispose_junk() -> None:
 
         if is_junk:
             debug_msg(f"Tossing junk item: {item.Name} (0x{item.Graphic:04X})")
-            increment_junk_count()
+            if not already_counted:
+                increment_junk_count()
             # Drop 2 tiles NE into water
             API.MoveItemOffset(item.Serial, 0, 2, -2, 0)
             API.Pause(0.6)
@@ -807,31 +821,65 @@ def fish_spot(offset: Tuple[int, int], spot_name: str) -> bool:
             handle_enemy_combat(enemy)
             return False
 
-        # 3. Clean up caught junk
-        dispose_junk()
-
-        # 4. Check if a fish was caught and run the Organizer agent
+        # 3. Check for catches (junk vs fish) and clean up
         if cast_completed:
+            caught_junk = False
             caught_fish = False
-            for kw in FISH_CAUGHT_KEYWORDS:
-                if API.InJournal(kw):
-                    caught_fish = True
+
+            # Check journal for junk keywords first (server auto-toss or pull out an item)
+            for jkw in JUNK_JOURNAL_KEYWORDS:
+                if API.InJournal(jkw):
+                    caught_junk = True
                     break
-            if not caught_fish:
-                entries = API.GetJournalEntries(FISHING_DELAY + 1.0)
-                if entries:
+
+            entries = API.GetJournalEntries(FISHING_DELAY + 2.0)
+            if entries and not caught_junk:
+                for entry in entries:
+                    t = str(entry.Text).lower()
+                    if any(jkw in t for jkw in JUNK_JOURNAL_KEYWORDS):
+                        caught_junk = True
+                        break
+
+            if caught_junk:
+                debug_msg(f"{spot_name}: Junk caught!")
+                increment_junk_count()
+            else:
+                # Check for fish catch (excluding junk phrases and failed casts)
+                for kw in FISH_CAUGHT_KEYWORDS:
+                    if API.InJournal(kw):
+                        caught_fish = True
+                        break
+
+                if caught_fish and entries:
+                    valid_fish_entry = False
                     for entry in entries:
                         t = str(entry.Text).lower()
                         if "fail to catch" in t or "biting here" in t or "no fish" in t:
+                            continue
+                        if any(jkw in t for jkw in JUNK_JOURNAL_KEYWORDS) or "item :" in t or "item:" in t:
+                            continue
+                        if any(kw in t for kw in FISH_CAUGHT_KEYWORDS):
+                            valid_fish_entry = True
+                            break
+                    caught_fish = valid_fish_entry
+                elif not caught_fish and entries:
+                    for entry in entries:
+                        t = str(entry.Text).lower()
+                        if "fail to catch" in t or "biting here" in t or "no fish" in t:
+                            continue
+                        if any(jkw in t for jkw in JUNK_JOURNAL_KEYWORDS) or "item :" in t or "item:" in t:
                             continue
                         if any(kw in t for kw in FISH_CAUGHT_KEYWORDS):
                             caught_fish = True
                             break
 
-            if caught_fish:
-                debug_msg(f"{spot_name}: Fish caught!")
-                increment_fish_count()
-                run_fish_organizer()
+                if caught_fish:
+                    debug_msg(f"{spot_name}: Fish caught!")
+                    increment_fish_count()
+                    run_fish_organizer()
+
+            # Clean up any physical junk remaining in backpack (for shards without auto-toss)
+            dispose_junk(already_counted=caught_junk)
 
         # 5. Check spot depletion
         depleted, reason = is_spot_depleted()

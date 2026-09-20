@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed junk catch detection and Gump counter tracking in `FesterUO/FishAuto.py`:
+  - Added `JUNK_JOURNAL_KEYWORDS` (`"waterlogged junk"`, `"pull out an item"`, `"an item :"`, `"toss waterlogged"`, etc.) to intercept junk catches directly from client journal and server auto-toss system messages.
+  - Resolved an issue where `"You pull out an item : shoes"` matched `"you pull out"`, incorrectly incrementing the fish counter instead of the junk counter.
+  - Updated `dispose_junk(already_counted=True)` to support journal-detected catches, preventing double-counting while maintaining a backpack scan fallback for shards without automatic server-side disposal.
 - Fixed combat weapon switching in `FesterUO/FishAuto.py` when encountering sea enemies:
   - Corrected `API.Notoriety.CanBeAttacked` to `API.Notoriety.Gray` to resolve runtime `AttributeError` when scanning for hostiles.
   - Unconditionally invokes `API.Undress("Fishing")` before applying `"Archery"` to free all gear and hand slots.
