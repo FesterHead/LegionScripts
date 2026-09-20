@@ -146,23 +146,25 @@ An automated fishing script featuring an interactive on-screen control Gump, dyn
 
 #### [FishAuto.py](FesterUO/FishAuto.py)
 
-An automated boat fishing and combat defense script featuring interactive control Gump, dynamic dual-spot Northwest harvesting, sequential boat movement pulses, ocean junk disposal, and automatic enemy combat resolution:
+An automated boat fishing and combat defense script featuring interactive control Gump, dual-side (Northwest & Southeast) railing harvesting, 8-space boat movement advances, ocean junk disposal, and automatic enemy combat resolution:
 
 - **Dress Profile Auto-Equip:** Automatically equips the saved `"Fishing"` profile at startup.
-- **Zero-Prompt Automated Targeting:** Starts immediately without requiring the user to target water; inspects and targets water spots to the player's Northwest.
-- **Dual-Spot Northwest Harvesting:** Automatically fishes two relative spots to the player's Northwest (`-2, -2` and `-3, -3`) until depleted.
-- **Automatic Boat Navigation:** Once both Northwest fishing spots are depleted, pulses `"forward one"` 8 times sequentially (`API.Say("forward one")`) to advance the vessel before restarting fishing.
+- **Zero-Prompt Automated Targeting:** Starts immediately without requiring manual water targeting; dynamically samples open water directly off the vessel's sides (Northwest and Southeast).
+- **Dual-Side Railing Harvesting:** Sequentially fishes off both sides of the boat (Northwest and Southeast) within 2–4 tiles, completely avoiding line-of-sight obstructions from the mast, sail, bow, and stern.
+- **Automatic Boat Navigation:** Once both side spots are depleted, pulses `"forward one"` 8 times sequentially (`API.Msg("forward one")`) to advance the vessel 8 tiles into the next resource bank.
+- **Automated Catch Stowing:** Detects fish caught and optionally runs the configured TazUO Organizer agent (`RUN_ORGANIZER = True`, `ORGANIZER_NAME = "FishOrganizer"`) via `API.Organizer(name)` to automatically move catches into your hold or designated container.
 - **Junk Disposal:** Detects fished-up junk items (boots, shoes, sandals, seaweed, twigs) in the backpack and automatically throws them back into the ocean (`API.MoveItemOffset`).
-- **Combat Detection & Execution:** Actively monitors for hostile sea creatures (sea serpents, water elementals, krakens, etc.). When detected:
-  1. Equips the `"Archery"` dress profile.
-  2. Enters War Mode (`API.SetWarMode(True)`).
-  3. Attacks and kills the enemy mobile.
-  4. Announces victory and immediately stops script execution.
+- **Combat Detection & Execution:** Actively monitors for hostile sea creatures (sea serpents, water elementals, krakens, etc.), explicitly ignoring harmless dolphins. When an enemy is detected:
+  1. Undresses the `"Fishing"` profile and clears hand slots.
+  2. Equips the `"Archery"` dress profile (with automatic backpack bow equip fallback).
+  3. Enters War Mode (`API.SetWarMode(True)`).
+  4. Attacks the enemy mobile (`API.Attack(enemy.Serial)`).
+  5. Halts automated fishing, keeping the Gump open with a **"Start"** button so the player can manually finish combat and loot, then click "Start" to resume fishing.
 - **Interactive Control Gump:** On-screen movable Gump displaying:
-  - Real-time action status (Fishing NE Spot 1/2, Fighting mob, Moving boat, Paused, Stopped)
+  - Real-time action status (Fishing NW/SE, Combat mode, Moving boat, Paused, Stopped)
   - Live Fishing skill value and cap (`XX.X / XXX.X`) with automatic skill gain announcements
   - Enemies defeated counter
-  - Interactive **Pause/Resume** and **Stop** buttons.
+  - Interactive **Start / Pause / Resume** and **Stop** buttons.
 
 #### [TrainChivalry.py](FesterUO/TrainChivalry.py)
 

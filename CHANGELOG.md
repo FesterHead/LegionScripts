@@ -20,8 +20,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Live Fishing skill value/cap tracking with automatic skill gain announcements.
   - Multi-source catch detection utilizing both backpack delta checks and client journal parsing.
 
+### Changed
+
+- Configured `FesterUO/FishAuto.py` for dual-side (Northwest & Southeast) boat railing harvesting:
+  - Targets water tiles off the two sides of the vessel (Northwest and Southeast) at 2–4 tiles distance, completely avoiding line-of-sight obstructions caused by the mast, sail, bowsprit, and stern.
+  - Set boat movement advancement to 8 spaces (`BOAT_STEPS = 8`, `"forward one"`) to advance across an $8 \times 8$ resource block between side-harvesting cycles.
+  - Added configurable TazUO Organizer agent execution (`RUN_ORGANIZER = True`, `ORGANIZER_NAME = "FishOrganizer"`) triggered automatically via journal detection (`"you pull out"`, `"you catch"`) whenever any fish (raw fish, named fish like amberjack, or steaks) is caught.
+  - Streamlined catch detection to rely directly on in-game system messages, eliminating the need for hardcoded raw fish graphic IDs.
+  - Updated in-code docstrings, usage instructions, and `README.md` to reflect dual-side railing harvesting, 8-step navigation, and automatic fish organizing.
+
 ### Fixed
 
+- Fixed combat weapon switching in `FesterUO/FishAuto.py` when encountering sea enemies:
+  - Corrected `API.Notoriety.CanBeAttacked` to `API.Notoriety.Gray` to resolve runtime `AttributeError` when scanning for hostiles.
+  - Unconditionally invokes `API.Undress("Fishing")` before applying `"Archery"` to free all gear and hand slots.
+  - Excluded dolphins (`IGNORED_MOBILES = ["dolphin"]`) from hostile targeting in `find_hostile_enemy()`, preventing harmless sea creatures from triggering attack mode.
+  - Switched combat response from an automated kill loop to an engaging attack halt: after undressing fishing, equipping archery, entering war mode, and sending the attack command, the script halts automated fishing and displays a **"Start"** button on the Gump so players can manually fight and loot, then click "Start" to seamlessly re-equip fishing gear and resume.
+  - Added fallback bow equipping directly from the backpack, iterating each bow graphic individually to match `API.FindType(graphic: int)`'s `UInt32` signature.
+  - Added startup and combat verification via `API.GetAvailableDressOutfits()` to warn the user if the configured combat profile name does not match their TazUO dress configurations.
+- Fixed obstruction errors and water tile detection in `FesterUO/FishAuto.py`:
+  - Corrected `is_open_water` to recognize water land tiles (`tile.Graphic in LAND_WATER_GRAPHICS` or `IsWet`) without false rejection by the land `Impassable` flag.
+  - Adjusted quadrant target search distance from 4-6 tiles down to 2-4 tiles (defaulting to 2 tiles directly over the railing), ensuring casts remain within UO's 4-tile fishing limit and clear distant cliffs.
+  - Added `"obstructed"`, `"Obstructed"`, `"that is obstructed"`, and `"target is obstructed"` to `DEPLETED_MESSAGES` and `is_spot_depleted()` so that any quadrant blocked by the boat mast, sail, or cliff walls is skipped immediately on the first cast instead of stalling.
+- Fixed water land tile targeting in `FesterUO/FishAuto.py` by sending `API.Target(tx, ty, tz)` without passing static graphic parameters on terrain water tiles to eliminate target packet mismatches.
+- Added graceful target fail recovery in `FesterUO/FishAuto.py` to automatically skip an obstructed quadrant spot (such as shorelines or obstacles) after 2 failed attempts rather than stalling.
 - Fixed mountain land tile targeting in `FesterUO/MiningAuto.py` by distinguishing land tiles from statics and invoking `API.TargetLandRel(dx, dy)` / `API.Target(tx, ty, tz)` (omitting the static graphic parameter for terrain tiles) to prevent repeatedly re-popping `"Where do you wish to dig?"`.
 - Fixed vein depletion tracking in `FesterUO/MiningAuto.py` by storing depleted vein center points and checking distance rather than pushing 169 individual tile coordinates into a fixed-size FIFO queue, preventing premature cache eviction that previously caused the miner to bounce back and forth between two spots.
 - Fixed mountain pathfinding in `FesterUO/MiningAuto.py` by using direct native pathfinding (`distance=1` and `distance=2`) along mountain edges with a walkable perimeter stand fallback rather than prematurely filtering deposits out of candidate discovery.
