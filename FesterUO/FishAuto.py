@@ -161,6 +161,8 @@ DEPLETED_MESSAGES: List[str] = [
 gump = None
 lbl_status = None
 lbl_skill = None
+lbl_fish = None
+lbl_junk = None
 lbl_enemies = None
 btn_pause = None
 btn_stop = None
@@ -168,6 +170,8 @@ btn_stop = None
 is_paused: bool = False
 is_stopped: bool = False
 is_waiting_start: bool = False
+total_fish_count: int = 0
+total_junk_count: int = 0
 enemies_defeated_count: int = 0
 last_skill: Optional[float] = None
 
@@ -183,6 +187,22 @@ def update_status(text: str) -> None:
     if lbl_status:
         lbl_status.Text = f"Status: {text}"
     debug_msg(text)
+
+
+def increment_fish_count() -> None:
+    """Increments the fish counter and refreshes the Gump."""
+    global total_fish_count, lbl_fish
+    total_fish_count += 1
+    if lbl_fish:
+        lbl_fish.Text = f"Fish Caught: {total_fish_count}"
+
+
+def increment_junk_count() -> None:
+    """Increments the junk counter and refreshes the Gump."""
+    global total_junk_count, lbl_junk
+    total_junk_count += 1
+    if lbl_junk:
+        lbl_junk.Text = f"Junk Caught: {total_junk_count}"
 
 
 def increment_enemies_defeated() -> None:
@@ -281,14 +301,14 @@ def on_gump_disposed() -> None:
 
 def create_control_gump() -> None:
     """Initializes and displays the interactive control Gump."""
-    global gump, lbl_status, lbl_skill, lbl_enemies, btn_pause, btn_stop
+    global gump, lbl_status, lbl_skill, lbl_fish, lbl_junk, lbl_enemies, btn_pause, btn_stop
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
-    gump.SetRect(100, 100, 240, 150)
+    gump.SetRect(100, 100, 240, 185)
 
     # Semi-transparent dark background
     bg = API.Gumps.CreateGumpColorBox(0.8, "#1A1A1A")
-    bg.SetRect(0, 0, 240, 150)
+    bg.SetRect(0, 0, 240, 185)
     gump.Add(bg)
 
     # Title label (gold hue 53)
@@ -298,28 +318,38 @@ def create_control_gump() -> None:
 
     # Status label
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)
-    lbl_status.SetPos(10, 32)
+    lbl_status.SetPos(10, 30)
     gump.Add(lbl_status)
 
     # Fishing skill label
     lbl_skill = API.Gumps.CreateGumpLabel("Fishing: --", 996)
-    lbl_skill.SetPos(10, 54)
+    lbl_skill.SetPos(10, 52)
     gump.Add(lbl_skill)
 
+    # Fish caught label
+    lbl_fish = API.Gumps.CreateGumpLabel(f"Fish Caught: {total_fish_count}", 996)
+    lbl_fish.SetPos(10, 74)
+    gump.Add(lbl_fish)
+
+    # Junk caught label
+    lbl_junk = API.Gumps.CreateGumpLabel(f"Junk Caught: {total_junk_count}", 996)
+    lbl_junk.SetPos(10, 96)
+    gump.Add(lbl_junk)
+
     # Enemies defeated label
-    lbl_enemies = API.Gumps.CreateGumpLabel("Enemies Defeated: 0", 996)
-    lbl_enemies.SetPos(10, 76)
+    lbl_enemies = API.Gumps.CreateGumpLabel(f"Enemies Defeated: {enemies_defeated_count}", 996)
+    lbl_enemies.SetPos(10, 118)
     gump.Add(lbl_enemies)
 
     # Action button (Start / Pause / Resume)
     btn_pause = API.Gumps.CreateSimpleButton("Pause", 70, 22)
-    btn_pause.SetPos(15, 112)
+    btn_pause.SetPos(15, 150)
     API.Gumps.AddControlOnClick(btn_pause, on_action_clicked)
     gump.Add(btn_pause)
 
     # Stop button
     btn_stop = API.Gumps.CreateSimpleButton("Stop", 70, 22)
-    btn_stop.SetPos(155, 112)
+    btn_stop.SetPos(155, 150)
     API.Gumps.AddControlOnClick(btn_stop, on_stop_clicked)
     gump.Add(btn_stop)
 
@@ -449,6 +479,7 @@ def dispose_junk() -> None:
 
         if is_junk:
             debug_msg(f"Tossing junk item: {item.Name} (0x{item.Graphic:04X})")
+            increment_junk_count()
             # Drop 2 tiles NE into water
             API.MoveItemOffset(item.Serial, 0, 2, -2, 0)
             API.Pause(0.6)
@@ -799,6 +830,7 @@ def fish_spot(offset: Tuple[int, int], spot_name: str) -> bool:
 
             if caught_fish:
                 debug_msg(f"{spot_name}: Fish caught!")
+                increment_fish_count()
                 run_fish_organizer()
 
         # 5. Check spot depletion

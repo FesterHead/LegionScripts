@@ -163,6 +163,7 @@ An automated boat fishing and combat defense script featuring interactive contro
 - **Interactive Control Gump:** On-screen movable Gump displaying:
   - Real-time action status (Fishing NW/SE, Combat mode, Moving boat, Paused, Stopped)
   - Live Fishing skill value and cap (`XX.X / XXX.X`) with automatic skill gain announcements
+  - Running **Fish Caught** and **Junk Caught** statistics
   - Enemies defeated counter
   - Interactive **Start / Pause / Resume** and **Stop** buttons.
 
