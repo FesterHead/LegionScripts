@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `NameError: name 't' is not defined` during resource depletion and tool breakage checks in `FesterUO/ChopTreeAuto.py`, `FesterUO/ChopTree.py`, and `FesterUO/MiningAuto.py` caused by shadowing `kw` instead of using `t` in list comprehension iterations over `recent_text`.
 - Fixed junk catch detection and Gump counter tracking in `FesterUO/FishAuto.py`:
   - Added `JUNK_JOURNAL_KEYWORDS` (`"waterlogged junk"`, `"pull out an item"`, `"an item :"`, `"toss waterlogged"`, etc.) to intercept junk catches directly from client journal and server auto-toss system messages.
   - Resolved an issue where `"You pull out an item : shoes"` matched `"you pull out"`, incorrectly incrementing the fish counter instead of the junk counter.

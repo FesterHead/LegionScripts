@@ -409,7 +409,7 @@ def chop_tree(axe, tree) -> None:
 
         depleted = False
         for kw in DEPLETED_KEYWORDS:
-            if any(kw in t for kw in recent_text) or API.InJournal(kw):
+            if any(kw in t for t in recent_text) or API.InJournal(kw):
                 API.SysMsg(f"Tree finished: '{kw}'")
                 depleted = True
                 break

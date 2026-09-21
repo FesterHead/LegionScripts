@@ -783,7 +783,7 @@ def mine_deposit(tool, deposit) -> None:
         # Check if mining tool broke
         tool_broken = False
         for kw in TOOL_BROKEN_KEYWORDS:
-            if any(kw in t for kw in recent_text) or API.InJournal(kw):
+            if any(kw in t for t in recent_text) or API.InJournal(kw):
                 API.SysMsg(f"Tool broke: '{kw}'")
                 tool_broken = True
                 break
@@ -798,7 +798,7 @@ def mine_deposit(tool, deposit) -> None:
         # Check depletion journal messages
         depleted = False
         for kw in DEPLETED_KEYWORDS:
-            if any(kw in t for kw in recent_text) or API.InJournal(kw):
+            if any(kw in t for t in recent_text) or API.InJournal(kw):
                 API.SysMsg(f"Deposit depleted: '{kw}'")
                 depleted = True
                 break
