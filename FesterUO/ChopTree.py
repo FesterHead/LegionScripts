@@ -26,16 +26,16 @@ SWING_DELAY: float = 1.0
 # Dress configuration profile to load at startup (set to None or "" to disable)
 DRESS_PROFILE: str = "Lumberjack"
 
-DEPLETED_MESSAGES = [
-    "no wood here to harvest",
-    "not enough wood here",
+# Journal keywords indicating a tree has no more wood or cannot be harvested (matched case-insensitively)
+DEPLETED_KEYWORDS = [
+    "no wood here",
+    "not enough wood",
     "nothing here to chop",
     "cannot see that",
-    "can't reach that",
+    "can't reach",
     "too far away",
-    "can't use an axe on that",
-    "cannot use an axe on that",
-    "it appears immune to your axe"
+    "use an axe",
+    "immune to your axe"
 ]
 
 def on_stop():
@@ -118,10 +118,13 @@ def main():
             break
 
         # Check depletion
+        entries = API.GetJournalEntries(SWING_DELAY + 2.0)
+        recent_text = [str(e.Text).lower() for e in entries] if entries else []
+
         depleted = False
-        for msg in DEPLETED_MESSAGES:
-            if API.InJournal(msg):
-                API.SysMsg(f"Tree finished: '{msg}'")
+        for kw in DEPLETED_KEYWORDS:
+            if any(kw in t for t in recent_text) or API.InJournal(kw):
+                API.SysMsg(f"Tree finished: '{kw}'")
                 depleted = True
                 break
 

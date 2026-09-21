@@ -109,6 +109,19 @@ An automated roaming lumberjacking script that scans for nearby trees, navigates
 - **Pause & Stop Controls:** Includes interactive **Pause/Resume** and **Stop** buttons right on the Gump.
 - **Configurable Settings:** Includes settings for `SWING_DELAY`, `SEARCH_RADIUS`, `TREE_HISTORY_LIMIT`, `MAX_WEIGHT_CHECK`, `DRESS_PROFILE`, and `DEBUG` logging.
 
+#### [MiningAuto.py](FesterUO/MiningAuto.py)
+
+An automated roaming mining script designed for caves, mountainsides, and ore nodes with an interactive control Gump:
+
+- **Mining Dress Profile:** Automatically applies the saved `"Mining"` dress profile at startup.
+- **Skill-Tier Deposit Filtering:** Scans nearby cave tiles, rock outcroppings, boulders, and ore nodes within `SEARCH_RADIUS`, filtering candidate deposits to match your player's current Mining skill tier (Valorite, Verite, Agapite, Gold, Bronze, Copper, Shadow, Dull Copper, Iron).
+- **Autonomous Navigation & Pathfinding:** Intelligently pathfinds adjacent to candidate ore veins within reach (distance <= 2) using TazUO's native pathfinder.
+- **History Tracking:** Remembers the last 30 visited veins (`DEPOSIT_HISTORY_LIMIT`) to prevent repeatedly revisiting depleted spots.
+- **Tool Detection & Auto-Recovery:** Supports pickaxes and shovels (in hands or backpack), detecting broken tools and switching to spares automatically.
+- **Capacity & Weight Protection:** Automatically monitors player weight and halts execution safely before becoming overburdened (`MAX_WEIGHT_CHECK`).
+- **Interactive Control Gump:** Displays real-time status, total veins mined counter, total ores mined counter, live Mining skill (`XX.X / XXX.X`), and STR/DEX stats with gain announcements.
+- **Pause & Stop Controls:** Interactive on-screen **Pause/Resume** and **Stop** buttons.
+
 #### [TrainAnatomy.py](FesterUO/TrainAnatomy.py)
 
 An automated Anatomy skill training script with configurable skill cooldowns, automatic self-targeting, and skill cap tracking:
@@ -120,34 +133,39 @@ An automated Anatomy skill training script with configurable skill cooldowns, au
 
 #### [Fish.py](FesterUO/Fish.py)
 
-An automated fishing script that prompts the player to select a target water location and repeatedly fishes until the spot is empty:
+An automated fishing script featuring an interactive on-screen control Gump, dynamic water target selector, and persistent catch statistics:
 
-- **Interactive Water Targeting:** Uses the fishing pole to pop the targeting cursor, prompting the player with `"Click the water where you want to fish..."`.
+- **Interactive Control Gump:** Displays real-time status (`Ready`, `Click water to fish...`, `Fishing (Cast #N)...`, `Spot Depleted`), cast counts, running catch totals, and live Fishing skill tracking (`XX.X / XXX.X`).
+- **Start / Stop Selector Button:** Features an interactive "Start" button that prompts the player with `"Click the water where you want to fish..."` and begins automated fishing on that spot. Toggles to "Stop" during active casting to permit early cancellation.
+- **Spot Cast Counter:** Accurately counts casts made at the current fishing spot and automatically resets to zero whenever "Start" is clicked.
+- **Persistent Catch Totals:** Maintains running totals of standard **Fish**, **Small Fish**, and **Junk** caught across multiple spots for the entire duration the Gump remains open.
+- **Multi-Source Catch Detection:** Detects catches using both backpack inventory deltas and client journal parsing.
 - **Coordinate & Graphic Locking:** Captures `API.LastTargetPos` and `API.LastTargetGraphic` to repeatedly target the exact water tile.
-- **Automated Fishing Loop:** Continuously fishes the locked water tile using `FISHING_DELAY` (default `8.0s` matching standard UO fishing time) until depletion messages are observed.
-- **Depletion Detection:** Clears and monitors the client journal for depletion messages (`"the fish don't seem to be biting here"`, `"there are no fish here"`, etc.) and halts cleanly.
-- **Pole Detection:** Automatically detects equipped fishing poles or finds one inside your backpack.
-- **Dress Profile Support:** Optional `DRESS_PROFILE` to automatically equip saved fishing outfits at startup.
+- **Depletion Detection:** Monitors the client journal for spot exhaustion messages (`"the fish don't seem to be biting here"`, `"there are no fish here"`, etc.) and finishes cleanly.
+- **Pole Detection & Outfits:** Automatically detects equipped fishing poles or finds one inside your backpack, with optional `DRESS_PROFILE` support.
 
 #### [FishAuto.py](FesterUO/FishAuto.py)
 
-An automated boat fishing and combat defense script featuring interactive control Gump, dynamic dual-spot Northwest harvesting, sequential boat movement pulses, ocean junk disposal, and automatic enemy combat resolution:
+An automated boat fishing and combat defense script featuring interactive control Gump, dual-side (Northwest & Southeast) railing harvesting, 8-space boat movement advances, ocean junk disposal, and automatic enemy combat resolution:
 
 - **Dress Profile Auto-Equip:** Automatically equips the saved `"Fishing"` profile at startup.
-- **Zero-Prompt Automated Targeting:** Starts immediately without requiring the user to target water; inspects and targets water spots to the player's Northwest.
-- **Dual-Spot Northwest Harvesting:** Automatically fishes two relative spots to the player's Northwest (`-2, -2` and `-3, -3`) until depleted.
-- **Automatic Boat Navigation:** Once both Northwest fishing spots are depleted, pulses `"forward one"` 8 times sequentially (`API.Say("forward one")`) to advance the vessel before restarting fishing.
+- **Zero-Prompt Automated Targeting:** Starts immediately without requiring manual water targeting; dynamically samples open water directly off the vessel's sides (Northwest and Southeast).
+- **Dual-Side Railing Harvesting:** Sequentially fishes off both sides of the boat (Northwest and Southeast) within 2–4 tiles, completely avoiding line-of-sight obstructions from the mast, sail, bow, and stern.
+- **Automatic Boat Navigation:** Once both side spots are depleted, pulses `"forward one"` 8 times sequentially (`API.Msg("forward one")`) to advance the vessel 8 tiles into the next resource bank.
+- **Automated Catch Stowing:** Detects fish caught and optionally runs the configured TazUO Organizer agent (`RUN_ORGANIZER = True`, `ORGANIZER_NAME = "FishOrganizer"`) via `API.Organizer(name)` to automatically move catches into your hold or designated container.
 - **Junk Disposal:** Detects fished-up junk items (boots, shoes, sandals, seaweed, twigs) in the backpack and automatically throws them back into the ocean (`API.MoveItemOffset`).
-- **Combat Detection & Execution:** Actively monitors for hostile sea creatures (sea serpents, water elementals, krakens, etc.). When detected:
-  1. Equips the `"Archery"` dress profile.
-  2. Enters War Mode (`API.SetWarMode(True)`).
-  3. Attacks and kills the enemy mobile.
-  4. Announces victory and immediately stops script execution.
+- **Combat Detection & Execution:** Actively monitors for hostile sea creatures (sea serpents, water elementals, krakens, etc.), explicitly ignoring harmless dolphins. When an enemy is detected:
+  1. Undresses the `"Fishing"` profile and clears hand slots.
+  2. Equips the `"Archery"` dress profile (with automatic backpack bow equip fallback).
+  3. Enters War Mode (`API.SetWarMode(True)`).
+  4. Attacks the enemy mobile (`API.Attack(enemy.Serial)`).
+  5. Halts automated fishing, keeping the Gump open with a **"Start"** button so the player can manually finish combat and loot, then click "Start" to resume fishing.
 - **Interactive Control Gump:** On-screen movable Gump displaying:
-  - Real-time action status (Fishing NE Spot 1/2, Fighting mob, Moving boat, Paused, Stopped)
+  - Real-time action status (Fishing NW/SE, Combat mode, Moving boat, Paused, Stopped)
   - Live Fishing skill value and cap (`XX.X / XXX.X`) with automatic skill gain announcements
+  - Running **Fish Caught** and **Junk Caught** statistics
   - Enemies defeated counter
-  - Interactive **Pause/Resume** and **Stop** buttons.
+  - Interactive **Start / Pause / Resume** and **Stop** buttons.
 
 #### [TrainChivalry.py](FesterUO/TrainChivalry.py)
 
