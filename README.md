@@ -113,7 +113,7 @@ An automated roaming lumberjacking script that scans for nearby trees, navigates
 
 An automated roaming mining script designed for caves, mountainsides, and ore nodes with an interactive control Gump:
 
-- **Mining Dress Profile:** Automatically applies the saved `"Mining"` dress profile at startup.
+- **Mining Dress Profile:** Automatically applies the saved `"Mining"` dress profile before every mine swing and at startup.
 - **Skill-Tier Deposit Filtering:** Scans nearby cave tiles, rock outcroppings, boulders, and ore nodes within `SEARCH_RADIUS`, filtering candidate deposits to match your player's current Mining skill tier (Valorite, Verite, Agapite, Gold, Bronze, Copper, Shadow, Dull Copper, Iron).
 - **Autonomous Navigation & Pathfinding:** Intelligently pathfinds adjacent to candidate ore veins within reach (distance <= 2) using TazUO's native pathfinder.
 - **History Tracking:** Remembers the last 30 visited veins (`DEPOSIT_HISTORY_LIMIT`) to prevent repeatedly revisiting depleted spots.
@@ -189,6 +189,33 @@ An automated skill training script for Chivalry with an interactive control Gump
 - **Dress Profile Auto-Equip:** Configurable `DRESS_PROFILE` (default `"Archer"`) automatically equips your saved profile at startup, re-arms after meditation, and equips a weapon if hands are empty before casting Consecrate Weapon.
 - **Auto-Meditation & Depletion Protection:** Automatically meditates or pauses when mana drops during training, and immediately halts when tithing points are depleted.
 - **Attribution:** Adapted from [PlayTazUO/PublicLegionScripts](https://github.com/PlayTazUO/PublicLegionScripts/blob/main/Skills/Any/Train%20Chiv.py) by FesterHead.
+
+#### [TrainMagery.py](FesterUO/TrainMagery.py)
+
+An automated skill training script for Magery with an interactive control Gump, real-time reagent tracking, and automatic self-healing:
+
+- **Skill Tiers & Training Modes:**
+  - **Resist Training (`RESIST_TRAIN = True`, default):** Casts offensive spells on yourself (Mind Blast, Energy Bolt, Flamestrike) to train Resisting Spells concurrently with automated healing.
+    - **0 – 29.9:** Clumsy (if `ALLOW_LOW_SKILL = True`)
+    - **30.0 – 44.9:** Fireball
+    - **45.0 – 59.9:** Mind Blast
+    - **60.0 – 84.9:** Energy Bolt
+    - **85.0 – 100.0+:** Flamestrike
+  - **Non-Resist Training (`RESIST_TRAIN = False`):** Casts non-damaging spells on yourself for safe, passive leveling.
+    - **0 – 29.9:** Clumsy (if `ALLOW_LOW_SKILL = True`)
+    - **30.0 – 54.9:** Mana Drain
+    - **55.0 – 74.9:** Invisibility
+    - **75.0 – 100.0+:** Mana Vampire
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (Casting, Meditating, Healing, Waiting for Mana, Paused, Finished)
+  - Current Mana and Max Mana tracking (`API.Player.Mana / ManaMax`)
+  - Lower Reagent Cost percentage (`API.Player.LowerReagentCost`)
+  - Live Magery skill level, skill cap, and automatic skill gain announcements
+  - Live two-column backpack reagent counter for all 8 standard reagents: Black Pearl, Bloodmoss, Garlic, Ginseng, Mandrake Root, Nightshade, Sulfurous Ash, and Spiders' Silk
+  - Interactive **Pause/Resume** and **Stop** buttons
+- **Automated Healing & Mana Recovery:** Automatically restores health using Spirit Speak or Greater Heal during Resist Training, and meditates when mana drops below threshold.
+- **Smart Startup Validation:** Verifies minimum skill, mana, and required reagents (if LRC < 100%) before starting; displays clear warnings and cleanly stops if prerequisites are not met.
+- **Attribution:** Adapted from [PlayTazUO/PublicLegionScripts](https://github.com/PlayTazUO/PublicLegionScripts/blob/main/Skills/Any/Train%20Magery.py) by FesterHead.
 
 ---
 

@@ -6,7 +6,7 @@ Target Client: TazUO (Legion Scripting Engine)
 
 Description:
     Automates mining across caves, mountainsides, and ore deposits with an interactive control Gump:
-    - Automatically loads the "Mining" dress profile at startup.
+    - Automatically loads the "Mining" dress profile before every mine swing and at startup.
     - Scans for nearby mineable statics (cave floors, walls, rock outcroppings, boulders)
       and world ore deposits within SEARCH_RADIUS.
     - Filters deposits by the player's current Mining skill to only target deposits they can harvest.
@@ -46,7 +46,7 @@ DEBUG: bool = False
 # FesterUO allows fast harvesting (1.0s). Set to 4.5s or 5.0s for standard UO shards.
 SWING_DELAY: float = 1.0
 
-# Dress configuration profile to load at startup (set to None or "" to disable)
+# Dress configuration profile to load before every swing and at startup (set to None or "" to disable)
 DRESS_PROFILE: str = "Mining"
 
 # Search radius in tiles around the player to locate ore deposits
@@ -692,6 +692,18 @@ def mine_deposit(tool, deposit) -> None:
         if chebyshev_distance(API.Player.X, API.Player.Y, tx, ty) > 2:
             debug_msg("Player moved out of reach.")
             break
+
+        # Load dress profile before every mine swing
+        if DRESS_PROFILE:
+            API.Dress(DRESS_PROFILE)
+            API.Pause(0.2)
+
+        # Refresh tool in case dress profile equipped or swapped tool
+        tool = get_mining_tool()
+        if not tool:
+            update_status("No tool available")
+            API.SysMsg("Pickaxe/shovel missing or broken! Stopping.")
+            return
 
         swing += 1
         update_status(f"Mining ({tx}, {ty}) #{swing}")
