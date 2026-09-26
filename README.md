@@ -109,6 +109,17 @@ An automated roaming lumberjacking script that scans for nearby trees, navigates
 - **Pause & Stop Controls:** Includes interactive **Pause/Resume** and **Stop** buttons right on the Gump.
 - **Configurable Settings:** Includes settings for `SWING_DELAY`, `SEARCH_RADIUS`, `TREE_HISTORY_LIMIT`, `MAX_WEIGHT_CHECK`, `DRESS_PROFILE`, and `DEBUG` logging.
 
+#### [ChopTreeAndMageryAuto.py](FesterUO/ChopTreeAndMageryAuto.py)
+
+A unified roaming lumberjacking and Magery skill training script that coordinates chopping, spellcasting, equips, and targeting cursors within a single engine to eliminate script conflicts:
+
+- **Coordinated Target Cursor Management:** Eliminates target cursor collisions and equip race conditions that occur when running separate chopping and spell training scripts.
+- **Spot-Depletion Batch Training Cycle:** Chops each tree continuously until depleted, then enters a dedicated spell session to burn available mana on skill-appropriate Magery spells until mana runs dry before moving to the next tree.
+- **Synergized Mana Regeneration:** Mana naturally regenerates while walking and chopping subsequent trees, creating an uninterrupted, efficient training loop.
+- **Lumberjack & Mage Dress Profiles:** Automatically applies the configured `"Lumberjack"` dress profile before every axe swing, and optionally equips `"Mage"` during spell training cycles.
+- **Dual Training Modes:** Supports Resist Training (Mind Blast, Energy Bolt, Flamestrike with automated healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
+- **Interactive Control Gump:** Displays trees harvested, live Lumberjacking and Magery skills with gain announcements, Mana / Max Mana, Lower Reagent Cost (LRC %), a live two-column reagent counter, and Pause/Resume/Stop controls.
+
 #### [MiningAuto.py](FesterUO/MiningAuto.py)
 
 An automated roaming mining script designed for caves, mountainsides, and ore nodes with an interactive control Gump:
@@ -121,6 +132,17 @@ An automated roaming mining script designed for caves, mountainsides, and ore no
 - **Capacity & Weight Protection:** Automatically monitors player weight and halts execution safely before becoming overburdened (`MAX_WEIGHT_CHECK`).
 - **Interactive Control Gump:** Displays real-time status, total veins mined counter, total ores mined counter, live Mining skill (`XX.X / XXX.X`), and STR/DEX stats with gain announcements.
 - **Pause & Stop Controls:** Interactive on-screen **Pause/Resume** and **Stop** buttons.
+
+#### [MiningAndMageryAuto.py](FesterUO/MiningAndMageryAuto.py)
+
+A unified roaming mining and Magery skill training script that coordinates ore vein mining, spellcasting, equips, and targeting cursors within a single engine to eliminate script conflicts:
+
+- **Coordinated Target Cursor Management:** Eliminates target cursor collisions and equip race conditions that occur when running separate mining and spell training scripts.
+- **Spot-Depletion Batch Training Cycle:** Mines each ore deposit continuously until depleted, then enters a dedicated spell session to burn available mana on skill-appropriate Magery spells until mana runs dry before moving to the next vein.
+- **Synergized Mana Regeneration:** Mana naturally regenerates while walking and mining subsequent veins, creating an uninterrupted, efficient training loop.
+- **Mining & Mage Dress Profiles:** Automatically applies the configured `"Mining"` dress profile before every pickaxe/shovel swing, and optionally equips `"Mage"` during spell training cycles.
+- **Dual Training Modes:** Supports Resist Training (Mind Blast, Energy Bolt, Flamestrike with automated healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
+- **Interactive Control Gump:** Displays veins mined, ores mined, live Mining and Magery skills with gain announcements, Mana / Max Mana, Lower Reagent Cost (LRC %), a live two-column reagent counter, and Pause/Resume/Stop controls.
 
 #### [TrainAnatomy.py](FesterUO/TrainAnatomy.py)
 

@@ -14,14 +14,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Includes interactive **Pause/Resume** and **Stop** buttons with responsive time-sliced UI event processing.
   - Supports dual training modes: Resist Training (`RESIST_TRAIN = True`) casting offensive circle spells on self with automatic self-healing (Spirit Speak or Greater Heal) to train Resisting Spells simultaneously, and Non-Resist Training (`RESIST_TRAIN = False`) casting non-damaging spells (Mana Drain, Invisibility, Mana Vampire).
   - Features smart startup validation, vendor training recommendations for low skill levels, mana threshold detection, Lower Reagent Cost (LRC) checking, and automated Meditation recovery.
+- Added `FesterUO/MiningAndMageryAuto.py`: Unified roaming mining and Magery training engine that coordinates targeting, equips, and skill delays within a single script:
+  - Eliminates target cursor collisions and action desyncs caused by running separate mining and spellcasting macros.
+  - Features an optimized batch workflow: Mines each deposit continuously until depleted, then enters a dedicated training cycle to burn available mana on skill-appropriate Magery spells until spell points run dry before moving to the next vein.
+  - Synergizes passive mana regeneration: Mana regenerates while walking and harvesting the next node, creating an efficient perpetual cycle.
+  - Automatically loads the configured mining dress profile before every pickaxe/shovel swing, and supports an optional separate mage dress profile (`DRESS_PROFILE_MAGE`) for casting.
+  - Features an interactive control Gump tracking action and mage status, veins mined, ores mined, live Mining and Magery skills with gain announcements, Mana, LRC %, and a live two-column reagent counter.
+- Added `FesterUO/ChopTreeAndMageryAuto.py`: Unified roaming lumberjacking and Magery training engine that coordinates tree chopping and spellcasting:
+  - Eliminates targeting cursor collisions and equip conflicts between simultaneous lumberjacking and spellcasting routines.
+  - Features an optimized batch workflow: Chops each tree continuously until depleted, then enters a dedicated training cycle to burn available mana on skill-appropriate Magery spells until spell points run dry before pathfinding to the next tree.
+  - Synergizes passive mana regeneration during walking and harvesting phases.
+  - Automatically loads the configured lumberjack dress profile before every axe swing, with optional mage outfit switching.
+  - Features an interactive control Gump displaying action and mage status, trees harvested, live Lumberjacking and Magery skills with gain announcements, Mana, LRC %, and a live two-column reagent counter.
+
 
 ### Changed
 
+- Refactored `FesterUO/MiningAndMageryAuto.py` and `FesterUO/ChopTreeAndMageryAuto.py` from interleaved per-swing casting to spot-depletion mana burn cycles (`burn_magery_cycle()`), allowing fast, uninterrupted harvesting swings followed by dedicated mana-burning spell sessions once nodes are depleted.
 - Updated `FesterUO/MiningAuto.py` to automatically load `DRESS_PROFILE` and refresh the equipped mining tool before every individual mine swing in addition to initial startup.
 
 ### Fixed
 
 - Fixed runtime `SystemError: MakeGenericType on non-generic type` in `FesterUO/TrainMagery.py` by removing subscripted generic built-ins (`dict[...]`, `tuple[...]`, `list[...]`) that fail under Python.NET's type reflection.
+- Fixed `'LegionAPI' object has no attribute 'GetLandTile'` in `FesterUO/MiningAndMageryAuto.py` by using `API.GetTile(x, y)` for land terrain tile scanning.
+- Fixed `"You must wait to perform another action"` stalling and premature deposit depletion in `FesterUO/MiningAndMageryAuto.py` and `FesterUO/ChopTreeAndMageryAuto.py`:
+  - Resolved dress profile thrashing by loading the dress profile upon deposit arrival rather than spamming `API.Dress()` 0.2 seconds before every individual swing.
+  - Added post-spellcasting recovery cooldowns (1.0s) after `burn_magery_cycle()` completes.
+  - Added 3-attempt retry loop with automatic 1.2s delay backoff when the server returns `"must wait to perform another action"`, preventing false target timeouts from aborting deposits.
+
 
 ## [1.1.0] - 2026-09-20
 
