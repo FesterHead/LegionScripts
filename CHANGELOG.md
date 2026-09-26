@@ -25,11 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Features an optimized batch workflow: Chops each tree continuously until depleted, then enters a dedicated training cycle to burn available mana on skill-appropriate Magery spells until spell points run dry before pathfinding to the next tree.
   - Synergizes passive mana regeneration during walking and harvesting phases.
   - Automatically loads the configured lumberjack dress profile before every axe swing, with optional mage outfit switching.
-  - Features an interactive control Gump displaying action and mage status, trees harvested, live Lumberjacking and Magery skills with gain announcements, Mana, LRC %, and a live two-column reagent counter.
-
+- Added `FesterUO/TrainBlacksmith.py`: Automated resource-efficient Blacksmithing training script with interactive control Gump:
+  - Automatically progresses through the lowest ingot-per-attempt items from 0 to 120 (Mace -> Maul -> Short Spear -> Platemail Gorget -> Platemail Gloves/Arms/Legs/Tunic).
+  - Features resource satchel integration: Prompts player on launch to target their resource satchel, maintains a lightweight buffer of ingots in the main backpack (default 40–80 ingots) to prevent overburdening, and returns smelted/recycled ingots back into the satchel.
+  - Automatically smelts and recycles crafted items at a nearby forge to reclaim 50%–90% of raw ingots.
+  - Includes tool upkeep via Tinkering: Detects broken or missing Smith's Hammers and automatically crafts replacements on the fly using Tinker's Tools and ingots.
+  - Includes an interactive control Gump with status display, live Blacksmithing skill and cap with gain announcements, running counters for Crafted / Smelted / Failed items, live Satchel and Backpack ingot counts, tool status, and Pause/Resume, Set Recipe, Set Satchel, and Stop buttons.
 
 ### Changed
 
+- Added configurable per-cycle spell cast limit (`MAX_MAGERY_CASTS_PER_CYCLE = 8`) to `FesterUO/MiningAndMageryAuto.py` and `FesterUO/ChopTreeAndMageryAuto.py` to bound the Magery training phase after a deposit or tree is depleted, automatically returning to harvesting once the cast limit is reached without waiting for high mana pools to fully empty (set to `0` for unlimited / until mana is depleted).
 - Refactored `FesterUO/MiningAndMageryAuto.py` and `FesterUO/ChopTreeAndMageryAuto.py` from interleaved per-swing casting to spot-depletion mana burn cycles (`burn_magery_cycle()`), allowing fast, uninterrupted harvesting swings followed by dedicated mana-burning spell sessions once nodes are depleted.
 - Updated `FesterUO/MiningAuto.py` to automatically load `DRESS_PROFILE` and refresh the equipped mining tool before every individual mine swing in addition to initial startup.
 
@@ -41,7 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Resolved dress profile thrashing by loading the dress profile upon deposit arrival rather than spamming `API.Dress()` 0.2 seconds before every individual swing.
   - Added post-spellcasting recovery cooldowns (1.0s) after `burn_magery_cycle()` completes.
   - Added 3-attempt retry loop with automatic 1.2s delay backoff when the server returns `"must wait to perform another action"`, preventing false target timeouts from aborting deposits.
-
 
 ## [1.1.0] - 2026-09-20
 

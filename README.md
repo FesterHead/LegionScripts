@@ -114,7 +114,8 @@ An automated roaming lumberjacking script that scans for nearby trees, navigates
 A unified roaming lumberjacking and Magery skill training script that coordinates chopping, spellcasting, equips, and targeting cursors within a single engine to eliminate script conflicts:
 
 - **Coordinated Target Cursor Management:** Eliminates target cursor collisions and equip race conditions that occur when running separate chopping and spell training scripts.
-- **Spot-Depletion Batch Training Cycle:** Chops each tree continuously until depleted, then enters a dedicated spell session to burn available mana on skill-appropriate Magery spells until mana runs dry before moving to the next tree.
+- **Spot-Depletion Batch Training Cycle:** Chops each tree continuously until depleted, then enters a dedicated spell session to burn available mana on skill-appropriate Magery spells up to a configurable cast limit (`MAX_MAGERY_CASTS_PER_CYCLE = 8`, or `0` for unlimited until mana is dry) before returning to chopping the next tree.
+- **Configurable Cast Limit:** Prevents extended pauses when mana pools are high by bounding the number of Magery casts per tree cycle (`MAX_MAGERY_CASTS_PER_CYCLE = 8`), automatically switching back to roaming lumberjacking when reached.
 - **Synergized Mana Regeneration:** Mana naturally regenerates while walking and chopping subsequent trees, creating an uninterrupted, efficient training loop.
 - **Lumberjack & Mage Dress Profiles:** Automatically applies the configured `"Lumberjack"` dress profile before every axe swing, and optionally equips `"Mage"` during spell training cycles.
 - **Dual Training Modes:** Supports Resist Training (Mind Blast, Energy Bolt, Flamestrike with automated healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
@@ -138,7 +139,8 @@ An automated roaming mining script designed for caves, mountainsides, and ore no
 A unified roaming mining and Magery skill training script that coordinates ore vein mining, spellcasting, equips, and targeting cursors within a single engine to eliminate script conflicts:
 
 - **Coordinated Target Cursor Management:** Eliminates target cursor collisions and equip race conditions that occur when running separate mining and spell training scripts.
-- **Spot-Depletion Batch Training Cycle:** Mines each ore deposit continuously until depleted, then enters a dedicated spell session to burn available mana on skill-appropriate Magery spells until mana runs dry before moving to the next vein.
+- **Spot-Depletion Batch Training Cycle:** Mines each ore deposit continuously until depleted, then enters a dedicated spell session to burn available mana on skill-appropriate Magery spells up to a configurable cast limit (`MAX_MAGERY_CASTS_PER_CYCLE = 8`, or `0` for unlimited until mana is dry) before returning to mining the next vein.
+- **Configurable Cast Limit:** Prevents extended pauses when mana pools are high by bounding the number of Magery casts per node cycle (`MAX_MAGERY_CASTS_PER_CYCLE = 8`), automatically switching back to roaming mining when reached.
 - **Synergized Mana Regeneration:** Mana naturally regenerates while walking and mining subsequent veins, creating an uninterrupted, efficient training loop.
 - **Mining & Mage Dress Profiles:** Automatically applies the configured `"Mining"` dress profile before every pickaxe/shovel swing, and optionally equips `"Mage"` during spell training cycles.
 - **Dual Training Modes:** Supports Resist Training (Mind Blast, Energy Bolt, Flamestrike with automated healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
@@ -238,6 +240,30 @@ An automated skill training script for Magery with an interactive control Gump, 
 - **Automated Healing & Mana Recovery:** Automatically restores health using Spirit Speak or Greater Heal during Resist Training, and meditates when mana drops below threshold.
 - **Smart Startup Validation:** Verifies minimum skill, mana, and required reagents (if LRC < 100%) before starting; displays clear warnings and cleanly stops if prerequisites are not met.
 - **Attribution:** Adapted from [PlayTazUO/PublicLegionScripts](https://github.com/PlayTazUO/PublicLegionScripts/blob/main/Skills/Any/Train%20Magery.py) by FesterHead.
+
+#### [TrainBlacksmith.py](FesterUO/TrainBlacksmith.py)
+
+An automated, resource-efficient Blacksmithing training engine with interactive control Gump, resource satchel support, auto-smelting, and Tinkering tool upkeep:
+
+- **Ingot-Efficient Skill Progression:** Automatically tracks your Blacksmithing skill and crafts the lowest-ingot items in each tier from 0 to 120 (GM / Legendary):
+  - **30.0 – 45.0:** Mace (6 ingots)
+  - **45.0 – 50.0:** Maul (6 ingots)
+  - **50.0 – 95.0:** Short Spear (6 ingots — *primary training workhorse*)
+  - **95.0 – 106.4:** Platemail Gorget (10 ingots — *cheapest platemail piece*)
+  - **106.4 – 108.9:** Platemail Gloves (12 ingots)
+  - **108.9 – 116.3:** Platemail Arms (18 ingots)
+  - **116.3 – 118.8:** Platemail Legs (20 ingots)
+  - **118.8 – 120.0:** Platemail Tunic (25 ingots)
+- **Resource Satchel Integration:** Prompts player on launch to target their resource satchel or bag. Maintains a lightweight working buffer of ingots in the main backpack (default 40–80 ingots) so your character is never overburdened, pulling fresh batches as needed.
+- **Automated Smelting (Recycling):** Automatically smelts crafted items at the forge to reclaim 50%–90% of raw ingots, automatically returning the recovered ingots back into your satchel.
+- **Tool Upkeep via Tinkering:** Detects broken or missing Smith's Hammers and automatically crafts replacements on the fly using Tinker's Tools and ingots from the satchel.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafting Short Spear...`, `Smelting...`, `Tinkering Hammer...`, `Restocking Ingots...`, `Paused`, `Finished`)
+  - Live Blacksmith skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Smelted**, and **Failed** items
+  - Live Satchel and Backpack ingot counts
+  - Interactive **Pause/Resume**, **Set Recipe**, **Set Satchel**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
 
 ---
 

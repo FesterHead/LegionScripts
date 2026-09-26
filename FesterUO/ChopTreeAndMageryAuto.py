@@ -17,8 +17,9 @@ Description:
         * Continuously chops until the tree is depleted, tracking trees harvested and weight limits.
         * Maintains a tree history queue to prevent revisiting recently chopped trees.
     - Magery Engine:
-        * Dedicated batch training cycle: Chops a tree until empty, then burns available mana
-          casting skill-appropriate Magery spells until spell points are depleted before moving.
+        * Dedicated batch training cycle: Chops a tree until empty, then casts skill-appropriate
+          Magery spells up to a configurable cast limit (MAX_MAGERY_CASTS_PER_CYCLE) or until mana
+          is depleted before moving.
         * Synergizes mana regeneration: While walking and chopping the next tree, mana naturally regenerates.
         * Supports Resist Training (damaging spells on self with auto-healing) and Non-Resist Training.
         * Monitors Lower Reagent Cost (LRC %) and live counts for all 8 standard reagents.
@@ -83,6 +84,10 @@ DEPLETED_KEYWORDS = [
 
 # Enable or disable Magery training alongside lumberjacking
 TRAIN_MAGERY = True
+
+# Maximum number of Magery spell casts per training cycle before returning to chopping
+# (Set to 0 for unlimited / until mana is depleted)
+MAX_MAGERY_CASTS_PER_CYCLE = 8
 
 # Training mode:
 # Set to True to cast offensive spells on self (Mind Blast, Energy Bolt, Flamestrike)
@@ -533,7 +538,8 @@ def burn_magery_cycle() -> None:
     """
     Executes a dedicated Magery training session after a tree is depleted.
     Casts the appropriate skill-tier spell on self until mana is depleted,
-    Magery target is reached, or reagents are exhausted.
+    the maximum cast limit per cycle is reached, Magery target is reached,
+    or reagents are exhausted.
     """
     global last_mage_warn_time
     if not TRAIN_MAGERY or not API.Player:
@@ -570,10 +576,17 @@ def burn_magery_cycle() -> None:
 
     casts = 0
     update_magery_status(f"Burning Mana ({cur_mana})...")
-    API.SysMsg(f"[Magery] Tree depleted. Training {spell_name} (Mana: {cur_mana})...")
+    limit_str = f" [Limit: {MAX_MAGERY_CASTS_PER_CYCLE}]" if MAX_MAGERY_CASTS_PER_CYCLE > 0 else ""
+    API.SysMsg(f"[Magery] Tree depleted. Training {spell_name} (Mana: {cur_mana}){limit_str}...")
 
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():
+            break
+
+        # Check cast limit per cycle
+        if MAX_MAGERY_CASTS_PER_CYCLE > 0 and casts >= MAX_MAGERY_CASTS_PER_CYCLE:
+            update_magery_status(f"Cast limit reached ({casts})")
+            API.SysMsg(f"[Magery] Cast limit ({MAX_MAGERY_CASTS_PER_CYCLE}) reached. Returning to chopping.")
             break
 
         # Check skill progress
@@ -629,7 +642,10 @@ def burn_magery_cycle() -> None:
 
         # Cast
         casts += 1
-        update_magery_status(f"Cast #{casts}: {spell_name}")
+        if MAX_MAGERY_CASTS_PER_CYCLE > 0:
+            update_magery_status(f"Cast #{casts}/{MAX_MAGERY_CASTS_PER_CYCLE}: {spell_name}")
+        else:
+            update_magery_status(f"Cast #{casts}: {spell_name}")
         API.CastSpell(spell_name)
         if API.WaitForTarget(timeout=4.5):
             API.TargetSelf()
@@ -639,6 +655,12 @@ def burn_magery_cycle() -> None:
 
         update_stats(force_reagents=True)
         if not wait_with_ui(CAST_DELAY):
+            break
+
+        # Check if limit reached after cast delay
+        if MAX_MAGERY_CASTS_PER_CYCLE > 0 and casts >= MAX_MAGERY_CASTS_PER_CYCLE:
+            update_magery_status(f"Cast limit reached ({casts})")
+            API.SysMsg(f"[Magery] Cast limit ({MAX_MAGERY_CASTS_PER_CYCLE}) reached. Returning to chopping.")
             break
 
     # Re-equip lumberjack gear and pause for spell recovery cooldown
