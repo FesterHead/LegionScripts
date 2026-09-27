@@ -300,6 +300,28 @@ An automated, ingot-efficient Tinkering training engine with interactive control
   - Interactive **Pause/Resume**, **Set Recipe**, **Set Satchel**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 
+#### [TrainCarpentry.py](FesterUO/TrainCarpentry.py)
+
+An automated, board-efficient Carpentry training engine with interactive control Gump, resource satchel support, auto-trashing of crafted furniture/weapons, and milestone tracking:
+
+- **Board-Efficient Skill Progression:** Automatically tracks your Carpentry skill and crafts the lowest-board items in each tier from 0 to 120 (GM / Legendary):
+  - **0.0 – 45.0:** Wooden Box (5 boards)
+  - **45.0 – 68.0:** Ballot Box Deed (5 boards)
+  - **68.0 – 75.0:** Wooden Shield (9 boards)
+  - **75.0 – 80.0:** Quarter Staff (6 boards)
+  - **80.0 – 120.0:** Gnarled Staff (7 boards)
+- **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next recipe. Players can click **"Set Recipe"** on the Gump at any time to manually choose any recipe from the open craft menu.
+- **Automated Trash Barrel Disposal:** Auto-detects nearby Trash Barrels or allows targeting one at startup. Automatically deposits newly crafted items into the trash barrel via backpack serial diff, preventing overweight and backpack clutter. Includes a **"Trash Can"** button on the Gump to change/set trash barrels at any time.
+- **Resource Satchel Integration:** Prompts player on launch to target their wood/resource satchel. Maintains a lightweight working buffer of boards in the main backpack (default 20–60 boards) so characters are never overburdened, pulling fresh batches as needed. Protects colored/special woods (Frostwood, Heartwood, Bloodwood).
+- **Tool Upkeep:** Works with any carpentry tool (Saw, Dovetail Saw, Plane, Scorp, Draw Knife, Hammer). Automatically attempts to craft replacement Saws via Tinkering if Tinkering tools and iron ingots are in your backpack.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafted`, `Trashing...`, `Tinkering Saw...`, `Restocking boards...`, `Paused`, `Finished`)
+  - Live Carpentry skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Trashed**, and **Failed** items
+  - Live Satchel and Backpack board counts, plus tool and trash indicators
+  - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
 
 ---
 
