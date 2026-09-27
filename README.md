@@ -259,8 +259,8 @@ An automated, resource-efficient Blacksmithing training engine with interactive 
 - **Ingot-Efficient Skill Progression:** Automatically tracks your Blacksmithing skill and crafts the lowest-ingot items in each tier from 0 to 120 (GM / Legendary):
   - **30.0 – 45.0:** Mace (6 ingots)
   - **45.0 – 50.0:** Maul (6 ingots)
-  - **50.0 – 95.0:** Short Spear (6 ingots — *primary training workhorse*)
-  - **95.0 – 106.4:** Platemail Gorget (10 ingots — *cheapest platemail piece*)
+  - **50.0 – 95.0:** Short Spear (6 ingots — _primary training workhorse_)
+  - **95.0 – 106.4:** Platemail Gorget (10 ingots — _cheapest platemail piece_)
   - **106.4 – 108.9:** Platemail Gloves (12 ingots)
   - **108.9 – 116.3:** Platemail Arms (18 ingots)
   - **116.3 – 118.8:** Platemail Legs (20 ingots)
@@ -281,9 +281,9 @@ An automated, resource-efficient Blacksmithing training engine with interactive 
 An automated, ingot-efficient Tinkering training engine with interactive control Gump, resource satchel support, perpetual tool self-crafting, auto-smelting, and milestone tracking:
 
 - **Ingot-Efficient Skill Progression:** Automatically tracks your Tinkering skill and crafts the lowest-ingot items in each tier from 0 to 100 (GM):
-  - **0.0 – 45.0:** Tinker's Tools (2 ingots) or Scissors (2 ingots) — *self-perpetuating tool crafting*
-  - **45.0 – 60.0:** Tongs (1 ingot) — *smeltable at forges to reclaim ingots*
-  - **60.0 – 95.0:** Lockpicks (1 ingot) — *stackable and lowest cost per attempt*
+  - **0.0 – 45.0:** Tinker's Tools (2 ingots) or Scissors (2 ingots) — _self-perpetuating tool crafting_
+  - **45.0 – 60.0:** Tongs (1 ingot) — _smeltable at forges to reclaim ingots_
+  - **60.0 – 95.0:** Lockpicks (1 ingot) — _stackable and lowest cost per attempt_
   - **95.0 – 100.0:** Heating Stand (4 ingots)
 - **Blacksmithing Milestones:**
   - **40.0 Tinkering:** Unlocks Smith's Hammer crafting (for Blacksmithing training).
@@ -321,7 +321,6 @@ An automated, board-efficient Carpentry training engine with interactive control
   - Live Satchel and Backpack board counts, plus tool and trash indicators
   - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Trash Can**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
-
 
 ---
 

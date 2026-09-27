@@ -57,6 +57,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Enabled direct satchel crafting (`DIRECT_SATCHEL_CRAFTING = True`) across `FesterUO/TrainCarpentry.py`, `FesterUO/TrainBlacksmith.py`, and `FesterUO/TrainTinkering.py`:
+  - Scripts now craft directly from the resource satchel with `0` boards/ingots needed in the main backpack, preserving weight capacity.
+  - Automatically deposits any reclaimed or loose materials from backpack into the satchel.
+  - Includes automatic fallback restocking if a server or container ever requires materials in the root backpack.
 - Added configurable retry limit (`MAX_TOOL_CRAFT_ATTEMPTS = 8`, default 8 attempts) to `FesterUO/TrainBlacksmith.py` when auto-crafting replacement smithing tools via Tinkering, with automatic mid-retry ingot restocking from the satchel.
 - Added configurable per-cycle spell cast limit (`MAX_MAGERY_CASTS_PER_CYCLE = 8`) to `FesterUO/MiningAndMageryAuto.py` and `FesterUO/ChopTreeAndMageryAuto.py` to bound the Magery training phase after a deposit or tree is depleted, automatically returning to harvesting once the cast limit is reached without waiting for high mana pools to fully empty (set to `0` for unlimited / until mana is depleted).
 - Refactored `FesterUO/MiningAndMageryAuto.py` and `FesterUO/ChopTreeAndMageryAuto.py` from interleaved per-swing casting to spot-depletion mana burn cycles (`burn_magery_cycle()`), allowing fast, uninterrupted harvesting swings followed by dedicated mana-burning spell sessions once nodes are depleted.

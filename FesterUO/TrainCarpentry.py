@@ -41,9 +41,12 @@ import API
 # Configuration
 # ==============================================================================
 
-# Backpack wood buffer limits (prevents overweight while training)
-MIN_BACKPACK_BOARDS = 20
-TARGET_BACKPACK_BOARDS = 60
+# Direct Satchel Crafting (crafts directly from resource satchel without pulling to backpack)
+DIRECT_SATCHEL_CRAFTING = True
+
+# Fallback limits if direct satchel crafting is disabled or server requires backpack items
+MIN_BACKPACK_BOARDS = 0 if DIRECT_SATCHEL_CRAFTING else 20
+TARGET_BACKPACK_BOARDS = 50
 RESTOCK_BATCH_SIZE = 50
 
 # Delays in seconds
@@ -555,18 +558,16 @@ def restock_wood_from_satchel() -> bool:
 
 
 def deposit_excess_wood_to_satchel() -> None:
-    """Moves excess boards from backpack back into the satchel."""
+    """Moves loose boards from backpack into the satchel."""
     if not satchel_serial:
         return
 
     current_bp = count_backpack_wood()
-    if current_bp <= TARGET_BACKPACK_BOARDS + 30:
+    target_bp = 0 if DIRECT_SATCHEL_CRAFTING else TARGET_BACKPACK_BOARDS
+    if current_bp <= target_bp:
         return
 
-    excess = current_bp - TARGET_BACKPACK_BOARDS
-    if excess <= 10:
-        return
-
+    excess = current_bp - target_bp
     items = API.ItemsInContainer(API.Backpack, recursive=False)
     if not items:
         return
@@ -577,7 +578,7 @@ def deposit_excess_wood_to_satchel() -> None:
             amt_to_move = min(amt, excess)
             if amt_to_move > 0:
                 API.MoveItem(item.Serial, satchel_serial, amt=amt_to_move)
-                API.Pause(0.6)
+                API.Pause(0.5)
                 excess -= amt_to_move
                 if excess <= 0:
                     break
@@ -678,13 +679,16 @@ def craft_cycle() -> bool:
         API.SysMsg("[Carpentry] Weight limit reached! Please lighten your backpack.")
         return False
 
-    # 2. Check and restock wood from satchel
-    if count_backpack_wood() < MIN_BACKPACK_BOARDS:
-        if not restock_wood_from_satchel():
-            if count_backpack_wood() < 5:  # Minimum recipe cost
-                update_status("Out of Wood")
-                API.SysMsg("[Carpentry] Out of boards/wood in backpack and satchel!")
-                return False
+    # 2. Check total wood available (satchel + backpack)
+    total_wood = count_backpack_wood() + (count_satchel_wood() if satchel_serial else 0)
+    if total_wood < 5:  # Minimum recipe cost
+        update_status("Out of Wood")
+        API.SysMsg("[Carpentry] Out of boards/wood in backpack and satchel!")
+        return False
+
+    # If direct satchel crafting is disabled, maintain backpack buffer
+    if not DIRECT_SATCHEL_CRAFTING and count_backpack_wood() < MIN_BACKPACK_BOARDS:
+        restock_wood_from_satchel()
 
     # 3. Ensure carpentry tool is available
     tool = get_carpenter_tool()
@@ -727,6 +731,13 @@ def craft_cycle() -> bool:
         update_status(f"Prime '{rec_name}'")
         on_pause_clicked()
         return True
+
+    # Check if server complained about missing resources despite satchel having wood
+    if any("sufficient wood" in t or "enough wood" in t for t in j_text) or API.InJournal("sufficient wood"):
+        if satchel_serial and count_satchel_wood() >= 5:
+            API.SysMsg("[Carpentry] Server requires wood in root backpack. Restocking from satchel...")
+            restock_wood_from_satchel()
+            return True
 
     # Check craft success or failure
     success = any("you create" in t or "put the" in t or "put it into" in t for t in j_text) or API.InJournal("you create")
@@ -819,8 +830,8 @@ def main():
     create_control_gump()
     update_stats()
 
-    # Initial check and restock of wood
-    if count_backpack_wood() < MIN_BACKPACK_BOARDS:
+    # Initial check and restock of wood only if not using direct satchel crafting
+    if not DIRECT_SATCHEL_CRAFTING and count_backpack_wood() < MIN_BACKPACK_BOARDS:
         restock_wood_from_satchel()
 
     update_status("Running")

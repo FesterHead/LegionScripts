@@ -46,9 +46,12 @@ import API
 # Target Tinkering skill to stop training (e.g. 50.0 for Blacksmith tools, 100.0 for GM)
 TARGET_SKILL = 100.0
 
+# Direct Satchel Crafting (crafts directly from resource satchel without pulling to backpack)
+DIRECT_SATCHEL_CRAFTING = True
+
 # Working ingot buffer maintained in main backpack (prevents becoming overweight)
-MIN_BACKPACK_INGOTS = 20
-TARGET_BACKPACK_INGOTS = 60
+MIN_BACKPACK_INGOTS = 0 if DIRECT_SATCHEL_CRAFTING else 20
+TARGET_BACKPACK_INGOTS = 50
 RESTOCK_BATCH_SIZE = 50
 
 # Minimum spare Tinker's Tools to maintain in backpack
@@ -493,11 +496,12 @@ def deposit_excess_ingots_to_satchel() -> None:
         return
 
     current_bp = count_backpack_ingots()
-    if current_bp <= TARGET_BACKPACK_INGOTS + 20:
+    target_bp = 0 if DIRECT_SATCHEL_CRAFTING else TARGET_BACKPACK_INGOTS
+    if current_bp <= target_bp:
         return
 
-    excess = current_bp - TARGET_BACKPACK_INGOTS
-    if excess <= 10:
+    excess = current_bp - target_bp
+    if excess <= 0:
         return
 
     bp_items = API.ItemsInContainer(API.Backpack, recursive=False)
@@ -510,7 +514,7 @@ def deposit_excess_ingots_to_satchel() -> None:
             amt_to_move = min(item_amt, excess)
             if amt_to_move > 0:
                 API.MoveItem(item.Serial, satchel_serial, amt=amt_to_move)
-                API.Pause(0.6)
+                API.Pause(0.5)
                 excess -= amt_to_move
                 if excess <= 0:
                     break
@@ -680,7 +684,16 @@ def craft_cycle() -> bool:
     ensure_tinker_tools()
 
     # 3. Check & Restock Ingots
-    if count_backpack_ingots() < ingot_cost:
+    total_ingots = count_backpack_ingots() + (count_satchel_ingots() if satchel_serial else 0)
+    if total_ingots < ingot_cost:
+        update_status("Out of Ingots")
+        API.SysMsg("[Tinkering] Out of ingots in satchel and backpack! Please refill and click Resume.")
+        is_paused = True
+        if btn_pause:
+            btn_pause.SetText("Resume")
+        return True
+
+    if not DIRECT_SATCHEL_CRAFTING and count_backpack_ingots() < ingot_cost:
         if not restock_ingots_from_satchel():
             update_status("Out of Ingots")
             API.SysMsg("[Tinkering] Out of ingots in satchel! Please refill satchel and click Resume.")
@@ -729,10 +742,12 @@ def craft_cycle() -> bool:
         update_status(f"Click {current_recipe_name} in menu")
         return True
 
-    # 6. Check Result in Journal & Backpack
-    crafted_item = get_backpack_crafted_item(known_serials)
-    entries = API.GetJournalEntries(CRAFT_DELAY + 1.0)
-    j_text = [str(e.Text).lower() for e in entries] if entries else []
+    # Check if server complained about missing resources despite satchel having ingots
+    if any("sufficient metal" in t or "enough metal" in t or "lack the metal" in t or "sufficient ingots" in t for t in j_text) or API.InJournal("sufficient metal"):
+        if satchel_serial and count_satchel_ingots() >= ingot_cost:
+            API.SysMsg("[Tinkering] Server requires ingots in root backpack. Restocking from satchel...")
+            restock_ingots_from_satchel()
+            return True
 
     # Check for success
     if crafted_item or any("you create" in t or "placed in your backpack" in t for t in j_text):
@@ -808,8 +823,8 @@ def main() -> None:
     create_control_gump()
     update_stats()
 
-    # Initial check of ingots in backpack
-    if count_backpack_ingots() < MIN_BACKPACK_INGOTS:
+    # Initial check of ingots in backpack only if not using direct satchel crafting
+    if not DIRECT_SATCHEL_CRAFTING and count_backpack_ingots() < MIN_BACKPACK_INGOTS:
         restock_ingots_from_satchel()
 
     update_status("Running")
