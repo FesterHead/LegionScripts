@@ -146,6 +146,17 @@ A unified roaming mining and Magery skill training script that coordinates ore v
 - **Dual Training Modes:** Supports Resist Training (Mind Blast, Energy Bolt, Flamestrike with automated healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
 - **Interactive Control Gump:** Displays veins mined, ores mined, live Mining and Magery skills with gain announcements, Mana / Max Mana, Lower Reagent Cost (LRC %), a live two-column reagent counter, and Pause/Resume/Stop controls.
 
+#### [MiningAndLumberjackAuto.py](FesterUO/MiningAndLumberjackAuto.py)
+
+A unified roaming resource harvesting script that alternates between mining ore deposits and chopping static trees with an integrated control Gump:
+
+- **Alternating Harvest Workflow:** Mines one ore deposit or cave rock until depleted, then automatically switches to lumberjack gear and chops one tree until depleted, repeating seamlessly (`Mine -> Chop -> Mine -> Chop...`).
+- **Autonomous Equipment & Dress Switching:** Automatically equips your `"Mining"` profile (pickaxe/shovel) during the mining phase, and switches to your `"Lumberjack"` profile (axe) during the woodcutting phase.
+- **Combined Spatial Scanning:** Scans for cave floors, mountain edges, rock outcroppings, and boulders for mining, and scans static trees via TazUO's native vegetation detection for lumberjacking.
+- **Pathfinding & Depletion Memory:** Safely pathfinds within reach (`distance <= 2`) of candidate nodes, maintaining separate depletion history queues for both veins (`DEPOSIT_HISTORY_LIMIT = 150`) and trees (`TREE_HISTORY_LIMIT = 50`) to avoid revisiting depleted spots.
+- **Integrated Control Gump:** Displays real-time activity status, dual skill bars for **Mining** and **Lumberjacking** with automatic gain announcements, combined counters for **Veins Mined / Total Ore** and **Trees Chopped / Total Logs**, Strength and Dexterity stats, Weight monitoring, and interactive **Pause/Resume** and **Stop** buttons.
+- **Backpack Weight Protection:** Continuously checks player weight against maximum capacity (`MAX_WEIGHT_CHECK`, `WEIGHT_BUFFER = 15`) and halts safely before becoming overburdened.
+
 #### [TrainAnatomy.py](FesterUO/TrainAnatomy.py)
 
 An automated Anatomy skill training script with configurable skill cooldowns, automatic self-targeting, and skill cap tracking:
@@ -256,7 +267,7 @@ An automated, resource-efficient Blacksmithing training engine with interactive 
   - **118.8 – 120.0:** Platemail Tunic (25 ingots)
 - **Resource Satchel Integration:** Prompts player on launch to target their resource satchel or bag. Maintains a lightweight working buffer of ingots in the main backpack (default 40–80 ingots) so your character is never overburdened, pulling fresh batches as needed.
 - **Automated Smelting (Recycling):** Automatically smelts crafted items at the forge to reclaim 50%–90% of raw ingots, automatically returning the recovered ingots back into your satchel.
-- **Tool Upkeep via Tinkering:** Detects broken or missing Smith's Hammers and automatically crafts replacements on the fly using Tinker's Tools and ingots from the satchel.
+- **Tool Upkeep via Tinkering:** Detects broken or missing tools and automatically crafts replacements on the fly using Tinker's Tools and ingots, prioritizing **Tongs** (only 1 ingot at 45.0+ Tinkering) over Smith's Hammers (4 ingots).
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
   - Real-time training status (`Crafting Short Spear...`, `Smelting...`, `Tinkering Hammer...`, `Restocking Ingots...`, `Paused`, `Finished`)
   - Live Blacksmith skill level, skill cap, and automatic skill gain announcements
@@ -264,6 +275,31 @@ An automated, resource-efficient Blacksmithing training engine with interactive 
   - Live Satchel and Backpack ingot counts
   - Interactive **Pause/Resume**, **Set Recipe**, **Set Satchel**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
+
+#### [TrainTinkering.py](FesterUO/TrainTinkering.py)
+
+An automated, ingot-efficient Tinkering training engine with interactive control Gump, resource satchel support, perpetual tool self-crafting, auto-smelting, and milestone tracking:
+
+- **Ingot-Efficient Skill Progression:** Automatically tracks your Tinkering skill and crafts the lowest-ingot items in each tier from 0 to 100 (GM):
+  - **0.0 – 45.0:** Tinker's Tools (2 ingots) or Scissors (2 ingots) — *self-perpetuating tool crafting*
+  - **45.0 – 60.0:** Tongs (1 ingot) — *smeltable at forges to reclaim ingots*
+  - **60.0 – 95.0:** Lockpicks (1 ingot) — *stackable and lowest cost per attempt*
+  - **95.0 – 100.0:** Heating Stand (4 ingots)
+- **Blacksmithing Milestones:**
+  - **40.0 Tinkering:** Unlocks Smith's Hammer crafting (for Blacksmithing training).
+  - **45.0 Tinkering:** Unlocks Tongs crafting (for Blacksmithing training).
+  - Emits clear system messages when both milestones are reached.
+- **Perpetual Tool Self-Crafting:** Monitors backpack Tinker's Tools and automatically crafts fresh replacement tools whenever your supply drops below the safety threshold (`MIN_TOOLS = 2`).
+- **Resource Satchel Integration:** Prompts player on launch to target their resource satchel or bag. Maintains a lightweight working buffer of ingots in the main backpack (default 40–80 ingots) so your character is never overburdened, pulling fresh batches as needed.
+- **Automated Smelting (Recycling):** Automatically smelts crafted metal items (Tongs, Scissors) at the forge to reclaim 50%–90% of raw ingots and returns recovered ingots back to the satchel.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafting Tinker's Tools...`, `Smelting...`, `Crafting Tool...`, `Restocking Ingots...`, `Paused`, `Finished`)
+  - Live Tinkering skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Smelted**, and **Failed** items
+  - Live Satchel and Backpack ingot counts
+  - Interactive **Pause/Resume**, **Set Recipe**, **Set Satchel**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
 
 ---
 

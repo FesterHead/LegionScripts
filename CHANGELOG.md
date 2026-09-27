@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Synergizes passive mana regeneration: Mana regenerates while walking and harvesting the next node, creating an efficient perpetual cycle.
   - Automatically loads the configured mining dress profile before every pickaxe/shovel swing, and supports an optional separate mage dress profile (`DRESS_PROFILE_MAGE`) for casting.
   - Features an interactive control Gump tracking action and mage status, veins mined, ores mined, live Mining and Magery skills with gain announcements, Mana, LRC %, and a live two-column reagent counter.
+- Added `FesterUO/MiningAndLumberjackAuto.py`: Unified roaming miner and lumberjack script with integrated control Gump:
+  - Alternating harvest cycle: Mines one ore deposit or cave rock until depleted, then automatically equips lumberjack gear and chops one tree until depleted, repeating seamlessly.
+  - Autonomous equipment & dress switching: Automatically equips the `"Mining"` dress profile (pickaxe/shovel) during the mining phase, and switches to the `"Lumberjack"` dress profile (axe) during the woodcutting phase.
+  - Spatial scanning & memory: Scans for cave floors, mountain edges, and boulders for mining, and scans static trees via TazUO's native vegetation detection for lumberjacking, with independent depletion history queues to prevent revisiting depleted spots.
+  - Integrated control Gump displaying real-time activity status, dual live skill tracking for **Mining** and **Lumberjacking** with automatic gain announcements, combined counters for **Veins Mined / Total Ore** and **Trees Chopped / Total Logs**, Strength and Dexterity stats, Weight capacity monitoring, and interactive Pause/Resume and Stop buttons.
+  - Backpack weight protection (`MAX_WEIGHT_CHECK`, `WEIGHT_BUFFER = 15`) halting execution before becoming overburdened.
 - Added `FesterUO/ChopTreeAndMageryAuto.py`: Unified roaming lumberjacking and Magery training engine that coordinates tree chopping and spellcasting:
   - Eliminates targeting cursor collisions and equip conflicts between simultaneous lumberjacking and spellcasting routines.
   - Features an optimized batch workflow: Chops each tree continuously until depleted, then enters a dedicated training cycle to burn available mana on skill-appropriate Magery spells until spell points run dry before pathfinding to the next tree.
@@ -28,18 +34,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `FesterUO/TrainBlacksmith.py`: Automated resource-efficient Blacksmithing training script with interactive control Gump:
   - Automatically progresses through the lowest ingot-per-attempt items from 0 to 120 (Mace -> Maul -> Short Spear -> Platemail Gorget -> Platemail Gloves/Arms/Legs/Tunic).
   - Features resource satchel integration: Prompts player on launch to target their resource satchel, maintains a lightweight buffer of ingots in the main backpack (default 40–80 ingots) to prevent overburdening, and returns smelted/recycled ingots back into the satchel.
+  - Strict resource protection: Exclusively counts, restocks, and consumes regular iron ingots (`Hue 0`), strictly ignoring and protecting colored/special ingots (Dull Copper, Shadow Iron, Copper, Bronze, Gold, Agapite, Verite, Valorite).
   - Automatically smelts and recycles crafted items at a nearby forge to reclaim 50%–90% of raw ingots.
-  - Includes tool upkeep via Tinkering: Detects broken or missing Smith's Hammers and automatically crafts replacements on the fly using Tinker's Tools and ingots.
+  - Includes tool upkeep via Tinkering: Detects broken or missing tools and automatically crafts replacements on the fly using Tinker's Tools and ingots, prioritizing Tongs (only 1 ingot at 45.0+ Tinkering) over Smith's Hammers (4 ingots).
   - Includes an interactive control Gump with status display, live Blacksmithing skill and cap with gain announcements, running counters for Crafted / Smelted / Failed items, live Satchel and Backpack ingot counts, tool status, and Pause/Resume, Set Recipe, Set Satchel, and Stop buttons.
+- Added `FesterUO/TrainTinkering.py`: Automated resource-efficient Tinkering skill training script with interactive control Gump:
+  - Progresses through the lowest-ingot items from 0 to 100 (Tinker's Tools -> Tongs -> Lockpicks -> Heating Stand).
+  - Highlights critical Blacksmithing synergy milestones: Unlocks crafting Smith's Hammers at 40.0 Tinkering and Tongs at 45.0 Tinkering.
+  - Perpetual self-tool crafting: Automatically crafts replacement Tinker's Tools (2 ingots) when tool count falls low, ensuring the training loop never exhausts tools.
+  - Resource satchel integration: Prompts player on launch to target their resource satchel, maintains a lightweight buffer of ingots in the main backpack (default 40–80 ingots), and deposits recycled/excess ingots back into the satchel.
+  - Strict resource protection: Exclusively counts, restocks, and consumes regular iron ingots (`Hue 0`), protecting colored/special ingots.
+  - Auto-smelting: Automatically smelts recyclable items (Tongs) when standing near a forge.
+  - Interactive control Gump with real-time status, live Tinkering skill tracking, gain announcements, running statistics (Crafted, Smelted, Failed, Tools Made), satchel/backpack ingot counts, and Pause/Resume, Set Recipe, Set Satchel, and Stop controls.
 
 ### Changed
 
+- Added configurable retry limit (`MAX_TOOL_CRAFT_ATTEMPTS = 8`, default 8 attempts) to `FesterUO/TrainBlacksmith.py` when auto-crafting replacement smithing tools via Tinkering, with automatic mid-retry ingot restocking from the satchel.
 - Added configurable per-cycle spell cast limit (`MAX_MAGERY_CASTS_PER_CYCLE = 8`) to `FesterUO/MiningAndMageryAuto.py` and `FesterUO/ChopTreeAndMageryAuto.py` to bound the Magery training phase after a deposit or tree is depleted, automatically returning to harvesting once the cast limit is reached without waiting for high mana pools to fully empty (set to `0` for unlimited / until mana is depleted).
 - Refactored `FesterUO/MiningAndMageryAuto.py` and `FesterUO/ChopTreeAndMageryAuto.py` from interleaved per-swing casting to spot-depletion mana burn cycles (`burn_magery_cycle()`), allowing fast, uninterrupted harvesting swings followed by dedicated mana-burning spell sessions once nodes are depleted.
 - Updated `FesterUO/MiningAuto.py` to automatically load `DRESS_PROFILE` and refresh the equipped mining tool before every individual mine swing in addition to initial startup.
 
 ### Fixed
 
+- Fixed continuous hammer crafting loop in `FesterUO/TrainBlacksmith.py`:
+  - When auto-crafting a replacement Smith's Hammer via Tinkering, the Tinkering craft gump remained open on the client; the trainer subsequently sent "Make Last" (`ReplyGump(21)`) to the lingering Tinkering gump instead of the Blacksmithing gump.
+  - Added explicit Tinkering craft gump closure (`API.ReplyGump(0, gump_id)`) upon hammer completion.
+  - Added active tool serial tracking (`active_tool_serial`) to detect tool changes or broken tools, ensuring any non-blacksmith gump is closed and the new hammer is explicitly double-clicked before resuming the craft loop.
+  - Added `0x0FB4` to `SLEDGEHAMMER_GRAPHICS` and filtered weapon hammers (e.g. War Hammer) out of smithing tool detection.
+- Fixed regular iron ingot detection in `FesterUO/TrainBlacksmith.py` and `FesterUO/TrainTinkering.py`:
+  - Standard iron ingots are named `<count> Ingots` rather than containing the word `iron`. The strict name check erroneously rejected standard iron ingots, causing the trainer to report `Out of Ingots` despite ingots being in the backpack and satchel.
+  - Refactored `is_regular_iron_ingot` to verify `Hue == 0` and explicitly filter out special ore names (`dull`, `shadow`, `copper`, `bronze`, `gold`, `agapite`, `verite`, `valorite`).
+- Fixed `ensure_tinker_tools()` in `FesterUO/TrainTinkering.py` to only attempt auto-crafting spare tools via Make Last when the active recipe is `Tinker's Tools`, preventing tool maintenance from overriding higher-tier recipes (Lockpicks, Tongs).
 - Fixed runtime `SystemError: MakeGenericType on non-generic type` in `FesterUO/TrainMagery.py` by removing subscripted generic built-ins (`dict[...]`, `tuple[...]`, `list[...]`) that fail under Python.NET's type reflection.
 - Fixed `'LegionAPI' object has no attribute 'GetLandTile'` in `FesterUO/MiningAndMageryAuto.py` by using `API.GetTile(x, y)` for land terrain tile scanning.
 - Fixed `"You must wait to perform another action"` stalling and premature deposit depletion in `FesterUO/MiningAndMageryAuto.py` and `FesterUO/ChopTreeAndMageryAuto.py`:
