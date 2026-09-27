@@ -40,7 +40,7 @@ import API
 SWING_DELAY: float = 1.0
 
 # Harvesting ratio: trees to chop per mining spot (e.g. 4 trees to 1 mining spot)
-TREES_PER_MINING_SPOT: int = 5
+TREES_PER_MINING_SPOT: int = 8
 MINING_SPOTS_PER_CYCLE: int = 1
 
 # Dress configuration profiles configured in TazUO
