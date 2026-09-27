@@ -279,8 +279,8 @@ An automated, resource-efficient Blacksmithing training engine with interactive 
 An automated, ingot-efficient Tinkering training engine with interactive control Gump, resource satchel support, perpetual tool self-crafting, auto-smelting, and milestone tracking:
 
 - **Ingot-Efficient Skill Progression:** Automatically tracks your Tinkering skill and crafts the lowest-ingot items in each tier from 0 to 100 (GM):
-  - **0.0 – 45.0:** Tinker's Tools (2 ingots) or Scissors (2 ingots) — _self-perpetuating tool crafting_
-  - **45.0 – 60.0:** Tongs (1 ingot) — _smeltable at forges to reclaim ingots_
+  - **0.0 – 45.0:** Tinker's Tools (2 ingots) — _self-perpetuating tool crafting_
+  - **45.0 – 60.0:** Tongs (1 ingot)
   - **60.0 – 95.0:** Lockpicks (1 ingot) — _stackable and lowest cost per attempt_
   - **95.0 – 100.0:** Heating Stand (4 ingots)
 - **Blacksmithing Milestones:**
@@ -288,14 +288,14 @@ An automated, ingot-efficient Tinkering training engine with interactive control
   - **45.0 Tinkering:** Unlocks Tongs crafting (for Blacksmithing training).
   - Emits clear system messages when both milestones are reached.
 - **Perpetual Tool Self-Crafting:** Monitors backpack Tinker's Tools and automatically crafts fresh replacement tools whenever your supply drops below the safety threshold (`MIN_TOOLS = 2`).
-- **Resource Satchel Integration:** Prompts player on launch to target their resource satchel or bag. Maintains a lightweight working buffer of ingots in the main backpack (default 40–80 ingots) so your character is never overburdened, pulling fresh batches as needed.
-- **Automated Smelting (Recycling):** Automatically smelts crafted metal items (Tongs, Scissors) at the forge to reclaim 50%–90% of raw ingots and returns recovered ingots back to the satchel.
+- **Resource Satchel Integration:** Prompts player on launch to target their resource satchel or bag. Maintains a lightweight working buffer of ingots in the main backpack (default 20–50 ingots) so your character is never overburdened, pulling fresh batches as needed. Protects colored/special ingots (Dull Copper, Shadow, Bronze, Gold, etc.).
+- **Automated Trash Barrel Disposal:** Auto-detects nearby Trash Barrels or allows targeting one at startup. Automatically deposits newly crafted non-stackable items (Tongs, Heating Stands, excess tools) into the trash barrel via backpack serial diff, while preserving stackable lockpicks and working tool reserves. Includes a **"Trash Can"** button on the Gump to change/set trash barrels at any time.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
-  - Real-time training status (`Crafting Tinker's Tools...`, `Smelting...`, `Crafting Tool...`, `Restocking Ingots...`, `Paused`, `Finished`)
+  - Real-time training status (`Crafting Tinker's Tools...`, `Trashing...`, `Crafting Tool...`, `Restocking Ingots...`, `Paused`, `Finished`)
   - Live Tinkering skill level, skill cap, and automatic skill gain announcements
-  - Running counters for **Crafted**, **Smelted**, and **Failed** items
-  - Live Satchel and Backpack ingot counts
-  - Interactive **Pause/Resume**, **Set Recipe**, **Set Satchel**, and **Stop** buttons
+  - Running counters for **Crafted**, **Trashed**, and **Failed** items
+  - Live Satchel and Backpack ingot counts, plus tool and trash indicators
+  - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Trash Can**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 
 #### [TrainCarpentry.py](FesterUO/TrainCarpentry.py)
@@ -303,8 +303,10 @@ An automated, ingot-efficient Tinkering training engine with interactive control
 An automated, board-efficient Carpentry training engine with interactive control Gump, resource satchel support, auto-trashing of crafted furniture/weapons, and milestone tracking:
 
 - **Board-Efficient Skill Progression:** Automatically tracks your Carpentry skill and crafts the lowest-board items in each tier from 0 to 120 (GM / Legendary):
-  - **0.0 – 47.3:** Wooden Box (5 boards)
-  - **47.3 – 73.6:** Ballot Box Deed (5 boards)
+  - **0.0 – 42.1:** Wooden Box (5 boards)
+  - **42.1 – 47.3:** Vesper-Style Chair (15 boards)
+  - **47.3 – 70.0:** Ballot Box Deed (5 boards)
+  - **70.0 – 73.6:** Bokuto (6 boards) [or Wooden Shield (9 boards)]
   - **73.6 – 78.9:** Quarter Staff (6 boards)
   - **78.9 – 120.0:** Gnarled Staff (7 boards)
 - **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next recipe. Players can click **"Set Recipe"** on the Gump at any time to manually choose any recipe from the open craft menu.
