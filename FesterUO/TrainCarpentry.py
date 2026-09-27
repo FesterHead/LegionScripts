@@ -7,11 +7,10 @@ Target Client: TazUO (Legion Scripting Engine)
 Description:
     Fully automated Carpentry skill training script for TazUO featuring:
     - Optimal resource-efficient progression ladder from 0.0 to 120.0 Carpentry:
-        * 0.0 - 45.0:   Wooden Box (5 boards)
-        * 45.0 - 68.0:  Ballot Box Deed (5 boards)
-        * 68.0 - 75.0:  Wooden Shield (9 boards)
-        * 75.0 - 80.0:  Quarter Staff (6 boards)
-        * 80.0 - 120.0: Gnarled Staff (7 boards)
+        * 0.0 - 47.3:   Wooden Box (5 boards)
+        * 47.3 - 73.6:  Ballot Box Deed (5 boards)
+        * 73.6 - 78.9:  Quarter Staff (6 boards)
+        * 78.9 - 120.0: Gnarled Staff (7 boards)
     - Milestone Announcements & "Set Recipe" Manual Override:
         * Proactively notifies the player when reaching a skill threshold to recommend the next item.
         * Includes an interactive "Set Recipe" button allowing players to manually prime any craft recipe.
@@ -96,11 +95,10 @@ TRASH_BARREL_GRAPHICS = {0x0E77}
 
 # Optimal Carpentry Progression Ladder: (min_skill, max_skill, item_name, board_cost)
 PROGRESSION_LADDER: List[Tuple[float, float, str, int]] = [
-    (0.0, 45.0, "Wooden Box", 5),
-    (45.0, 68.0, "Ballot Box Deed", 5),
-    (68.0, 75.0, "Wooden Shield", 9),
-    (75.0, 80.0, "Quarter Staff", 6),
-    (80.0, 120.0, "Gnarled Staff", 7),
+    (0.0, 47.3, "Wooden Box", 5),
+    (47.3, 73.6, "Ballot Box Deed", 5),
+    (73.6, 78.9, "Quarter Staff", 6),
+    (78.9, 120.0, "Gnarled Staff", 7),
 ]
 
 
@@ -462,7 +460,7 @@ def count_carpenter_tools() -> int:
 
 
 def get_tinker_tool():
-    """Finds a Tinker's Tool in player hands or backpack."""
+    """Finds a Tinker's Tool in player hands, backpack, or satchel."""
     for layer in ["OneHanded", "TwoHanded"]:
         item = API.FindLayer(layer)
         if item and item.Graphic in TINKER_TOOL_GRAPHICS:
@@ -472,18 +470,15 @@ def get_tinker_tool():
         for item in items:
             if item.Graphic in TINKER_TOOL_GRAPHICS:
                 return item
+    if satchel_serial:
+        items = API.ItemsInContainer(satchel_serial, recursive=True)
+        if items:
+            for item in items:
+                if item.Graphic in TINKER_TOOL_GRAPHICS:
+                    API.MoveItem(item.Serial, API.Backpack)
+                    API.Pause(0.5)
+                    return item
     return None
-
-
-def count_backpack_wood() -> int:
-    """Counts regular boards/logs currently in the main backpack."""
-    total = 0
-    items = API.ItemsInContainer(API.Backpack, recursive=False)
-    if items:
-        for item in items:
-            if item.Serial != satchel_serial and is_regular_wood(item):
-                total += getattr(item, "Amount", 1) or 1
-    return total
 
 
 def count_backpack_ingots() -> int:
@@ -496,6 +491,80 @@ def count_backpack_ingots() -> int:
                 hue = getattr(item, "Hue", 0) or 0
                 if hue == IRON_INGOT_HUE:
                     total += getattr(item, "Amount", 1) or 1
+    return total
+
+
+def count_satchel_ingots() -> int:
+    """Counts regular iron ingots inside the resource satchel."""
+    if not satchel_serial:
+        return 0
+    total = 0
+    items = API.ItemsInContainer(satchel_serial, recursive=True)
+    if items:
+        for item in items:
+            if item.Graphic == INGOT_GRAPHIC:
+                hue = getattr(item, "Hue", 0) or 0
+                if hue == IRON_INGOT_HUE:
+                    total += getattr(item, "Amount", 1) or 1
+    return total
+
+
+def get_satchel_iron_ingot():
+    """Finds the largest stack of iron ingots in the satchel."""
+    if not satchel_serial:
+        return None
+    items = API.ItemsInContainer(satchel_serial, recursive=True)
+    if not items:
+        return None
+    best_item = None
+    best_amt = 0
+    for item in items:
+        if item.Graphic == INGOT_GRAPHIC and (getattr(item, "Hue", 0) or 0) == IRON_INGOT_HUE:
+            amt = getattr(item, "Amount", 1) or 1
+            if amt > best_amt:
+                best_amt = amt
+                best_item = item
+    return best_item
+
+
+def restock_ingots_from_satchel(amount: int = 8) -> bool:
+    """Pulls iron ingots from the satchel to craft replacement tools."""
+    if not satchel_serial:
+        return False
+    stack = get_satchel_iron_ingot()
+    if not stack:
+        return False
+    amt_available = getattr(stack, "Amount", 1) or 1
+    amt_to_move = min(amt_available, amount)
+    if amt_to_move > 0:
+        API.MoveItem(stack.Serial, API.Backpack, amt=amt_to_move)
+        API.Pause(0.6)
+        return count_backpack_ingots() >= 4
+    return False
+
+
+def deposit_ingots_to_satchel() -> None:
+    """Deposits any leftover iron ingots from backpack back into the satchel."""
+    if not satchel_serial:
+        return
+    items = API.ItemsInContainer(API.Backpack, recursive=False)
+    if not items:
+        return
+    for item in items:
+        if item.Serial != satchel_serial and item.Graphic == INGOT_GRAPHIC:
+            if (getattr(item, "Hue", 0) or 0) == IRON_INGOT_HUE:
+                API.MoveItem(item.Serial, satchel_serial)
+                API.Pause(0.5)
+
+
+def count_backpack_wood() -> int:
+    """Counts regular boards/logs currently in the main backpack."""
+    total = 0
+    items = API.ItemsInContainer(API.Backpack, recursive=False)
+    if items:
+        for item in items:
+            if item.Serial != satchel_serial and is_regular_wood(item):
+                total += getattr(item, "Amount", 1) or 1
     return total
 
 
@@ -609,25 +678,39 @@ def get_recommended_item(skill: float) -> Tuple[str, int]:
 
 
 def craft_saw_with_tinkering() -> bool:
-    """Crafts a replacement saw using Tinkering tools and iron ingots."""
-    global tools_crafted
+    """Crafts a replacement Dovetail Saw or Saw using Tinkering tools and iron ingots."""
+    global tools_crafted, is_paused, btn_pause
     if not AUTO_CRAFT_SAW:
         return False
 
     tinker_tool = get_tinker_tool()
     if not tinker_tool:
+        update_status("Need Tinker's Tool")
+        API.SysMsg("[Carpentry] No Tinker's Tool found in backpack or satchel to craft a new saw!")
         return False
 
     tinker_skill_obj = API.GetSkill("Tinkering")
     tinker_skill = float(tinker_skill_obj.Value) if tinker_skill_obj else 0.0
-    if tinker_skill < 40.0:
+    if tinker_skill < 30.0:
+        update_status("Low Tinker Skill")
+        API.SysMsg(f"[Carpentry] Tinkering skill ({tinker_skill:.1f}) is too low to craft saws (need 30.0 for Dovetail Saw, 40.0 for Saw).")
         return False
 
+    tool_name = "Dovetail Saw" if tinker_skill < 40.0 else "Dovetail Saw"
+
+    # Check total ingots in backpack and satchel
+    total_ingots = count_backpack_ingots() + count_satchel_ingots()
+    if total_ingots < 4:
+        update_status("Out of Ingots")
+        API.SysMsg(f"[Carpentry] Not enough iron ingots in backpack or satchel to craft {tool_name} (need 4 ingots)!")
+        return False
+
+    # Pull 8 ingots from satchel if needed in backpack
     if count_backpack_ingots() < 4:
-        return False
+        restock_ingots_from_satchel(8)
 
-    update_status("Tinkering Saw...")
-    API.SysMsg("[Carpentry] Crafting replacement Saw via Tinkering (4 ingots)...")
+    update_status(f"Tinkering {tool_name}...")
+    API.SysMsg(f"[Carpentry] Crafting replacement {tool_name} via Tinkering (4 ingots)...")
 
     count_before = count_carpenter_tools()
 
@@ -635,34 +718,83 @@ def craft_saw_with_tinkering() -> bool:
         if API.StopRequested or is_stopped:
             return False
 
+        # Ensure enough ingots remain in backpack across multiple attempts
+        if count_backpack_ingots() < 4:
+            restock_ingots_from_satchel(8)
+
         if not API.HasGump():
             API.UseObject(tinker_tool)
             if not API.WaitForGump(delay=2.5):
+                API.SysMsg("[Carpentry] Tinkering craft menu did not appear.")
                 return False
 
-        if API.GumpContains("haven't made anything"):
-            API.SysMsg("[Carpentry] Tinkering 'Make Last' is not set to Saw.")
-            return False
+        # Check if Make Last is uninitialized
+        if API.GumpContains("haven't made anything") or API.GumpContains("not made anything"):
+            API.SysMsg(f"[Carpentry] Tinkering 'Make Last' is not set to {tool_name}.")
+            API.SysMsg(f"[Carpentry] In the open Tinkering menu: Click 'Tools' -> '{tool_name}' once to craft it, then click Resume on the Gump.")
+            is_paused = True
+            if btn_pause:
+                btn_pause.SetText("Resume")
+            update_status(f"Craft 1 {tool_name} in menu")
+            return True
 
         API.ClearJournal()
         API.ReplyGump(GUMP_BTN_MAKE_LAST)
         wait_with_ui(TOOL_CRAFT_DELAY)
 
+        # Check journal
+        entries = API.GetJournalEntries(TOOL_CRAFT_DELAY + 0.5)
+        j_text = [str(e.Text).lower() for e in entries] if entries else []
+
+        if any("haven't made anything" in t or "have not made" in t for t in j_text):
+            API.SysMsg(f"[Carpentry] Tinkering 'Make Last' is not set to {tool_name}.")
+            API.SysMsg(f"[Carpentry] In the open Tinkering menu: Click 'Tools' -> '{tool_name}' once to craft it, then click Resume on the Gump.")
+            is_paused = True
+            if btn_pause:
+                btn_pause.SetText("Resume")
+            update_status(f"Craft 1 {tool_name} in menu")
+            return True
+
+        # Check if a new tool appeared
         count_after = count_carpenter_tools()
         if count_after > count_before or get_carpenter_tool() is not None:
             tools_crafted += 1
-            API.SysMsg("[Carpentry] Successfully crafted new Saw!")
+            API.SysMsg(f"[Carpentry] Successfully crafted new {tool_name}!")
             update_stats()
+            # Close Tinkering gump so it does not conflict with Carpentry craft loop
             if API.HasGump():
                 API.ReplyGump(0)
                 API.Pause(0.3)
+            # Deposit any leftover ingots back into satchel
+            deposit_ingots_to_satchel()
             return True
+
+        # If Make Last crafted something else (e.g. tongs or lockpicks)
+        if any("you create" in t for t in j_text) and count_after <= count_before:
+            API.SysMsg(f"[Carpentry] Tinkering 'Make Last' is currently set to a different item, not {tool_name}.")
+            API.SysMsg(f"[Carpentry] In the open Tinkering menu: Click 'Tools' -> '{tool_name}' once to craft it, then click Resume on the Gump.")
+            is_paused = True
+            if btn_pause:
+                btn_pause.SetText("Resume")
+            update_status(f"Craft 1 {tool_name} in menu")
+            return True
+
+        if any("fail" in t or "lack the skill" in t for t in j_text):
+            debug_msg(f"Tinkering {tool_name} attempt {attempt}/{MAX_TOOL_CRAFT_ATTEMPTS} failed, retrying...")
+            API.Pause(0.5)
 
     if API.HasGump():
         API.ReplyGump(0)
         API.Pause(0.3)
 
-    return False
+    deposit_ingots_to_satchel()
+    API.SysMsg(f"[Carpentry] Failed to auto-craft {tool_name} after {MAX_TOOL_CRAFT_ATTEMPTS} attempts.")
+    API.SysMsg(f"[Carpentry] In the Tinkering menu: Click 'Tools' -> '{tool_name}' once to prime Make Last, then click Resume on the Gump.")
+    is_paused = True
+    if btn_pause:
+        btn_pause.SetText("Resume")
+    update_status(f"Craft 1 {tool_name}")
+    return True
 
 
 # ==============================================================================
@@ -699,7 +831,7 @@ def craft_cycle() -> bool:
             return False
         tool = get_carpenter_tool()
         if not tool:
-            return False
+            return True
 
     # 4. Record pre-craft backpack state for serial diff detection
     bp_before = {item.Serial for item in (API.ItemsInContainer(API.Backpack, recursive=False) or [])}

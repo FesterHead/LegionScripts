@@ -148,10 +148,8 @@ A unified roaming mining and Magery skill training script that coordinates ore v
 
 #### [MiningAndLumberjackAuto.py](FesterUO/MiningAndLumberjackAuto.py)
 
-A unified roaming resource harvesting script that alternates between mining ore deposits and chopping static trees with an integrated control Gump:
-
-- **Alternating Harvest Workflow:** Mines one ore deposit or cave rock until depleted, then automatically switches to lumberjack gear and chops one tree until depleted, repeating seamlessly (`Mine -> Chop -> Mine -> Chop...`).
-- **Autonomous Equipment & Dress Switching:** Automatically equips your `"Mining"` profile (pickaxe/shovel) during the mining phase, and switches to your `"Lumberjack"` profile (axe) during the woodcutting phase.
+- **Configurable Harvest Ratio Workflow:** Automatically alternates between mining and lumberjacking with a configurable ratio (`TREES_PER_MINING_SPOT = 4`, `MINING_SPOTS_PER_CYCLE = 1` by default). Mines an ore deposit until depleted, then automatically switches to lumberjack gear and chops four trees until depleted, repeating seamlessly (`Mine 1 -> Chop 4 -> Mine 1 -> Chop 4...`).
+- **Autonomous Equipment & Dress Switching:** Automatically equips your `"Mining"` profile (pickaxe/shovel) during the mining phase, and switches to your `"Lumberjack"` profile (axe) during the woodcutting phase, avoiding redundant dress delays across consecutive trees.
 - **Combined Spatial Scanning:** Scans for cave floors, mountain edges, rock outcroppings, and boulders for mining, and scans static trees via TazUO's native vegetation detection for lumberjacking.
 - **Pathfinding & Depletion Memory:** Safely pathfinds within reach (`distance <= 2`) of candidate nodes, maintaining separate depletion history queues for both veins (`DEPOSIT_HISTORY_LIMIT = 150`) and trees (`TREE_HISTORY_LIMIT = 50`) to avoid revisiting depleted spots.
 - **Integrated Control Gump:** Displays real-time activity status, dual skill bars for **Mining** and **Lumberjacking** with automatic gain announcements, combined counters for **Veins Mined / Total Ore** and **Trees Chopped / Total Logs**, Strength and Dexterity stats, Weight monitoring, and interactive **Pause/Resume** and **Stop** buttons.
@@ -305,15 +303,14 @@ An automated, ingot-efficient Tinkering training engine with interactive control
 An automated, board-efficient Carpentry training engine with interactive control Gump, resource satchel support, auto-trashing of crafted furniture/weapons, and milestone tracking:
 
 - **Board-Efficient Skill Progression:** Automatically tracks your Carpentry skill and crafts the lowest-board items in each tier from 0 to 120 (GM / Legendary):
-  - **0.0 – 45.0:** Wooden Box (5 boards)
-  - **45.0 – 68.0:** Ballot Box Deed (5 boards)
-  - **68.0 – 75.0:** Wooden Shield (9 boards)
-  - **75.0 – 80.0:** Quarter Staff (6 boards)
-  - **80.0 – 120.0:** Gnarled Staff (7 boards)
+  - **0.0 – 47.3:** Wooden Box (5 boards)
+  - **47.3 – 73.6:** Ballot Box Deed (5 boards)
+  - **73.6 – 78.9:** Quarter Staff (6 boards)
+  - **78.9 – 120.0:** Gnarled Staff (7 boards)
 - **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next recipe. Players can click **"Set Recipe"** on the Gump at any time to manually choose any recipe from the open craft menu.
 - **Automated Trash Barrel Disposal:** Auto-detects nearby Trash Barrels or allows targeting one at startup. Automatically deposits newly crafted items into the trash barrel via backpack serial diff, preventing overweight and backpack clutter. Includes a **"Trash Can"** button on the Gump to change/set trash barrels at any time.
 - **Resource Satchel Integration:** Prompts player on launch to target their wood/resource satchel. Maintains a lightweight working buffer of boards in the main backpack (default 20–60 boards) so characters are never overburdened, pulling fresh batches as needed. Protects colored/special woods (Frostwood, Heartwood, Bloodwood).
-- **Tool Upkeep:** Works with any carpentry tool (Saw, Dovetail Saw, Plane, Scorp, Draw Knife, Hammer). Automatically attempts to craft replacement Saws via Tinkering if Tinkering tools and iron ingots are in your backpack.
+- **Tool Upkeep:** Works with any carpentry tool (Saw, Dovetail Saw, Plane, Scorp, Draw Knife, Hammer). Automatically crafts replacement Dovetail Saws (30.0+ Tinkering) or Saws via Tinkering using iron ingots from your satchel.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
   - Real-time training status (`Crafted`, `Trashing...`, `Tinkering Saw...`, `Restocking boards...`, `Paused`, `Finished`)
   - Live Carpentry skill level, skill cap, and automatic skill gain announcements

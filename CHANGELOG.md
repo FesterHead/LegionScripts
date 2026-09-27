@@ -47,16 +47,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Auto-smelting: Automatically smelts recyclable items (Tongs) when standing near a forge.
   - Interactive control Gump with real-time status, live Tinkering skill tracking, gain announcements, running statistics (Crafted, Smelted, Failed, Tools Made), satchel/backpack ingot counts, and Pause/Resume, Set Recipe, Set Satchel, and Stop controls.
 - Added `FesterUO/TrainCarpentry.py`: Automated resource-efficient Carpentry skill training script with interactive control Gump:
-  - Progresses through the lowest-board items from 0.0 to 120.0 (Wooden Box -> Ballot Box Deed -> Wooden Shield -> Quarter Staff -> Gnarled Staff).
+  - Progresses through the lowest-board items from 0.0 to 120.0 (Wooden Box -> Ballot Box Deed -> Quarter Staff -> Gnarled Staff).
   - Proactive milestone recommendations: Emits system message notifications upon reaching skill brackets recommending the next optimal item, with an interactive "Set Recipe" button to override or switch recipes at any time.
   - Automated Trash Barrel disposal: Auto-detects nearby Trash Barrels or allows targeting one at startup, automatically disposing of newly crafted furniture/weapons via backpack serial diff to eliminate overweight and backpack clutter. Includes an on-screen "Trash Can" button to set/change trash barrels.
   - Resource satchel integration: Prompts player on launch to target their wood/resource satchel or container, maintains a lightweight buffer of boards in the main backpack (default 20–60 boards), and deposits excess boards back into the satchel.
-  - Strict resource protection: Exclusively counts, restocks, and consumes regular plain boards/logs (`Hue 0`), protecting colored/special woods (Frostwood, Heartwood, Bloodwood).
-  - Tool upkeep via Tinkering: Automatically detects broken or missing tools and attempts to craft replacement Saws if Tinkering tools and iron ingots are available in the backpack.
+  - Tool upkeep via Tinkering: Automatically detects broken or missing tools and crafts replacement Dovetail Saws (30.0+ Tinkering) or Saws, automatically pulling ingots from the resource satchel and returning leftovers.
   - Interactive control Gump with real-time status, live Carpentry skill tracking with gain announcements, running statistics (Crafted, Trashed, Failed), satchel/backpack board counts, tool and trash status, and Pause/Resume, Set Recipe, Satchel, Trash Can, and Stop controls.
 
 ### Changed
 
+- Configurable harvesting ratio in `FesterUO/MiningAndLumberjackAuto.py`:
+  - Added `TREES_PER_MINING_SPOT = 4` (configurable) and `MINING_SPOTS_PER_CYCLE = 1` to harvest multiple trees per mining deposit.
+  - Optimized equipment switching to bypass dress delays between consecutive trees when the axe is already equipped.
+  - Updated status displays to show cycle step counters (e.g., `Chop 2/4 (X, Y) #3`).
 - Enabled direct satchel crafting (`DIRECT_SATCHEL_CRAFTING = True`) across `FesterUO/TrainCarpentry.py`, `FesterUO/TrainBlacksmith.py`, and `FesterUO/TrainTinkering.py`:
   - Scripts now craft directly from the resource satchel with `0` boards/ingots needed in the main backpack, preserving weight capacity.
   - Automatically deposits any reclaimed or loose materials from backpack into the satchel.
@@ -68,6 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed Carpentry progression threshold for Ballot Box Deed in `FesterUO/TrainCarpentry.py`:
+  - Raised the starting skill threshold for Ballot Box Deed from 45.0 to 47.3 to match standard Ultima Online minimum craft requirements, keeping Wooden Box (5 boards) as the active training item until 47.3.
 - Fixed continuous hammer crafting loop in `FesterUO/TrainBlacksmith.py`:
   - When auto-crafting a replacement Smith's Hammer via Tinkering, the Tinkering craft gump remained open on the client; the trainer subsequently sent "Make Last" (`ReplyGump(21)`) to the lingering Tinkering gump instead of the Blacksmithing gump.
   - Added explicit Tinkering craft gump closure (`API.ReplyGump(0, gump_id)`) upon hammer completion.

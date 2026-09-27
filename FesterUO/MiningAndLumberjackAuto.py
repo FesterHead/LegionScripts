@@ -7,10 +7,10 @@ Target Client: TazUO (Legion Scripting Engine)
 Description:
     Combines automated roaming mining and lumberjacking into a unified, alternating
     resource harvesting engine with an integrated control Gump:
-    - Alternating Harvest Loop:
-        1. Mines one ore deposit / cave rock until depleted.
-        2. Switches to lumberjack gear and chops one tree until depleted.
-        3. Repeats seamlessly (Mine -> Chop -> Mine -> Chop...).
+    - Configurable Harvest Ratio Loop:
+        1. Mines ore deposit(s) (default: 1 spot) until depleted.
+        2. Switches to lumberjack gear and chops tree(s) (default: 4 trees) until depleted.
+        3. Repeats seamlessly with custom tree-to-ore ratios (e.g. 4 trees per 1 mining spot).
     - Equipment & Dress Switching:
         * Automatically switches to the "Mining" dress profile and equips a pickaxe/shovel.
         * Automatically switches to the "Lumberjack" dress profile and equips a woodcutting axe.
@@ -38,6 +38,10 @@ import API
 
 # Delay in seconds between harvesting swings (1.0s on fast shards, 4.5s on OSI)
 SWING_DELAY: float = 1.0
+
+# Harvesting ratio: trees to chop per mining spot (e.g. 4 trees to 1 mining spot)
+TREES_PER_MINING_SPOT: int = 4
+MINING_SPOTS_PER_CYCLE: int = 1
 
 # Dress configuration profiles configured in TazUO
 DRESS_PROFILE_MINING: str = "Mining"
@@ -533,8 +537,10 @@ def clear_hands() -> None:
             API.Pause(0.4)
 
 
-def switch_to_mining():
+def switch_to_mining(force: bool = False):
     """Switches gear to mining using dress profile or direct equip."""
+    if not force and get_equipped_mining_tool():
+        return
     available = []
     try:
         available = API.GetAvailableDressOutfits() or []
@@ -555,8 +561,10 @@ def switch_to_mining():
                 API.Pause(0.8)
 
 
-def switch_to_lumberjack():
+def switch_to_lumberjack(force: bool = False):
     """Switches gear to lumberjack using dress profile or direct equip."""
+    if not force and get_equipped_axe():
+        return
     available = []
     try:
         available = API.GetAvailableDressOutfits() or []
@@ -697,7 +705,10 @@ def navigate_to_deposit(deposit) -> bool:
         return False
 
     sx, sy = stand_tile
-    update_status(f"Moving to deposit ({sx}, {sy})")
+    if total_spots > 1:
+        update_status(f"Moving to deposit {spot_index}/{total_spots} ({sx}, {sy})")
+    else:
+        update_status(f"Moving to deposit ({sx}, {sy})")
     API.Pathfind(sx, sy, distance=0, run=True)
 
     elapsed = 0.0
@@ -718,7 +729,7 @@ def navigate_to_deposit(deposit) -> bool:
     return chebyshev_distance(API.Player.X, API.Player.Y, tx, ty) <= 2
 
 
-def mine_deposit(deposit) -> None:
+def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
     """Mines a single deposit continuously until it is depleted."""
     global veins_mined, total_ores
 
@@ -755,7 +766,10 @@ def mine_deposit(deposit) -> None:
                 return
 
         swing += 1
-        update_status(f"Mining ({tx}, {ty}) #{swing}")
+        if total_spots > 1:
+            update_status(f"Mining {spot_index}/{total_spots} ({tx}, {ty}) #{swing}")
+        else:
+            update_status(f"Mining ({tx}, {ty}) #{swing}")
 
         # Attempt to get target cursor
         target_ready = False
@@ -892,14 +906,17 @@ def find_nearby_trees():
     return tree_list
 
 
-def navigate_to_tree(tree) -> bool:
+def navigate_to_tree(tree, tree_index: int = 1, total_trees: int = 1) -> bool:
     tx = int(tree.X)
     ty = int(tree.Y)
 
     if chebyshev_distance(API.Player.X, API.Player.Y, tx, ty) <= 2:
         return True
 
-    update_status(f"Moving to tree ({tx}, {ty})")
+    if total_trees > 1:
+        update_status(f"Moving to tree {tree_index}/{total_trees} ({tx}, {ty})")
+    else:
+        update_status(f"Moving to tree ({tx}, {ty})")
     API.Pathfind(tx, ty, distance=1, run=True)
 
     elapsed = 0.0
@@ -920,7 +937,7 @@ def navigate_to_tree(tree) -> bool:
     return chebyshev_distance(API.Player.X, API.Player.Y, tx, ty) <= 2
 
 
-def chop_tree(tree) -> None:
+def chop_tree(tree, tree_index: int = 1, total_trees: int = 1) -> None:
     """Chops a single tree continuously until it is depleted."""
     global trees_chopped, total_wood
 
@@ -954,7 +971,10 @@ def chop_tree(tree) -> None:
                 return
 
         swing += 1
-        update_status(f"Chopping ({tx}, {ty}) #{swing}")
+        if total_trees > 1:
+            update_status(f"Chop {tree_index}/{total_trees} ({tx}, {ty}) #{swing}")
+        else:
+            update_status(f"Chopping ({tx}, {ty}) #{swing}")
 
         # Attempt to get target cursor
         target_ready = False
@@ -1044,15 +1064,16 @@ def main():
         return
 
     # Equip initial mining gear
-    switch_to_mining()
+    switch_to_mining(force=True)
 
     create_control_gump()
     update_stats()
     update_status("Started")
-    API.SysMsg(f"Harvest engine started (Radius: {SEARCH_RADIUS} tiles).")
+    API.SysMsg(f"Harvest engine started (Radius: {SEARCH_RADIUS} tiles, Ratio: {TREES_PER_MINING_SPOT} trees / {MINING_SPOTS_PER_CYCLE} mining spot).")
 
-    # Alternate: True = Mine next, False = Chop next
-    mine_next = True
+    mining_spots_done = 0
+    trees_done = 0
+    current_mode = "mine"
 
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():
@@ -1063,43 +1084,53 @@ def main():
             API.SysMsg("Weight limit reached! Stopping harvest loop.")
             break
 
-        if mine_next:
-            # ------------------------------------------------------------------
-            # Phase 1: Mining
-            # ------------------------------------------------------------------
+        if current_mode == "mine":
+            # Switch gear if needed
             switch_to_mining()
 
             deposits = find_nearby_deposits()
             if deposits:
                 target_dep = deposits[0]
-                if navigate_to_deposit(target_dep):
-                    mine_deposit(target_dep)
+                if navigate_to_deposit(target_dep, mining_spots_done + 1, MINING_SPOTS_PER_CYCLE):
+                    mine_deposit(target_dep, mining_spots_done + 1, MINING_SPOTS_PER_CYCLE)
+                    mining_spots_done += 1
                 else:
                     debug_msg(f"Could not reach deposit at ({target_dep.X}, {target_dep.Y})")
+                    mining_spots_done += 1
             else:
                 debug_msg("No unvisited ore deposits found in radius.")
+                # Advance phase if no deposits in range
+                mining_spots_done = MINING_SPOTS_PER_CYCLE
 
-            # Toggle to lumberjacking for next iteration
-            mine_next = False
+            if mining_spots_done >= MINING_SPOTS_PER_CYCLE:
+                mining_spots_done = 0
+                trees_done = 0
+                current_mode = "chop"
+                switch_to_lumberjack(force=True)
 
         else:
-            # ------------------------------------------------------------------
-            # Phase 2: Lumberjacking
-            # ------------------------------------------------------------------
+            # Switch gear if needed
             switch_to_lumberjack()
 
             trees = find_nearby_trees()
             if trees:
                 target_tree = trees[0]
-                if navigate_to_tree(target_tree):
-                    chop_tree(target_tree)
+                if navigate_to_tree(target_tree, trees_done + 1, TREES_PER_MINING_SPOT):
+                    chop_tree(target_tree, trees_done + 1, TREES_PER_MINING_SPOT)
+                    trees_done += 1
                 else:
                     debug_msg(f"Could not reach tree at ({target_tree.X}, {target_tree.Y})")
+                    trees_done += 1
             else:
                 debug_msg("No unvisited static trees found in radius.")
+                # Advance phase if no trees in range
+                trees_done = TREES_PER_MINING_SPOT
 
-            # Toggle to mining for next iteration
-            mine_next = True
+            if trees_done >= TREES_PER_MINING_SPOT:
+                trees_done = 0
+                mining_spots_done = 0
+                current_mode = "mine"
+                switch_to_mining(force=True)
 
         API.Pause(0.5)
 
