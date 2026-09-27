@@ -40,7 +40,7 @@ import API
 SWING_DELAY: float = 1.0
 
 # Harvesting ratio: trees to chop per mining spot (e.g. 4 trees to 1 mining spot)
-TREES_PER_MINING_SPOT: int = 4
+TREES_PER_MINING_SPOT: int = 5
 MINING_SPOTS_PER_CYCLE: int = 1
 
 # Dress configuration profiles configured in TazUO
@@ -692,7 +692,7 @@ def find_nearby_deposits():
     return dep_list
 
 
-def navigate_to_deposit(deposit) -> bool:
+def navigate_to_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> bool:
     tx = int(deposit.X)
     ty = int(deposit.Y)
 

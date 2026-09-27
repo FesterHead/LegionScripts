@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `navigate_to_deposit()` argument count mismatch in `FesterUO/MiningAndLumberjackAuto.py` by adding `spot_index` and `total_spots` parameters to match cycle progress tracking calls.
 - Fixed Carpentry progression threshold for Ballot Box Deed in `FesterUO/TrainCarpentry.py`:
   - Raised the starting skill threshold for Ballot Box Deed from 45.0 to 47.3 to match standard Ultima Online minimum craft requirements, keeping Wooden Box (5 boards) as the active training item until 47.3.
 - Fixed continuous hammer crafting loop in `FesterUO/TrainBlacksmith.py`:
