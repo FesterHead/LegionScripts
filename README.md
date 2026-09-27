@@ -109,11 +109,23 @@ An automated roaming lumberjacking script that scans for nearby trees, navigates
 - **Pause & Stop Controls:** Includes interactive **Pause/Resume** and **Stop** buttons right on the Gump.
 - **Configurable Settings:** Includes settings for `SWING_DELAY`, `SEARCH_RADIUS`, `TREE_HISTORY_LIMIT`, `MAX_WEIGHT_CHECK`, `DRESS_PROFILE`, and `DEBUG` logging.
 
+#### [ChopTreeAndMageryAuto.py](FesterUO/ChopTreeAndMageryAuto.py)
+
+A unified roaming lumberjacking and Magery skill training script that coordinates chopping, spellcasting, equips, and targeting cursors within a single engine to eliminate script conflicts:
+
+- **Coordinated Target Cursor Management:** Eliminates target cursor collisions and equip race conditions that occur when running separate chopping and spell training scripts.
+- **Spot-Depletion Batch Training Cycle:** Chops each tree continuously until depleted, then enters a dedicated spell session to burn available mana on skill-appropriate Magery spells up to a configurable cast limit (`MAX_MAGERY_CASTS_PER_CYCLE = 8`, or `0` for unlimited until mana is dry) before returning to chopping the next tree.
+- **Configurable Cast Limit:** Prevents extended pauses when mana pools are high by bounding the number of Magery casts per tree cycle (`MAX_MAGERY_CASTS_PER_CYCLE = 8`), automatically switching back to roaming lumberjacking when reached.
+- **Synergized Mana Regeneration:** Mana naturally regenerates while walking and chopping subsequent trees, creating an uninterrupted, efficient training loop.
+- **Lumberjack & Mage Dress Profiles:** Automatically applies the configured `"Lumberjack"` dress profile before every axe swing, and optionally equips `"Mage"` during spell training cycles.
+- **Dual Training Modes:** Supports Resist Training (Mind Blast, Energy Bolt, Flamestrike with automated healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
+- **Interactive Control Gump:** Displays trees harvested, live Lumberjacking and Magery skills with gain announcements, Mana / Max Mana, Lower Reagent Cost (LRC %), a live two-column reagent counter, and Pause/Resume/Stop controls.
+
 #### [MiningAuto.py](FesterUO/MiningAuto.py)
 
 An automated roaming mining script designed for caves, mountainsides, and ore nodes with an interactive control Gump:
 
-- **Mining Dress Profile:** Automatically applies the saved `"Mining"` dress profile at startup.
+- **Mining Dress Profile:** Automatically applies the saved `"Mining"` dress profile before every mine swing and at startup.
 - **Skill-Tier Deposit Filtering:** Scans nearby cave tiles, rock outcroppings, boulders, and ore nodes within `SEARCH_RADIUS`, filtering candidate deposits to match your player's current Mining skill tier (Valorite, Verite, Agapite, Gold, Bronze, Copper, Shadow, Dull Copper, Iron).
 - **Autonomous Navigation & Pathfinding:** Intelligently pathfinds adjacent to candidate ore veins within reach (distance <= 2) using TazUO's native pathfinder.
 - **History Tracking:** Remembers the last 30 visited veins (`DEPOSIT_HISTORY_LIMIT`) to prevent repeatedly revisiting depleted spots.
@@ -121,6 +133,27 @@ An automated roaming mining script designed for caves, mountainsides, and ore no
 - **Capacity & Weight Protection:** Automatically monitors player weight and halts execution safely before becoming overburdened (`MAX_WEIGHT_CHECK`).
 - **Interactive Control Gump:** Displays real-time status, total veins mined counter, total ores mined counter, live Mining skill (`XX.X / XXX.X`), and STR/DEX stats with gain announcements.
 - **Pause & Stop Controls:** Interactive on-screen **Pause/Resume** and **Stop** buttons.
+
+#### [MiningAndMageryAuto.py](FesterUO/MiningAndMageryAuto.py)
+
+A unified roaming mining and Magery skill training script that coordinates ore vein mining, spellcasting, equips, and targeting cursors within a single engine to eliminate script conflicts:
+
+- **Coordinated Target Cursor Management:** Eliminates target cursor collisions and equip race conditions that occur when running separate mining and spell training scripts.
+- **Spot-Depletion Batch Training Cycle:** Mines each ore deposit continuously until depleted, then enters a dedicated spell session to burn available mana on skill-appropriate Magery spells up to a configurable cast limit (`MAX_MAGERY_CASTS_PER_CYCLE = 8`, or `0` for unlimited until mana is dry) before returning to mining the next vein.
+- **Configurable Cast Limit:** Prevents extended pauses when mana pools are high by bounding the number of Magery casts per node cycle (`MAX_MAGERY_CASTS_PER_CYCLE = 8`), automatically switching back to roaming mining when reached.
+- **Synergized Mana Regeneration:** Mana naturally regenerates while walking and mining subsequent veins, creating an uninterrupted, efficient training loop.
+- **Mining & Mage Dress Profiles:** Automatically applies the configured `"Mining"` dress profile before every pickaxe/shovel swing, and optionally equips `"Mage"` during spell training cycles.
+- **Dual Training Modes:** Supports Resist Training (Mind Blast, Energy Bolt, Flamestrike with automated healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
+- **Interactive Control Gump:** Displays veins mined, ores mined, live Mining and Magery skills with gain announcements, Mana / Max Mana, Lower Reagent Cost (LRC %), a live two-column reagent counter, and Pause/Resume/Stop controls.
+
+#### [MiningAndLumberjackAuto.py](FesterUO/MiningAndLumberjackAuto.py)
+
+- **Configurable Harvest Ratio Workflow:** Automatically alternates between mining and lumberjacking with a configurable ratio (`TREES_PER_MINING_SPOT = 8`, `MINING_SPOTS_PER_CYCLE = 1` by default). Mines an ore deposit until depleted, then automatically switches to lumberjack gear and chops eight trees until depleted, repeating seamlessly (`Mine 1 -> Chop 8 -> Mine 1 -> Chop 8...`).
+- **Autonomous Equipment & Dress Switching:** Automatically equips your `"Mining"` profile (pickaxe/shovel) during the mining phase, and switches to your `"Lumberjack"` profile (axe) during the woodcutting phase, avoiding redundant dress delays across consecutive trees.
+- **Combined Spatial Scanning:** Scans for cave floors, mountain edges, rock outcroppings, and boulders for mining, and scans static trees via TazUO's native vegetation detection for lumberjacking.
+- **Pathfinding & Depletion Memory:** Safely pathfinds within reach (`distance <= 2`) of candidate nodes, maintaining separate depletion history queues for both veins (`DEPOSIT_HISTORY_LIMIT = 150`) and trees (`TREE_HISTORY_LIMIT = 50`) to avoid revisiting depleted spots.
+- **Integrated Control Gump:** Displays real-time activity status, dual skill bars for **Mining** and **Lumberjacking** with automatic gain announcements, combined counters for **Veins Mined / Total Ore** and **Trees Chopped / Total Logs**, Strength and Dexterity stats, Weight monitoring, and interactive **Pause/Resume** and **Stop** buttons.
+- **Backpack Weight Protection:** Continuously checks player weight against maximum capacity (`MAX_WEIGHT_CHECK`, `WEIGHT_BUFFER = 15`) and halts safely before becoming overburdened.
 
 #### [TrainAnatomy.py](FesterUO/TrainAnatomy.py)
 
@@ -189,6 +222,102 @@ An automated skill training script for Chivalry with an interactive control Gump
 - **Dress Profile Auto-Equip:** Configurable `DRESS_PROFILE` (default `"Archer"`) automatically equips your saved profile at startup, re-arms after meditation, and equips a weapon if hands are empty before casting Consecrate Weapon.
 - **Auto-Meditation & Depletion Protection:** Automatically meditates or pauses when mana drops during training, and immediately halts when tithing points are depleted.
 - **Attribution:** Adapted from [PlayTazUO/PublicLegionScripts](https://github.com/PlayTazUO/PublicLegionScripts/blob/main/Skills/Any/Train%20Chiv.py) by FesterHead.
+
+#### [TrainMagery.py](FesterUO/TrainMagery.py)
+
+An automated skill training script for Magery with an interactive control Gump, real-time reagent tracking, and automatic self-healing:
+
+- **Skill Tiers & Training Modes:**
+  - **Resist Training (`RESIST_TRAIN = True`, default):** Casts offensive spells on yourself (Mind Blast, Energy Bolt, Flamestrike) to train Resisting Spells concurrently with automated healing.
+    - **0 – 29.9:** Clumsy (if `ALLOW_LOW_SKILL = True`)
+    - **30.0 – 44.9:** Fireball
+    - **45.0 – 59.9:** Mind Blast
+    - **60.0 – 84.9:** Energy Bolt
+    - **85.0 – 100.0+:** Flamestrike
+  - **Non-Resist Training (`RESIST_TRAIN = False`):** Casts non-damaging spells on yourself for safe, passive leveling.
+    - **0 – 29.9:** Clumsy (if `ALLOW_LOW_SKILL = True`)
+    - **30.0 – 54.9:** Mana Drain
+    - **55.0 – 74.9:** Invisibility
+    - **75.0 – 100.0+:** Mana Vampire
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (Casting, Meditating, Healing, Waiting for Mana, Paused, Finished)
+  - Current Mana and Max Mana tracking (`API.Player.Mana / ManaMax`)
+  - Lower Reagent Cost percentage (`API.Player.LowerReagentCost`)
+  - Live Magery skill level, skill cap, and automatic skill gain announcements
+  - Live two-column backpack reagent counter for all 8 standard reagents: Black Pearl, Bloodmoss, Garlic, Ginseng, Mandrake Root, Nightshade, Sulfurous Ash, and Spiders' Silk
+  - Interactive **Pause/Resume** and **Stop** buttons
+- **Automated Healing & Mana Recovery:** Automatically restores health using Spirit Speak or Greater Heal during Resist Training, and meditates when mana drops below threshold.
+- **Smart Startup Validation:** Verifies minimum skill, mana, and required reagents (if LRC < 100%) before starting; displays clear warnings and cleanly stops if prerequisites are not met.
+- **Attribution:** Adapted from [PlayTazUO/PublicLegionScripts](https://github.com/PlayTazUO/PublicLegionScripts/blob/main/Skills/Any/Train%20Magery.py) by FesterHead.
+
+#### [TrainBlacksmith.py](FesterUO/TrainBlacksmith.py)
+
+An automated, resource-efficient Blacksmithing training engine with interactive control Gump, resource satchel support, auto-smelting, and Tinkering tool upkeep:
+
+- **Ingot-Efficient Skill Progression:** Automatically tracks your Blacksmithing skill and crafts the lowest-ingot items in each tier from 0 to 120 (GM / Legendary):
+  - **30.0 – 45.0:** Mace (6 ingots)
+  - **45.0 – 50.0:** Maul (6 ingots)
+  - **50.0 – 95.0:** Short Spear (6 ingots — _primary training workhorse_)
+  - **95.0 – 106.4:** Platemail Gorget (10 ingots — _cheapest platemail piece_)
+  - **106.4 – 108.9:** Platemail Gloves (12 ingots)
+  - **108.9 – 116.3:** Platemail Arms (18 ingots)
+  - **116.3 – 118.8:** Platemail Legs (20 ingots)
+  - **118.8 – 120.0:** Platemail Tunic (25 ingots)
+- **Resource Satchel Integration:** Prompts player on launch to target their resource satchel or bag. Maintains a lightweight working buffer of ingots in the main backpack (default 40–80 ingots) so your character is never overburdened, pulling fresh batches as needed.
+- **Automated Smelting (Recycling):** Automatically smelts crafted items at the forge to reclaim 50%–90% of raw ingots, automatically returning the recovered ingots back into your satchel.
+- **Tool Upkeep via Tinkering:** Detects broken or missing tools and automatically crafts replacements on the fly using Tinker's Tools and ingots, prioritizing **Tongs** (only 1 ingot at 45.0+ Tinkering) over Smith's Hammers (4 ingots).
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafting Short Spear...`, `Smelting...`, `Tinkering Hammer...`, `Restocking Ingots...`, `Paused`, `Finished`)
+  - Live Blacksmith skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Smelted**, and **Failed** items
+  - Live Satchel and Backpack ingot counts
+  - Interactive **Pause/Resume**, **Set Recipe**, **Set Satchel**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
+#### [TrainTinkering.py](FesterUO/TrainTinkering.py)
+
+An automated, ingot-efficient Tinkering training engine with interactive control Gump, resource satchel support, perpetual tool self-crafting, auto-smelting, and milestone tracking:
+
+- **Ingot-Efficient Skill Progression:** Automatically tracks your Tinkering skill and crafts the lowest-ingot items in each tier from 0 to 100 (GM):
+  - **0.0 – 45.0:** Tinker's Tools (2 ingots) or Scissors (2 ingots) — _self-perpetuating tool crafting_
+  - **45.0 – 60.0:** Tongs (1 ingot) — _smeltable at forges to reclaim ingots_
+  - **60.0 – 95.0:** Lockpicks (1 ingot) — _stackable and lowest cost per attempt_
+  - **95.0 – 100.0:** Heating Stand (4 ingots)
+- **Blacksmithing Milestones:**
+  - **40.0 Tinkering:** Unlocks Smith's Hammer crafting (for Blacksmithing training).
+  - **45.0 Tinkering:** Unlocks Tongs crafting (for Blacksmithing training).
+  - Emits clear system messages when both milestones are reached.
+- **Perpetual Tool Self-Crafting:** Monitors backpack Tinker's Tools and automatically crafts fresh replacement tools whenever your supply drops below the safety threshold (`MIN_TOOLS = 2`).
+- **Resource Satchel Integration:** Prompts player on launch to target their resource satchel or bag. Maintains a lightweight working buffer of ingots in the main backpack (default 40–80 ingots) so your character is never overburdened, pulling fresh batches as needed.
+- **Automated Smelting (Recycling):** Automatically smelts crafted metal items (Tongs, Scissors) at the forge to reclaim 50%–90% of raw ingots and returns recovered ingots back to the satchel.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafting Tinker's Tools...`, `Smelting...`, `Crafting Tool...`, `Restocking Ingots...`, `Paused`, `Finished`)
+  - Live Tinkering skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Smelted**, and **Failed** items
+  - Live Satchel and Backpack ingot counts
+  - Interactive **Pause/Resume**, **Set Recipe**, **Set Satchel**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
+#### [TrainCarpentry.py](FesterUO/TrainCarpentry.py)
+
+An automated, board-efficient Carpentry training engine with interactive control Gump, resource satchel support, auto-trashing of crafted furniture/weapons, and milestone tracking:
+
+- **Board-Efficient Skill Progression:** Automatically tracks your Carpentry skill and crafts the lowest-board items in each tier from 0 to 120 (GM / Legendary):
+  - **0.0 – 47.3:** Wooden Box (5 boards)
+  - **47.3 – 73.6:** Ballot Box Deed (5 boards)
+  - **73.6 – 78.9:** Quarter Staff (6 boards)
+  - **78.9 – 120.0:** Gnarled Staff (7 boards)
+- **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next recipe. Players can click **"Set Recipe"** on the Gump at any time to manually choose any recipe from the open craft menu.
+- **Automated Trash Barrel Disposal:** Auto-detects nearby Trash Barrels or allows targeting one at startup. Automatically deposits newly crafted items into the trash barrel via backpack serial diff, preventing overweight and backpack clutter. Includes a **"Trash Can"** button on the Gump to change/set trash barrels at any time.
+- **Resource Satchel Integration:** Prompts player on launch to target their wood/resource satchel. Maintains a lightweight working buffer of boards in the main backpack (default 20–60 boards) so characters are never overburdened, pulling fresh batches as needed. Protects colored/special woods (Frostwood, Heartwood, Bloodwood).
+- **Tool Upkeep:** Works with any carpentry tool (Saw, Dovetail Saw, Plane, Scorp, Draw Knife, Hammer). Automatically crafts replacement Dovetail Saws (30.0+ Tinkering) or Saws via Tinkering using iron ingots from your satchel.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafted`, `Trashing...`, `Tinkering Saw...`, `Restocking boards...`, `Paused`, `Finished`)
+  - Live Carpentry skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Trashed**, and **Failed** items
+  - Live Satchel and Backpack board counts, plus tool and trash indicators
+  - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
 
 ---
 
