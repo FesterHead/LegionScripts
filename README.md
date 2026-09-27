@@ -148,7 +148,7 @@ A unified roaming mining and Magery skill training script that coordinates ore v
 
 #### [MiningAndLumberjackAuto.py](FesterUO/MiningAndLumberjackAuto.py)
 
-- **Configurable Harvest Ratio Workflow:** Automatically alternates between mining and lumberjacking with a configurable ratio (`TREES_PER_MINING_SPOT = 4`, `MINING_SPOTS_PER_CYCLE = 1` by default). Mines an ore deposit until depleted, then automatically switches to lumberjack gear and chops four trees until depleted, repeating seamlessly (`Mine 1 -> Chop 4 -> Mine 1 -> Chop 4...`).
+- **Configurable Harvest Ratio Workflow:** Automatically alternates between mining and lumberjacking with a configurable ratio (`TREES_PER_MINING_SPOT = 8`, `MINING_SPOTS_PER_CYCLE = 1` by default). Mines an ore deposit until depleted, then automatically switches to lumberjack gear and chops eight trees until depleted, repeating seamlessly (`Mine 1 -> Chop 8 -> Mine 1 -> Chop 8...`).
 - **Autonomous Equipment & Dress Switching:** Automatically equips your `"Mining"` profile (pickaxe/shovel) during the mining phase, and switches to your `"Lumberjack"` profile (axe) during the woodcutting phase, avoiding redundant dress delays across consecutive trees.
 - **Combined Spatial Scanning:** Scans for cave floors, mountain edges, rock outcroppings, and boulders for mining, and scans static trees via TazUO's native vegetation detection for lumberjacking.
 - **Pathfinding & Depletion Memory:** Safely pathfinds within reach (`distance <= 2`) of candidate nodes, maintaining separate depletion history queues for both veins (`DEPOSIT_HISTORY_LIMIT = 150`) and trees (`TREE_HISTORY_LIMIT = 50`) to avoid revisiting depleted spots.

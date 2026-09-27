@@ -9,8 +9,8 @@ Description:
     resource harvesting engine with an integrated control Gump:
     - Configurable Harvest Ratio Loop:
         1. Mines ore deposit(s) (default: 1 spot) until depleted.
-        2. Switches to lumberjack gear and chops tree(s) (default: 4 trees) until depleted.
-        3. Repeats seamlessly with custom tree-to-ore ratios (e.g. 4 trees per 1 mining spot).
+        2. Switches to lumberjack gear and chops tree(s) (default: 8 trees) until depleted.
+        3. Repeats seamlessly with custom tree-to-ore ratios (e.g. 8 trees per 1 mining spot).
     - Equipment & Dress Switching:
         * Automatically switches to the "Mining" dress profile and equips a pickaxe/shovel.
         * Automatically switches to the "Lumberjack" dress profile and equips a woodcutting axe.

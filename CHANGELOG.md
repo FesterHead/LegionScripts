@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-27
+
 ### Added
 
 - Added `FesterUO/TrainMagery.py`: Automated Magery skill training script derived from [PlayTazUO/PublicLegionScripts](https://github.com/PlayTazUO/PublicLegionScripts/blob/main/Skills/Any/Train%20Magery.py) by FesterHead:
@@ -57,9 +59,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Configurable harvesting ratio in `FesterUO/MiningAndLumberjackAuto.py`:
-  - Added `TREES_PER_MINING_SPOT = 4` (configurable) and `MINING_SPOTS_PER_CYCLE = 1` to harvest multiple trees per mining deposit.
+  - Added configurable `TREES_PER_MINING_SPOT` (defaults to 8, configurable) and `MINING_SPOTS_PER_CYCLE = 1` to harvest multiple trees per mining deposit.
   - Optimized equipment switching to bypass dress delays between consecutive trees when the axe is already equipped.
-  - Updated status displays to show cycle step counters (e.g., `Chop 2/4 (X, Y) #3`).
+  - Updated status displays to show cycle step counters (e.g., `Chop 2/8 (X, Y) #3`).
 - Enabled direct satchel crafting (`DIRECT_SATCHEL_CRAFTING = True`) across `FesterUO/TrainCarpentry.py`, `FesterUO/TrainBlacksmith.py`, and `FesterUO/TrainTinkering.py`:
   - Scripts now craft directly from the resource satchel with `0` boards/ingots needed in the main backpack, preserving weight capacity.
   - Automatically deposits any reclaimed or loose materials from backpack into the satchel.
