@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-30
+
 ### Added
 
-- Added [`FesterUO/TrainInscription.py`](file:///e:/TazUO/TazUO/LegionScripts/FesterUO/TrainInscription.py): Automated resource-efficient Inscription skill training script with interactive control Gump created by FesterHead:
+- Added `FesterUO/TrainInscription.py`: Automated resource-efficient Inscription skill training script with interactive control Gump created by FesterHead:
   - Progresses through the optimal spell scroll ladder from 0.0 to 120.0 (Reactive Armor -> Poison -> Lightning -> Magic Reflection -> Energy Bolt -> Flamestrike), selecting spells with lowest reagent costs and maximum reliability.
   - Features smart mana management: Continuously monitors player mana against spell requirements and automatically meditates to full mana when depleted, maximizing continuous crafting bursts.
   - Supports dual crafted scroll handling: Automatically moves completed scrolls into a designated storage container / scroll book or nearby Trash Barrel via backpack serial diff, preventing weight overloads and clutter.
@@ -17,21 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Includes tool upkeep via Tinkering: Detects broken or missing Scribe's Pens and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
   - Features an interactive control Gump displaying real-time training status, live Inscription skill and cap with gain tracking, Mana & LRC indicators, Crafted / Stored / Trashed / Failed counters, blank scroll counts, and interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons.
 
-### Fixed
-
-- Fixed `UnboundLocalError: local variable 'armor_blocks_meditation' referenced before assignment` in [`FesterUO/TrainInscription.py`](file:///e:/TazUO/TazUO/LegionScripts/FesterUO/TrainInscription.py) by adding the missing `global armor_blocks_meditation` declaration in `handle_mana_recovery()`.
-- Fixed server disconnection (`Invalid gump response, disconnecting...`) in [`FesterUO/TrainTinkering.py`](file:///e:/TazUO/TazUO/LegionScripts/FesterUO/TrainTinkering.py):
-  - In ServUO/RunUO, the Tinkering `CraftGump` does not have a "Smelt Item" button (`Resmelt = false` in `DefTinkering.cs`). Attempting to send button ID 14 caused the server to reject the response and disconnect the client.
-  - Removed invalid smelt gump replies and transitioned item disposal to use nearby Trash Barrels matching [`TrainCarpentry.py`](file:///e:/TazUO/TazUO/LegionScripts/FesterUO/TrainCarpentry.py).
-- Fixed `NameError: name 'j_text' is not defined` in [`FesterUO/TrainTinkering.py`](file:///e:/TazUO/TazUO/LegionScripts/FesterUO/TrainTinkering.py).
-
 ### Changed
 
-- Refactored [`FesterUO/TrainTinkering.py`](file:///e:/TazUO/TazUO/LegionScripts/FesterUO/TrainTinkering.py) to follow the unified architecture of [`TrainCarpentry.py`](file:///e:/TazUO/TazUO/LegionScripts/FesterUO/TrainCarpentry.py) and [`TrainBlacksmith.py`](file:///e:/TazUO/TazUO/LegionScripts/FesterUO/TrainBlacksmith.py):
+- Refactored `FesterUO/TrainTinkering.py` to follow the unified architecture of `TrainCarpentry.py` and `TrainBlacksmith.py`:
   - Added automated Trash Barrel detection (`find_nearby_trash_barrel()`) and interactive **"Trash Can"** button on the control Gump.
   - Automatically disposes of newly crafted non-stackable items (Tongs, Heating Stands, excess tools) into the trash barrel via backpack serial diff, while preserving stackable lockpicks and maintaining working tool reserves.
   - Standardized the control Gump layout (Pause/Resume, Set Recipe, Satchel, Trash Can, and Stop buttons) and added milestone announcements for Blacksmith tool requirements (Smith's Hammers at 40.0, Tongs at 45.0).
   - Enhanced resource protection strictly enforcing plain iron ingots (`Hue 0`), protecting colored/special ingots.
+
+### Fixed
+
+- Fixed `UnboundLocalError: local variable 'armor_blocks_meditation' referenced before assignment` in `FesterUO/TrainInscription.py` by adding the missing `global armor_blocks_meditation` declaration in `handle_mana_recovery()`.
+- Fixed server disconnection (`Invalid gump response, disconnecting...`) in `FesterUO/TrainTinkering.py`:
+  - In ServUO/RunUO, the Tinkering `CraftGump` does not have a "Smelt Item" button (`Resmelt = false` in `DefTinkering.cs`). Attempting to send button ID 14 caused the server to reject the response and disconnect the client.
+  - Removed invalid smelt gump replies and transitioned item disposal to use nearby Trash Barrels matching `TrainCarpentry.py`.
+- Fixed `NameError: name 'j_text' is not defined` in `FesterUO/TrainTinkering.py`.
 
 ## [1.2.0] - 2026-09-27
 
