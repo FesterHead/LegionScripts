@@ -321,6 +321,37 @@ An automated, board-efficient Carpentry training engine with interactive control
   - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Trash Can**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 
+#### [TrainInscription.py](FesterUO/TrainInscription.py)
+
+An automated, resource-efficient Inscription training engine with interactive control Gump, resource satchel support, smart mana recovery via Meditation, dual storage/trash disposal, and Tinkering pen upkeep:
+
+- **Resource-Efficient Spell Progression:** Automatically monitors your Inscription skill and crafts the lowest-cost, single/dual-reagent spells in each tier from 0 to 120 (GM / Legendary):
+  - **0.0 – 30.0:** Reactive Armor (Circle 1, 4 Mana, 1 blank scroll, Garlic / Spiders' Silk / Sulfurous Ash)
+  - **30.0 – 45.0:** Poison (Circle 3, 9 Mana, 1 blank scroll, Nightshade — _only 1 reagent!_)
+  - **45.0 – 65.0:** Lightning (Circle 4, 11 Mana, 1 blank scroll, Mandrake Root / Sulfurous Ash)
+  - **65.0 – 75.0:** Magic Reflection (Circle 5, 14 Mana, 1 blank scroll, Garlic / Mandrake Root / Spiders' Silk)
+  - **75.0 – 90.0:** Energy Bolt (Circle 6, 20 Mana, 1 blank scroll, Black Pearl / Nightshade)
+  - **90.0 – 120.0:** Flamestrike (Circle 7, 40 Mana, 1 blank scroll, Spiders' Silk / Sulfurous Ash)
+- **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next spell. Players can click **"Set Recipe"** on the Gump at any time to manually choose any recipe or custom spell from the open craft menu.
+- **Smart Mana Management & Meditation:** Continuously monitors your character's mana against the required spell cost. Automatically activates Meditation whenever mana falls below threshold and meditates until mana is fully replenished, enabling sustained, uninterrupted crafting bursts.
+- **Dual Crafted Scroll Management (Storage & Trash Disposal):**
+  - **Storage Container:** Allows targeting a scroll book, chest, or pouch on startup or via the Gump's **"Storage"** button to automatically store all completed scrolls.
+  - **Trash Barrel:** Auto-detects nearby Trash Barrels or allows targeting one via the Gump's **"Trash Can"** button for players who prefer to discard scrolls to prevent weight and clutter.
+  - Deposits newly crafted scrolls via backpack serial diff, ensuring backpack cleanliness.
+- **Resource Satchel Integration & LRC Support:**
+  - Automatically detects 100% Lower Reagent Cost (LRC) suits and completely bypasses reagent requirements.
+  - If LRC < 100%, automatically monitors and restocks required reagents from the resource satchel.
+  - Automatically restocks blank scrolls from the satchel when backpack reserves run low.
+- **Tool Upkeep via Tinkering:** Detects broken or missing Scribe's Pens and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafted`, `Regenerating Mana...`, `Storing...`, `Trashing...`, `Tinkering Scribe's Pen...`, `Paused`, `Finished`)
+  - Live Inscription skill level, skill cap, and automatic skill gain announcements
+  - Mana and LRC indicators (`Mana: Cur/Max | LRC: XX%`)
+  - Running counters for **Crafted**, **Stored**, **Trashed**, and **Failed** items
+  - Live Satchel and Backpack blank scroll counts, plus pen count and destination indicator
+  - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
 ---
 
 ## ⚖️ Best Practices for Writing Legion Scripts
