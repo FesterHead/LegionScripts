@@ -7,8 +7,10 @@ Target Client: TazUO (Legion Scripting Engine)
 Description:
     Fully automated Carpentry skill training script for TazUO featuring:
     - Optimal resource-efficient progression ladder from 0.0 to 120.0 Carpentry:
-        * 0.0 - 47.3:   Wooden Box (5 boards)
-        * 47.3 - 73.6:  Ballot Box Deed (5 boards)
+        * 0.0 - 42.1:   Wooden Box (5 boards)
+        * 42.1 - 47.3:  Vesper-Style Chair (15 boards)
+        * 47.3 - 70.0:  Ballot Box Deed (5 boards)
+        * 70.0 - 73.6:  Bokuto (6 boards) [or Wooden Shield (9 boards)]
         * 73.6 - 78.9:  Quarter Staff (6 boards)
         * 78.9 - 120.0: Gnarled Staff (7 boards)
     - Milestone Announcements & "Set Recipe" Manual Override:
@@ -57,7 +59,7 @@ GUMP_BTN_MAKE_LAST = 21  # Universal "Make Last" button
 
 # Tool upkeep via Tinkering
 AUTO_CRAFT_SAW = True
-MAX_TOOL_CRAFT_ATTEMPTS = 5
+MAX_TOOL_CRAFT_ATTEMPTS = 8
 
 # Enable verbose debug messages in client console
 DEBUG = False
@@ -95,8 +97,10 @@ TRASH_BARREL_GRAPHICS = {0x0E77}
 
 # Optimal Carpentry Progression Ladder: (min_skill, max_skill, item_name, board_cost)
 PROGRESSION_LADDER: List[Tuple[float, float, str, int]] = [
-    (0.0, 47.3, "Wooden Box", 5),
-    (47.3, 73.6, "Ballot Box Deed", 5),
+    (0.0, 42.1, "Wooden Box", 5),
+    (42.1, 47.3, "Vesper-Style Chair", 15),
+    (47.3, 70.0, "Ballot Box Deed", 5),
+    (70.0, 73.6, "Bokuto", 6),
     (73.6, 78.9, "Quarter Staff", 6),
     (78.9, 120.0, "Gnarled Staff", 7),
 ]

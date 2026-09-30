@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-30
+
+### Added
+
+- Added `FesterUO/TrainInscription.py`: Automated resource-efficient Inscription skill training script with interactive control Gump created by FesterHead:
+  - Progresses through the optimal spell scroll ladder from 0.0 to 120.0 (Reactive Armor -> Poison -> Lightning -> Magic Reflection -> Energy Bolt -> Flamestrike), selecting spells with lowest reagent costs and maximum reliability.
+  - Features smart mana management: Continuously monitors player mana against spell requirements and automatically meditates to full mana when depleted, maximizing continuous crafting bursts.
+  - Supports dual crafted scroll handling: Automatically moves completed scrolls into a designated storage container / scroll book or nearby Trash Barrel via backpack serial diff, preventing weight overloads and clutter.
+  - Fully supports Lower Reagent Cost (LRC) suits (bypassing reagent needs at 100% LRC) while also supporting non-LRC players with automatic reagent restocking from the resource satchel.
+  - Includes tool upkeep via Tinkering: Detects broken or missing Scribe's Pens and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
+  - Features an interactive control Gump displaying real-time training status, live Inscription skill and cap with gain tracking, Mana & LRC indicators, Crafted / Stored / Trashed / Failed counters, blank scroll counts, and interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons.
+
+### Changed
+
+- Refactored `FesterUO/TrainTinkering.py` to follow the unified architecture of `TrainCarpentry.py` and `TrainBlacksmith.py`:
+  - Added automated Trash Barrel detection (`find_nearby_trash_barrel()`) and interactive **"Trash Can"** button on the control Gump.
+  - Automatically disposes of newly crafted non-stackable items (Tongs, Heating Stands, excess tools) into the trash barrel via backpack serial diff, while preserving stackable lockpicks and maintaining working tool reserves.
+  - Standardized the control Gump layout (Pause/Resume, Set Recipe, Satchel, Trash Can, and Stop buttons) and added milestone announcements for Blacksmith tool requirements (Smith's Hammers at 40.0, Tongs at 45.0).
+  - Enhanced resource protection strictly enforcing plain iron ingots (`Hue 0`), protecting colored/special ingots.
+
+### Fixed
+
+- Fixed `UnboundLocalError: local variable 'armor_blocks_meditation' referenced before assignment` in `FesterUO/TrainInscription.py` by adding the missing `global armor_blocks_meditation` declaration in `handle_mana_recovery()`.
+- Fixed server disconnection (`Invalid gump response, disconnecting...`) in `FesterUO/TrainTinkering.py`:
+  - In ServUO/RunUO, the Tinkering `CraftGump` does not have a "Smelt Item" button (`Resmelt = false` in `DefTinkering.cs`). Attempting to send button ID 14 caused the server to reject the response and disconnect the client.
+  - Removed invalid smelt gump replies and transitioned item disposal to use nearby Trash Barrels matching `TrainCarpentry.py`.
+- Fixed `NameError: name 'j_text' is not defined` in `FesterUO/TrainTinkering.py`.
+
 ## [1.2.0] - 2026-09-27
 
 ### Added
@@ -49,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Auto-smelting: Automatically smelts recyclable items (Tongs) when standing near a forge.
   - Interactive control Gump with real-time status, live Tinkering skill tracking, gain announcements, running statistics (Crafted, Smelted, Failed, Tools Made), satchel/backpack ingot counts, and Pause/Resume, Set Recipe, Set Satchel, and Stop controls.
 - Added `FesterUO/TrainCarpentry.py`: Automated resource-efficient Carpentry skill training script with interactive control Gump:
-  - Progresses through the lowest-board items from 0.0 to 120.0 (Wooden Box -> Ballot Box Deed -> Quarter Staff -> Gnarled Staff).
+  - Progresses through the lowest-board items from 0.0 to 120.0 (Wooden Box -> Vesper-Style Chair -> Ballot Box Deed -> Bokuto -> Quarter Staff -> Gnarled Staff).
   - Proactive milestone recommendations: Emits system message notifications upon reaching skill brackets recommending the next optimal item, with an interactive "Set Recipe" button to override or switch recipes at any time.
   - Automated Trash Barrel disposal: Auto-detects nearby Trash Barrels or allows targeting one at startup, automatically disposing of newly crafted furniture/weapons via backpack serial diff to eliminate overweight and backpack clutter. Includes an on-screen "Trash Can" button to set/change trash barrels.
   - Resource satchel integration: Prompts player on launch to target their wood/resource satchel or container, maintains a lightweight buffer of boards in the main backpack (default 20–60 boards), and deposits excess boards back into the satchel.
@@ -74,8 +102,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed `navigate_to_deposit()` argument count mismatch in `FesterUO/MiningAndLumberjackAuto.py` by adding `spot_index` and `total_spots` parameters to match cycle progress tracking calls.
-- Fixed Carpentry progression threshold for Ballot Box Deed in `FesterUO/TrainCarpentry.py`:
-  - Raised the starting skill threshold for Ballot Box Deed from 45.0 to 47.3 to match standard Ultima Online minimum craft requirements, keeping Wooden Box (5 boards) as the active training item until 47.3.
+- Fixed Carpentry progression plateaus at 46.0 and 72.3 in `FesterUO/TrainCarpentry.py`:
+  - On standard UO/ServUO/RunUO mechanics, craft success chance hits 100% at `MinSkill + 25.0`, causing skill gains to stall before reaching the next tier item.
+  - Added Vesper-Style Chair (min skill 42.1, 15 boards) to bridge the 42.1–47.3 bracket where Wooden Box capped at 46.0 before Ballot Box Deed unlocked at 47.3.
+  - Added Bokuto (min skill 70.0, 6 boards) or Wooden Shield (min skill 52.6, 9 boards) to bridge the 70.0–73.6 bracket where Ballot Box Deed capped at 72.3 before Quarter Staff unlocked at 73.6.
 - Fixed continuous hammer crafting loop in `FesterUO/TrainBlacksmith.py`:
   - When auto-crafting a replacement Smith's Hammer via Tinkering, the Tinkering craft gump remained open on the client; the trainer subsequently sent "Make Last" (`ReplyGump(21)`) to the lingering Tinkering gump instead of the Blacksmithing gump.
   - Added explicit Tinkering craft gump closure (`API.ReplyGump(0, gump_id)`) upon hammer completion.
