@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `FesterUO/MoveItemsBetweenContainers.py`: Interactive container-to-container item organizer and transfer script created by FesterHead:
+  - Prompts the player to target a SOURCE container, then a DESTINATION container with timeout and cancellation handling.
+  - Automatically sends an open request to the source container prior to querying items, ensuring container contents are fully received from the server.
+  - Safely transfers all top-level items between containers while respecting classic drag/drop delays and responsive `API.StopRequested` checks.
+  - Validates source and destination containers to prevent moving items into the same container or executing when containers are empty.
+
+
 ## [1.3.0] - 2026-09-30
 
 ### Added

@@ -350,6 +350,16 @@ An automated, resource-efficient Inscription training engine with interactive co
   - Running counters for **Crafted**, **Stored**, **Trashed**, and **Failed** items
   - Live Satchel and Backpack blank scroll counts, plus pen count and destination indicator
   - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons
+
+#### [MoveItemsBetweenContainers.py](FesterUO/MoveItemsBetweenContainers.py)
+
+A quick and reliable container-to-container item organizer and transfer utility script:
+
+- **Interactive Targeting:** Prompts the player to target the SOURCE container, then the DESTINATION container (with 10-second timeouts and graceful cancellation).
+- **Container Pre-Opening:** Automatically opens the source container (`API.UseObject`) to force the game server to send full container contents to the client if not already cached in memory.
+- **Validation & Safety:** Verifies that source and destination are valid and distinct entities, refusing to run if both targets are identical or if the source is empty.
+- **Graceful Cancellation & Loop Safety:** Checks `API.StopRequested` on each item iteration to ensure immediate, clean script halts when cancelled in the TazUO UI.
+- **Client Synchronization:** Uses `API.Pause(0.65)` between moves to prevent item drag/drop desynchronization or server packet drops.
 - **Attribution:** Created by FesterHead.
 
 ---
