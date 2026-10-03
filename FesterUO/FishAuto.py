@@ -134,6 +134,8 @@ DEPLETED_KEYWORDS: List[str] = [
     "can't reach",
     "too far away",
     "closer to the water",
+    "what water",
+    "already fished",
 ]
 
 # ==============================================================================
@@ -491,10 +493,11 @@ def is_open_water(tx: int, ty: int) -> bool:
     return False
 
 
-def find_side_water_spot(dir_x: int, dir_y: int, min_dist: int = 2, max_dist: int = 4) -> Tuple[int, int]:
+def find_side_water_spot(dir_x: int, dir_y: int, min_dist: int = 3, max_dist: int = 4) -> Tuple[int, int]:
     """
     Finds a clear open water tile offset (dx, dy) to the side of the boat (NW or SE).
-    Checks distances 2 to 4 to stay close to the boat railing and well within cast range.
+    Checks distances 3 to 4 so it clears the boat hull, mast, and railings regardless
+    of whether the player is standing on the port or starboard railing.
     """
     px = API.Player.X
     py = API.Player.Y
@@ -519,8 +522,8 @@ def find_side_water_spot(dir_x: int, dir_y: int, min_dist: int = 2, max_dist: in
             if is_open_water(px + dx, py + dy):
                 return dx, dy
 
-    # Fallback to 2-tile side offset (right off the railing)
-    return dir_x * 2, dir_y * 2
+    # Fallback to 3-tile side offset (clearing the boat railing)
+    return dir_x * 3, dir_y * 3
 
 
 
@@ -703,9 +706,10 @@ def cast_at_offset(offset: Tuple[int, int]) -> bool:
     return not API.HasTarget()
 
 
-def fish_spot(offset: Tuple[int, int], spot_name: str) -> bool:
+def fish_spot(dir_x: int, dir_y: int, spot_name: str) -> bool:
     """
-    Repeatedly casts at a relative offset until depleted or interrupted by an enemy.
+    Repeatedly casts at a side water spot until depleted or interrupted by an enemy.
+    Dynamically adjusts casting distance if the boat hull/railing obstructs the cast.
     Returns True if depleted or skipped, False if stopped.
     """
     pole = get_fishing_pole()
@@ -720,10 +724,14 @@ def fish_spot(offset: Tuple[int, int], spot_name: str) -> bool:
         API.SysMsg("Error: Fishing pole not found!")
         return False
 
+    current_dist = 3
+    offset = find_side_water_spot(dir_x, dir_y, min_dist=current_dist, max_dist=4)
+
     update_status(f"Fishing {spot_name}...")
     debug_msg(f"Fishing {spot_name} at offset {offset}")
 
     consecutive_target_fails = 0
+    consecutive_invalid_water = 0
 
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():
@@ -776,6 +784,28 @@ def fish_spot(offset: Tuple[int, int], spot_name: str) -> bool:
             else:
                 debug_msg(f"{spot_name}: Target failed.")
                 return True
+
+        # Check if the server rejected the target tile as invalid water or LOS blocked
+        is_invalid_water = (
+            API.InJournal("what water")
+            or API.InJournal("cannot see that")
+            or API.InJournal("can't see that")
+        )
+
+        if is_invalid_water:
+            consecutive_invalid_water += 1
+            debug_msg(f"{spot_name}: Server rejected target ('What water do you want to fish in?' or LOS). Attempt #{consecutive_invalid_water}")
+            if consecutive_invalid_water < 3 and current_dist < 5:
+                current_dist += 1
+                offset = (dir_x * current_dist, dir_y * current_dist)
+                API.SysMsg(f"{spot_name}: Boat in the way, adjusting distance to {current_dist} tiles ({offset})...")
+                API.Pause(0.5)
+                continue
+            else:
+                API.SysMsg(f"{spot_name}: Obstructed by boat, moving to next spot.")
+                return True
+        else:
+            consecutive_invalid_water = 0
 
         # 2. Check for enemy that may have spawned from the cast
         enemy = find_hostile_enemy()
@@ -904,9 +934,7 @@ def main():
                     combat_triggered = True
                     break
 
-                offset = find_side_water_spot(dir_x, dir_y)
-
-                if not fish_spot(offset, spot_name):
+                if not fish_spot(dir_x, dir_y, spot_name):
                     combat_triggered = True
                     break
 

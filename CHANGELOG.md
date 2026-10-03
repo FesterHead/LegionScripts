@@ -33,8 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prompts the player to target a SOURCE container, then a DESTINATION container with timeout and cancellation handling.
   - Automatically sends an open request to the source container prior to querying items, ensuring container contents are fully received from the server.
   - Safely transfers all top-level items between containers while respecting classic drag/drop delays and responsive `API.StopRequested` checks.
-  - Validates source and destination containers to prevent moving items into the same container or executing when containers are empty.
 
+### Fixed
+
+- Fixed infinite cast loop and boat obstruction failure in `FesterUO/FishAuto.py`:
+  - When standing on the port railing of a boat, casting Southeast at distance 2 landed directly on the starboard railing/deck of the boat, causing the server to reject the cast with `"What water do you want to fish in?"`.
+  - Added `"what water"` and `"already fished"` to `DEPLETED_KEYWORDS`.
+  - Increased base railing offset distance in `find_side_water_spot` from 2 to 3-4 tiles, ensuring casts completely clear the boat multi on both sides.
+  - Implemented dynamic distance stepping in `fish_spot()`: automatically detects `"What water do you want to fish in?"` or line-of-sight obstruction messages and steps casting distance further out into open water, or cleanly advances to the next spot after 3 failed attempts rather than hanging in an infinite loop.
 
 ## [1.3.0] - 2026-09-30
 
