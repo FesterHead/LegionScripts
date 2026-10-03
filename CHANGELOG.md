@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `FesterUO/LobsterTrapAuto.py`: Automated lobster and crab trap deployment, retrieval, and recycling script with interactive control Gump created by FesterHead:
+  - Deploys up to 5 lobster traps from your backpack into the surrounding ocean at well-spaced relative water offsets (Port Bow, Port Railing, Port Stern, Starboard Bow, Starboard Stern).
+  - Actively monitors deployed trap buoys with elapsed timers and bob detection (~60-65s cycle).
+  - Automatically hauls ready buoys into the backpack, double-clicks retrieved traps to open and dump catches, moves crustaceans (lobsters and crabs) into an optional designated satchel, and immediately re-tosses the emptied traps back into the ocean.
+  - Detects sunk or destroyed traps, updating a "Traps Lost" counter and automatically checking the backpack for replacement traps with player notification alerts when spares run out.
+  - Features an interactive control Gump displaying real-time action status, active deployed trap count (e.g. 5 / 5), crustaceans caught counter, traps lost/sunk counter, live Fishing skill with gain announcements, Satchel destination indicator, and interactive **Start/Pause/Resume**, **Stop**, **Set Satchel**, and **Set Spots** buttons.
 - Added `FesterUO/TrainCooking.py`: Automated resource-efficient Cooking skill training script with interactive control Gump created by FesterHead:
   - Progresses through the optimal cooking progression ladder from 0.0 to 100.0 (Fish Steak / Cooked Ribs -> Dough / Bread Loaf -> Pan of Cookies / Meat Pie -> Baked Fruit Pie / Miso Soup).
   - Features universal crafting engine with dual-mode support: Standard Craft Gump with "Make Last" using Skillets, Flour Sifters, or Rolling Pins, and Direct Heat Source cooking mode using raw food directly on fires, ovens, stoves, forges, or heating stands.

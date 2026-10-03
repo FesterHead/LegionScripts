@@ -200,6 +200,28 @@ An automated boat fishing and combat defense script featuring interactive contro
   - Enemies defeated counter
   - Interactive **Start / Pause / Resume** and **Stop** buttons.
 
+#### [LobsterTrapAuto.py](FesterUO/LobsterTrapAuto.py)
+
+An automated lobster and crab trap management script featuring an interactive on-screen control Gump, automated 5-spot ocean deployment, live buoy tracking, catch retrieval, and trap recycling:
+
+- **Up to 5 Concurrent Traps:** Deploys up to 5 lobster traps from your backpack into the surrounding ocean at well-spaced relative water offsets (Port Bow, Port Railing, Port Stern, Starboard Bow, Starboard Stern) obeying the 1-tile buoy spacing rule.
+- **Buoy Tracking & Bob Detection:** Actively tracks deployed trap buoys with elapsed timers (~60-65s cycle) and monitors for server bob/catch events.
+- **Automated Haul & Open Cycle:**
+  1. Double-clicks the buoy to haul the trap into your backpack.
+  2. Double-clicks the retrieved trap in your backpack to open and dump caught lobsters and crabs.
+  3. Optionally stashes caught crustaceans into a designated satchel or container.
+  4. Immediately re-tosses the emptied trap right back into the ocean at the same spot.
+- **Sunk & Destroyed Trap Detection:** Detects when buoys sink or are torn apart in the ocean, updates the **Traps Lost** counter, and automatically pulls replacement traps from your backpack, alerting you when spare traps run out.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time action status (Deploying, Waiting for Bobs, Hauling, Opening, Redeploying, Paused, Stopped)
+  - Active traps counter (`Active Traps: N / 5`)
+  - Running **Crustaceans Caught** and **Traps Lost / Sunk** statistics
+  - Live Fishing skill level, cap, and skill gain tracking
+  - Satchel destination indicator
+  - Interactive **Start / Pause / Resume** and **Stop** buttons
+  - Interactive **Set Satchel** button to designate a catch storage container
+  - Interactive **Set Spots** button to customize water targeting offsets.
+
 #### [TrainChivalry.py](FesterUO/TrainChivalry.py)
 
 An automated skill training script for Chivalry with an interactive control Gump that casts spells corresponding to the player's current skill tier:
