@@ -69,11 +69,12 @@ FISH_CAUGHT_KEYWORDS: List[str] = [
 FISHING_DELAY: float = 3.0
 
 # Side fishing spots relative to the boat:
-# Targeting a few tiles to the Northwest and then Southeast targets directly off the
-# sides of the boat into open water, completely clearing the mast, sail, bow, and stern.
+# For a boat facing Northeast, Port (Northwest) is (-1, 0) and Starboard (Southeast) is (1, 0).
+# Targeting perpendicular to the keel casts directly off the boat sides into open water,
+# completely clearing the mast, sail, bow, and stern.
 FISHING_SPOTS: List[Tuple[Tuple[int, int], str]] = [
-    ((-1, -1), "Northwest"),
-    (( 1,  1), "Southeast"),
+    ((-1, 0), "Northwest"),
+    (( 1, 0), "Southeast"),
 ]
 
 # Known UO water graphic ranges (land and static)
@@ -122,20 +123,24 @@ JUNK_JOURNAL_KEYWORDS: List[str] = [
     "fished up some junk",
 ]
 
-# Depletion and unreachable journal keywords (matched case-insensitively)
+# Depletion journal keywords indicating the water tile has run out of fish
 DEPLETED_KEYWORDS: List[str] = [
     "biting here",
     "no fish here",
-    "cannot be seen",
-    "can't be seen",
+    "already fished",
+]
+
+# Obstacle journal keywords indicating the cast hit the boat, mast, railing, or is out of reach
+OBSTACLE_KEYWORDS: List[str] = [
+    "what water",
     "cannot see that",
     "can't see that",
+    "cannot be seen",
+    "can't be seen",
     "obstruct",
     "can't reach",
     "too far away",
     "closer to the water",
-    "what water",
-    "already fished",
 ]
 
 # ==============================================================================
@@ -785,20 +790,21 @@ def fish_spot(dir_x: int, dir_y: int, spot_name: str) -> bool:
                 debug_msg(f"{spot_name}: Target failed.")
                 return True
 
-        # Check if the server rejected the target tile as invalid water or LOS blocked
-        is_invalid_water = (
-            API.InJournal("what water")
-            or API.InJournal("cannot see that")
-            or API.InJournal("can't see that")
-        )
+        # Check if the server rejected the target tile as an obstacle or invalid water
+        is_obstructed = False
+        for okw in OBSTACLE_KEYWORDS:
+            if API.InJournal(okw):
+                is_obstructed = True
+                break
 
-        if is_invalid_water:
+        if is_obstructed:
             consecutive_invalid_water += 1
-            debug_msg(f"{spot_name}: Server rejected target ('What water do you want to fish in?' or LOS). Attempt #{consecutive_invalid_water}")
+            debug_msg(f"{spot_name}: Obstacle or invalid water detected. Attempt #{consecutive_invalid_water}")
             if consecutive_invalid_water < 3 and current_dist < 5:
                 current_dist += 1
                 offset = (dir_x * current_dist, dir_y * current_dist)
-                API.SysMsg(f"{spot_name}: Boat in the way, adjusting distance to {current_dist} tiles ({offset})...")
+                API.SysMsg(f"{spot_name}: Boat railing in the way, adjusting distance to {current_dist} tiles ({offset})...")
+                API.ClearJournal()
                 API.Pause(0.5)
                 continue
             else:

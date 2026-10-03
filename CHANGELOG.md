@@ -36,9 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed infinite cast loop and boat obstruction failure in `FesterUO/FishAuto.py`:
-  - When standing on the port railing of a boat, casting Southeast at distance 2 landed directly on the starboard railing/deck of the boat, causing the server to reject the cast with `"What water do you want to fish in?"`.
-  - Added `"what water"` and `"already fished"` to `DEPLETED_KEYWORDS`.
+- Fixed infinite cast loop, false spot depletion, and boat obstruction in `FesterUO/FishAuto.py`:
+  - Corrected `FISHING_SPOTS` relative directional vectors for Northeast-bound vessels from diagonal `(-1, -1)` / `(1, 1)` (which cast towards the bow/stern along the boat's length) to perpendicular beam offsets `(-1, 0)` for Port (Northwest) and `(1, 0)` for Starboard (Southeast), casting directly into open ocean off the boat railings.
+  - Separated `DEPLETED_KEYWORDS` (`"biting here"`, `"no fish here"`, `"already fished"`) from targeting/obstruction errors in `OBSTACLE_KEYWORDS` (`"what water"`, `"cannot see that"`, etc.), preventing lingering server messages from falsely triggering spot depletion after a single cast.
   - Increased base railing offset distance in `find_side_water_spot` from 2 to 3-4 tiles, ensuring casts completely clear the boat multi on both sides.
   - Implemented dynamic distance stepping in `fish_spot()`: automatically detects `"What water do you want to fish in?"` or line-of-sight obstruction messages and steps casting distance further out into open water, or cleanly advances to the next spot after 3 failed attempts rather than hanging in an infinite loop.
 
