@@ -369,7 +369,7 @@ An automated, resource-efficient Cartography training engine with interactive co
   - Supports direct satchel crafting or maintains a lightweight working buffer of blank scrolls in the backpack.
   - Automatically restocks blank scrolls from the satchel when backpack reserves run low.
   - Recognizes standard Blank Scrolls (`0x0EF3`, `0x0E34`) with full fallback compatibility for Blank Maps (`0x14EB`, `0x14EC`).
-- **Tool Upkeep via Tinkering:** Detects broken or missing Mapmaker's Pens and automatically crafts replacements on the fly using Tinker's Tools, iron ingots, and blank scrolls (1 ingot + 1 scroll).
+- **Tool Upkeep via Tinkering & Pen Discrimination:** Detects broken or missing Mapmaker's Pens, strictly rejects Scribe's Pens using active tooltip inspection, closes stale craft menus, and automatically crafts replacements on the fly using Tinker's Tools, iron ingots, and blank scrolls (1 ingot + 1 scroll) via serial diff tracking.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
   - Real-time training status (`Crafted`, `Storing...`, `Trashing...`, `Tinkering Mapmaker's Pen...`, `Paused`, `Finished`)
   - Live Cartography skill level, skill cap, and automatic skill gain announcements

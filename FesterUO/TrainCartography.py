@@ -24,10 +24,13 @@ Description:
         * Direct Satchel Crafting support (if server allows crafting directly from satchels).
         * Restock support: Maintains a lightweight buffer of blank scrolls in backpack, pulling fresh batches as needed.
         * Uses standard Blank Scrolls (0x0EF3, 0x0E34) while also supporting Blank Maps (0x14EB, 0x14EC).
-    - Tool Upkeep via Tinkering:
-        * Detects Mapmaker's Pens in backpack or hands.
-        * If pens break and Tinkering tools + iron ingots are available, attempts to auto-craft replacement
-          Mapmaker's Pens (1 ingot + 1 blank scroll) on the fly.
+    - Tool Upkeep via Tinkering & Smart Pen Discrimination:
+        * Detects Mapmaker's Pens in backpack or hands with active OPL tooltip verification.
+        * Strictly discriminates between Mapmaker's Pens and Scribe's Pens, never accidentally using
+          a Scribe's Pen for Cartography.
+        * Automatically tracks active pen serials and detects when tools break.
+        * Closes stale craft menus and automatically crafts replacement Mapmaker's Pens (1 ingot + 1 blank scroll)
+          via Tinkering on the fly using serial diff detection.
     - Interactive Control Gump:
         * Real-time training status, live Cartography skill level and cap with gain tracking,
           Crafted / Stored / Trashed / Failed counters, Satchel & Backpack blank scroll counts,
@@ -123,6 +126,7 @@ btn_stop = None
 satchel_serial: Optional[int] = None
 storage_serial: Optional[int] = None
 trash_barrel_serial: Optional[int] = None
+active_pen_serial: Optional[int] = None
 
 is_paused: bool = False
 is_stopped: bool = False
@@ -285,12 +289,21 @@ def on_recipe_clicked() -> None:
     """Opens the Cartography craft gump to allow manually selecting a map recipe."""
     global is_paused, btn_pause
     pen = get_mapmaker_pen()
+    if not pen:
+        if not craft_pen_with_tinkering():
+            API.SysMsg("[Cartography] No Mapmaker's Pen available to open craft menu!")
+            return
+        pen = get_mapmaker_pen()
+
     if pen:
         is_paused = True
         if btn_pause:
             btn_pause.SetText("Resume")
         update_status("Paused (Set Recipe)")
         API.SysMsg("[Cartography] Opening Cartography menu. Click your desired map once to craft it, then click 'Resume' on the Gump.")
+        if API.HasGump():
+            API.CloseGump()
+            API.Pause(0.3)
         API.UseObject(pen)
     else:
         API.SysMsg("[Cartography] No Mapmaker's Pen available to open craft menu!")
@@ -501,63 +514,101 @@ def is_crafted_map(item) -> bool:
     return False
 
 
+def get_pen_info(item) -> Tuple[bool, str]:
+    """
+    Analyzes an item and returns (is_pen, pen_type).
+    pen_type is 'mapmaker', 'scribe', or 'unknown'.
+    Queries tooltip properties from the server if name is not yet cached.
+    """
+    if not item or item.Graphic not in PEN_GRAPHICS:
+        return False, "none"
+
+    name = str(getattr(item, "Name", "") or "").lower()
+
+    if not any(kw in name for kw in ["map", "cartograph", "scribe", "inscript"]):
+        props = str(API.ItemNameAndProps(item.Serial, wait=True, timeout=2) or "").lower()
+        if props:
+            name = f"{name} {props}"
+
+    if "map" in name or "cartograph" in name:
+        return True, "mapmaker"
+    if "scribe" in name or "inscript" in name:
+        return True, "scribe"
+
+    return True, "unknown"
+
+
+def is_valid_mapmaker_pen(item) -> bool:
+    """
+    Returns True ONLY if the pen is verified to be a Mapmaker's Pen and NEVER a Scribe's Pen.
+    """
+    global active_pen_serial
+    if not item or item.Graphic not in PEN_GRAPHICS:
+        return False
+
+    # If this is our known active mapmaker pen, accept it
+    if active_pen_serial and item.Serial == active_pen_serial:
+        return True
+
+    is_pen, p_type = get_pen_info(item)
+    if not is_pen:
+        return False
+
+    # Strictly reject any Scribe's Pen!
+    if p_type == "scribe":
+        return False
+
+    # Validated Mapmaker's Pen
+    if p_type == "mapmaker":
+        return True
+
+    return False
+
+
 def get_mapmaker_pen():
-    """Finds a usable Mapmaker's Pen in player hands or backpack."""
-    # First priority: Hand layers or backpack with 'map' in name
+    """Finds a verified Mapmaker's Pen in player hands or backpack."""
+    global active_pen_serial
+
+    # 1. If active pen is known and still in player possession, use it
+    if active_pen_serial:
+        item = API.FindItem(active_pen_serial)
+        if item and item.Graphic in PEN_GRAPHICS:
+            is_pen, p_type = get_pen_info(item)
+            if p_type != "scribe":
+                return item
+        active_pen_serial = None
+
+    # 2. Check hands
     for layer in ["OneHanded", "TwoHanded"]:
         item = API.FindLayer(layer)
-        if item and item.Graphic in PEN_GRAPHICS:
-            name = str(getattr(item, "Name", "") or "").lower()
-            if "map" in name:
-                return item
+        if item and is_valid_mapmaker_pen(item):
+            active_pen_serial = item.Serial
+            return item
 
+    # 3. Check main backpack
     items = API.ItemsInContainer(API.Backpack, recursive=False)
     if items:
         for item in items:
-            if item.Graphic in PEN_GRAPHICS:
-                name = str(getattr(item, "Name", "") or "").lower()
-                if "map" in name:
-                    return item
-
-    # Second priority: Any pen that does NOT say 'scribe'
-    if items:
-        for item in items:
-            if item.Graphic in PEN_GRAPHICS:
-                name = str(getattr(item, "Name", "") or "").lower()
-                if "scribe" not in name:
-                    return item
-
-    # Fallback to any pen
-    for layer in ["OneHanded", "TwoHanded"]:
-        item = API.FindLayer(layer)
-        if item and item.Graphic in PEN_GRAPHICS:
-            return item
-
-    if items:
-        for item in items:
-            if item.Graphic in PEN_GRAPHICS:
+            if is_valid_mapmaker_pen(item):
+                active_pen_serial = item.Serial
                 return item
 
     return None
 
 
 def count_mapmaker_pens() -> int:
-    """Counts usable Mapmaker's Pens."""
+    """Counts usable Mapmaker's Pens, strictly excluding Scribe's Pens."""
     cnt = 0
     for layer in ["OneHanded", "TwoHanded"]:
         item = API.FindLayer(layer)
-        if item and item.Graphic in PEN_GRAPHICS:
-            name = str(getattr(item, "Name", "") or "").lower()
-            if "scribe" not in name:
-                cnt += 1
+        if item and is_valid_mapmaker_pen(item):
+            cnt += 1
 
     items = API.ItemsInContainer(API.Backpack, recursive=False)
     if items:
         for item in items:
-            if item.Graphic in PEN_GRAPHICS:
-                name = str(getattr(item, "Name", "") or "").lower()
-                if "scribe" not in name:
-                    cnt += 1
+            if is_valid_mapmaker_pen(item):
+                cnt += 1
     return cnt
 
 
@@ -742,7 +793,7 @@ def deposit_ingots_to_satchel() -> None:
 
 def craft_pen_with_tinkering() -> bool:
     """Crafts a replacement Mapmaker's Pen using Tinkering tools, iron ingots, and blank scrolls."""
-    global tools_crafted, is_paused, btn_pause
+    global tools_crafted, is_paused, btn_pause, active_pen_serial
     if not AUTO_CRAFT_PEN:
         return False
 
@@ -776,7 +827,12 @@ def craft_pen_with_tinkering() -> bool:
     update_status(f"Tinkering {tool_name}...")
     API.SysMsg(f"[Cartography] Crafting replacement {tool_name} via Tinkering (1 ingot + 1 scroll)...")
 
-    count_before = count_mapmaker_pens()
+    # Close any currently open craft gump (e.g. stale Cartography gump from previous pen)
+    if API.HasGump():
+        API.CloseGump()
+        API.Pause(0.3)
+
+    bp_pens_before = {item.Serial for item in (API.ItemsInContainer(API.Backpack, recursive=False) or []) if item.Graphic in PEN_GRAPHICS}
 
     for attempt in range(1, MAX_TOOL_CRAFT_ATTEMPTS + 1):
         if API.StopRequested or is_stopped:
@@ -817,18 +873,21 @@ def craft_pen_with_tinkering() -> bool:
             update_status(f"Craft 1 {tool_name} in menu")
             return True
 
-        count_after = count_mapmaker_pens()
-        if count_after > count_before or get_mapmaker_pen() is not None:
+        bp_pens_after = {item.Serial for item in (API.ItemsInContainer(API.Backpack, recursive=False) or []) if item.Graphic in PEN_GRAPHICS}
+        new_pens = bp_pens_after - bp_pens_before
+        if new_pens:
+            new_serial = list(new_pens)[0]
+            active_pen_serial = new_serial
             tools_crafted += 1
-            API.SysMsg(f"[Cartography] Successfully crafted new {tool_name}!")
+            API.SysMsg(f"[Cartography] Successfully crafted new {tool_name} (0x{new_serial:X})!")
             update_stats()
             if API.HasGump():
-                API.ReplyGump(0)
+                API.CloseGump()
                 API.Pause(0.3)
             deposit_ingots_to_satchel()
             return True
 
-        if any("you create" in t for t in j_text) and count_after <= count_before:
+        if any("you create" in t for t in j_text) and not new_pens:
             API.SysMsg(f"[Cartography] Tinkering 'Make Last' is currently set to a different item, not {tool_name}.")
             API.SysMsg(f"[Cartography] In the open Tinkering menu: Click 'Tools' -> '{tool_name}' once to craft it, then click Resume on the Gump.")
             is_paused = True
@@ -842,7 +901,7 @@ def craft_pen_with_tinkering() -> bool:
             API.Pause(0.5)
 
     if API.HasGump():
-        API.ReplyGump(0)
+        API.CloseGump()
         API.Pause(0.3)
 
     deposit_ingots_to_satchel()
@@ -1002,7 +1061,8 @@ API.OnStop(on_stop)
 
 
 def main():
-    global satchel_serial, storage_serial, trash_barrel_serial, current_recipe_name, recommended_recipe_name
+    global satchel_serial, storage_serial, trash_barrel_serial, active_pen_serial
+    global current_recipe_name, recommended_recipe_name
 
     API.SysMsg("=== FesterUO Cartography Trainer ===")
 
@@ -1050,6 +1110,14 @@ def main():
     # 5. Check initial tool
     pen = get_mapmaker_pen()
     if not pen:
+        API.SysMsg("[Cartography] No Mapmaker's Pen found. Attempting to auto-craft one via Tinkering...")
+        if craft_pen_with_tinkering():
+            pen = get_mapmaker_pen()
+
+    if pen:
+        active_pen_serial = pen.Serial
+        API.SysMsg(f"[Cartography] Ready with Mapmaker's Pen: 0x{active_pen_serial:X}")
+    else:
         API.SysMsg("[Cartography] No Mapmaker's Pen found! Please equip or carry a mapmaker's pen.")
         update_status("No Pen")
 
