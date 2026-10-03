@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `FesterUO/TrainCartography.py`: Automated resource-efficient Cartography skill training script with interactive control Gump created by FesterHead:
+  - Progresses through the optimal map ladder from 0.0 to 100.0/120.0 (Local Map -> City Map -> Sea Chart -> World Map), consuming 1 blank map per craft.
+  - Supports dual crafted map handling: Automatically transfers completed maps into a designated storage container / map box or nearby Trash Barrel via backpack serial diff, preventing weight overloads and backpack clutter.
+  - Features smart resource satchel integration supporting direct satchel crafting or automated restocking of blank maps into the backpack.
+  - Supports tool upkeep via Tinkering: Automatically detects missing or broken Mapmaker's Pens and crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
+  - Features an interactive control Gump displaying real-time training status, live Cartography skill and cap with gain tracking, Recipe recommendation, Crafted / Stored / Trashed / Failed counters, Satchel & Backpack blank map counts, Tool & Destination indicators, Weight indicator, and interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons.
 - Added `FesterUO/MoveItemsBetweenContainers.py`: Interactive container-to-container item organizer and transfer script created by FesterHead:
   - Prompts the player to target a SOURCE container, then a DESTINATION container with timeout and cancellation handling.
   - Automatically sends an open request to the source container prior to querying items, ensuring container contents are fully received from the server.
