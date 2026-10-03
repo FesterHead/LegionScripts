@@ -355,26 +355,26 @@ An automated, resource-efficient Inscription training engine with interactive co
 
 An automated, resource-efficient Cartography training engine with interactive control Gump, resource satchel support, dual storage/trash disposal, and Tinkering pen upkeep:
 
-- **Optimal Map Progression:** Automatically monitors your Cartography skill and crafts the optimal map in each tier from 0 to 100 (GM) / 120 (Legendary), requiring only 1 blank map per craft:
-  - **0.0 – 50.0:** Local Map (1 blank map)
-  - **50.0 – 65.0:** City Map (1 blank map)
-  - **65.0 – 70.0:** Sea Chart (1 blank map)
-  - **70.0 – 120.0:** World Map (1 blank map)
+- **Optimal Map Progression:** Automatically monitors your Cartography skill and crafts the optimal map in each tier from 0 to 100 (GM) / 120 (Legendary), requiring 1 blank scroll per craft:
+  - **0.0 – 50.0:** Local Map (1 blank scroll)
+  - **50.0 – 65.0:** City Map (1 blank scroll)
+  - **65.0 – 70.0:** Sea Chart (1 blank scroll)
+  - **70.0 – 120.0:** World Map (1 blank scroll)
 - **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next map. Players can click **"Set Recipe"** on the Gump at any time to manually choose any map from the open craft menu.
 - **Dual Crafted Map Management (Storage & Trash Disposal):**
   - **Storage Container:** Allows targeting a container (map case, chest, or pouch) on startup or via the Gump's **"Storage"** button to automatically store all completed maps.
   - **Trash Barrel:** Auto-detects nearby Trash Barrels or allows targeting one via the Gump's **"Trash Can"** button to automatically discard completed maps and avoid overweight.
   - Deposits newly crafted maps via backpack serial diff, ensuring backpack cleanliness.
 - **Resource Satchel Integration:**
-  - Supports direct satchel crafting or maintains a lightweight working buffer of blank maps in the backpack.
-  - Automatically restocks blank maps from the satchel when backpack reserves run low.
-  - Recognizes standard Blank Maps (`0x14EB`, `0x14EC`) and Blank Scrolls (`0x0EF3`, `0x0E34`).
-- **Tool Upkeep via Tinkering:** Detects broken or missing Mapmaker's Pens and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
+  - Supports direct satchel crafting or maintains a lightweight working buffer of blank scrolls in the backpack.
+  - Automatically restocks blank scrolls from the satchel when backpack reserves run low.
+  - Recognizes standard Blank Scrolls (`0x0EF3`, `0x0E34`) with full fallback compatibility for Blank Maps (`0x14EB`, `0x14EC`).
+- **Tool Upkeep via Tinkering:** Detects broken or missing Mapmaker's Pens and automatically crafts replacements on the fly using Tinker's Tools, iron ingots, and blank scrolls (1 ingot + 1 scroll).
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
   - Real-time training status (`Crafted`, `Storing...`, `Trashing...`, `Tinkering Mapmaker's Pen...`, `Paused`, `Finished`)
   - Live Cartography skill level, skill cap, and automatic skill gain announcements
   - Running counters for **Crafted**, **Stored**, **Trashed**, and **Failed** items
-  - Live Satchel and Backpack blank map counts, plus pen count and destination indicator
+  - Live Satchel and Backpack blank scroll counts, plus pen count and destination indicator
   - Live character weight indicator (`Weight: Cur / Max`)
   - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.

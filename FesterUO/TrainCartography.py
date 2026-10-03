@@ -7,10 +7,10 @@ Target Client: TazUO (Legion Scripting Engine)
 Description:
     Fully automated Cartography skill training script for TazUO featuring:
     - Optimal resource-efficient progression ladder from 0.0 to 100.0 (or 120.0) Cartography:
-        * 0.0 - 50.0:   Local Map (1 blank map)
-        * 50.0 - 65.0:  City Map (1 blank map)
-        * 65.0 - 70.0:  Sea Chart (1 blank map)
-        * 70.0 - 120.0: World Map (1 blank map)
+        * 0.0 - 50.0:   Local Map (1 blank scroll)
+        * 50.0 - 65.0:  City Map (1 blank scroll)
+        * 65.0 - 70.0:  Sea Chart (1 blank scroll)
+        * 70.0 - 120.0: World Map (1 blank scroll)
     - Milestone Announcements & "Set Recipe" Manual Override:
         * Proactively notifies the player when reaching a skill threshold to recommend the next map.
         * Includes an interactive "Set Recipe" button allowing players to manually prime any craft recipe.
@@ -22,15 +22,15 @@ Description:
         * Interactive "Storage" and "Trash Can" buttons on the Gump allow switching destinations at any time.
     - Resource Satchel Integration:
         * Direct Satchel Crafting support (if server allows crafting directly from satchels).
-        * Restock support: Maintains a lightweight buffer of blank maps in backpack, pulling fresh batches as needed.
-        * Recognizes standard Blank Maps (0x14EB, 0x14EC) and Blank Scrolls (0x0EF3, 0x0E34).
+        * Restock support: Maintains a lightweight buffer of blank scrolls in backpack, pulling fresh batches as needed.
+        * Uses standard Blank Scrolls (0x0EF3, 0x0E34) while also supporting Blank Maps (0x14EB, 0x14EC).
     - Tool Upkeep via Tinkering:
         * Detects Mapmaker's Pens in backpack or hands.
         * If pens break and Tinkering tools + iron ingots are available, attempts to auto-craft replacement
-          Mapmaker's Pens (1 ingot + 1 blank map/scroll) on the fly.
+          Mapmaker's Pens (1 ingot + 1 blank scroll) on the fly.
     - Interactive Control Gump:
         * Real-time training status, live Cartography skill level and cap with gain tracking,
-          Crafted / Stored / Trashed / Failed counters, Satchel & Backpack blank map counts,
+          Crafted / Stored / Trashed / Failed counters, Satchel & Backpack blank scroll counts,
           Tool & Destination indicators, and live Weight indicator.
         * Interactive Pause / Resume, Set Recipe, Satchel, Storage, Trash Can, and Stop buttons.
 """
@@ -48,9 +48,9 @@ TARGET_SKILL = 100.0
 # Direct Satchel Crafting (crafts directly from resource satchel without pulling to backpack)
 DIRECT_SATCHEL_CRAFTING = True
 
-# Working buffer of blank maps maintained in main backpack if direct crafting is not supported
-MIN_BACKPACK_MAPS = 0 if DIRECT_SATCHEL_CRAFTING else 20
-TARGET_BACKPACK_MAPS = 50
+# Working buffer of blank scrolls maintained in main backpack if direct crafting is not supported
+MIN_BACKPACK_SCROLLS = 0 if DIRECT_SATCHEL_CRAFTING else 20
+TARGET_BACKPACK_SCROLLS = 50
 RESTOCK_BATCH_SIZE = 50
 
 # Delays in seconds
@@ -75,8 +75,10 @@ DEBUG = False
 # Mapmaker / Scribe pen graphics
 PEN_GRAPHICS = {0x0FBF, 0x0FC0}
 
-# Blank map graphics (rolled maps) & blank scrolls
-BLANK_MAP_GRAPHICS = {0x14EB, 0x14EC, 0x0EF3, 0x0E34}
+# Blank scrolls (primary material for mapmaking) and blank rolled maps
+BLANK_SCROLL_GRAPHICS = {0x0EF3, 0x0E34}
+BLANK_MAP_GRAPHICS = {0x14EB, 0x14EC}
+ALL_BLANK_MATERIALS = BLANK_SCROLL_GRAPHICS | BLANK_MAP_GRAPHICS
 
 # Crafted map graphics (rolled and unrolled maps)
 CRAFTED_MAP_GRAPHICS = {0x14EB, 0x14EC, 0x14ED, 0x14EE}
@@ -89,7 +91,7 @@ IRON_INGOT_HUE = 0
 # Trash barrel graphics
 TRASH_BARREL_GRAPHICS = {0x0E77}
 
-# Optimal Cartography Progression Ladder: (min_skill, max_skill, map_name, blank_map_cost)
+# Optimal Cartography Progression Ladder: (min_skill, max_skill, map_name, scroll_cost)
 PROGRESSION_LADDER: List[Tuple[float, float, str, int]] = [
     (0.0, 50.0, "Local Map", 1),
     (50.0, 65.0, "City Map", 1),
@@ -107,7 +109,7 @@ lbl_status = None
 lbl_skill = None
 lbl_recipe = None
 lbl_counts = None
-lbl_maps = None
+lbl_scrolls = None
 lbl_tools = None
 lbl_weight = None
 
@@ -150,7 +152,7 @@ def update_status(text: str) -> None:
 def update_stats() -> None:
     """Refreshes all Gump statistic labels."""
     global last_cartography_skill, recommended_recipe_name
-    global lbl_skill, lbl_recipe, lbl_counts, lbl_maps, lbl_tools, lbl_weight
+    global lbl_skill, lbl_recipe, lbl_counts, lbl_scrolls, lbl_tools, lbl_weight
 
     # 1. Cartography Skill
     c_skill = API.GetSkill("Cartography")
@@ -188,12 +190,12 @@ def update_stats() -> None:
     if lbl_counts:
         lbl_counts.Text = f"Crafted: {total_crafted} | Stored: {total_stored} | Trashed: {total_trashed} | Failed: {total_failed}"
 
-    # 4. Blank Map Counts
-    bp_maps = count_backpack_blank_maps()
-    satchel_maps = count_satchel_blank_maps() if satchel_serial else 0
-    satchel_label = f"{satchel_maps:,}" if satchel_serial else "N/A"
-    if lbl_maps:
-        lbl_maps.Text = f"Satchel: {satchel_label} | Backpack: {bp_maps}"
+    # 4. Blank Scroll Counts
+    bp_scrolls = count_backpack_blank_scrolls()
+    satchel_scrolls = count_satchel_blank_scrolls() if satchel_serial else 0
+    satchel_label = f"{satchel_scrolls:,}" if satchel_serial else "N/A"
+    if lbl_scrolls:
+        lbl_scrolls.Text = f"Satchel: {satchel_label} | Backpack: {bp_scrolls}"
 
     # 5. Tool & Destination Status
     pens_cnt = count_mapmaker_pens()
@@ -243,8 +245,8 @@ def on_satchel_clicked() -> None:
         satchel_serial = new_serial
         API.SysMsg(f"[Cartography] Satchel updated: 0x{satchel_serial:X}")
         update_stats()
-        if count_backpack_blank_maps() < MIN_BACKPACK_MAPS:
-            restock_maps_from_satchel()
+        if count_backpack_blank_scrolls() < MIN_BACKPACK_SCROLLS:
+            restock_scrolls_from_satchel()
     else:
         API.SysMsg("[Cartography] Satchel targeting cleared.")
         satchel_serial = None
@@ -304,7 +306,7 @@ def on_gump_disposed() -> None:
 
 def create_control_gump() -> None:
     """Renders the FesterUO Cartography Trainer Gump."""
-    global gump, lbl_status, lbl_skill, lbl_recipe, lbl_counts, lbl_maps, lbl_tools, lbl_weight
+    global gump, lbl_status, lbl_skill, lbl_recipe, lbl_counts, lbl_scrolls, lbl_tools, lbl_weight
     global btn_pause, btn_recipe, btn_satchel, btn_storage, btn_trash, btn_stop
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
@@ -340,10 +342,10 @@ def create_control_gump() -> None:
     lbl_counts.SetPos(10, 88)
     gump.Add(lbl_counts)
 
-    # Blank map counts
-    lbl_maps = API.Gumps.CreateGumpLabel("Satchel: 0 | Backpack: 0", 996)
-    lbl_maps.SetPos(10, 108)
-    gump.Add(lbl_maps)
+    # Blank scroll counts
+    lbl_scrolls = API.Gumps.CreateGumpLabel("Satchel: 0 | Backpack: 0", 996)
+    lbl_scrolls.SetPos(10, 108)
+    gump.Add(lbl_scrolls)
 
     # Tools & Destination
     lbl_tools = API.Gumps.CreateGumpLabel("Pens: -- | Dest: --", 996)
@@ -456,25 +458,24 @@ def is_overburdened() -> bool:
     return False
 
 
-def is_blank_map(item) -> bool:
-    """Returns True if item is a blank map or blank scroll, not a completed/crafted map."""
-    if not item or item.Graphic not in BLANK_MAP_GRAPHICS:
+def is_blank_scroll(item) -> bool:
+    """Returns True if item is a blank scroll or blank map, not a completed/crafted map."""
+    if not item or item.Graphic not in ALL_BLANK_MATERIALS:
         return False
 
-    # Blank scrolls are always blank
-    if item.Graphic in {0x0EF3, 0x0E34}:
+    # Standard blank scrolls are always blank
+    if item.Graphic in BLANK_SCROLL_GRAPHICS:
         return True
 
+    # For 0x14EB / 0x14EC rolled maps
     name = str(getattr(item, "Name", "") or "").lower()
-    # Explicitly blank
     if "blank" in name:
         return True
 
-    # If name explicitly indicates crafted map
     if any(kw in name for kw in ["local", "city", "sea chart", "world", "detail", "map of"]):
         return False
 
-    # In UO, blank maps stack together; crafted maps never stack
+    # In UO, blank items stack together; crafted maps never stack
     if (getattr(item, "Amount", 1) or 1) > 1:
         return True
 
@@ -560,32 +561,32 @@ def count_mapmaker_pens() -> int:
     return cnt
 
 
-def count_backpack_blank_maps() -> int:
-    """Counts blank maps / blank scrolls currently in the main backpack."""
+def count_backpack_blank_scrolls() -> int:
+    """Counts blank scrolls / blank maps currently in the main backpack."""
     total = 0
     items = API.ItemsInContainer(API.Backpack, recursive=False)
     if items:
         for item in items:
-            if item.Serial != satchel_serial and is_blank_map(item):
+            if item.Serial != satchel_serial and is_blank_scroll(item):
                 total += getattr(item, "Amount", 1) or 1
     return total
 
 
-def count_satchel_blank_maps() -> int:
-    """Counts blank maps / blank scrolls inside the designated resource satchel."""
+def count_satchel_blank_scrolls() -> int:
+    """Counts blank scrolls / blank maps inside the designated resource satchel."""
     if not satchel_serial:
         return 0
     total = 0
     items = API.ItemsInContainer(satchel_serial, recursive=True)
     if items:
         for item in items:
-            if is_blank_map(item):
+            if is_blank_scroll(item):
                 total += getattr(item, "Amount", 1) or 1
     return total
 
 
-def get_satchel_blank_maps():
-    """Finds the largest stack of blank maps inside the satchel."""
+def get_satchel_blank_scrolls():
+    """Finds the largest stack of blank scrolls inside the satchel."""
     if not satchel_serial:
         return None
     items = API.ItemsInContainer(satchel_serial, recursive=True)
@@ -594,7 +595,7 @@ def get_satchel_blank_maps():
     best_item = None
     best_amt = 0
     for item in items:
-        if is_blank_map(item):
+        if is_blank_scroll(item):
             amt = getattr(item, "Amount", 1) or 1
             if amt > best_amt:
                 best_amt = amt
@@ -602,31 +603,31 @@ def get_satchel_blank_maps():
     return best_item
 
 
-def restock_maps_from_satchel() -> bool:
-    """Pulls a batch of blank maps from the satchel into the main backpack."""
+def restock_scrolls_from_satchel() -> bool:
+    """Pulls a batch of blank scrolls from the satchel into the main backpack."""
     if not satchel_serial:
         return False
 
-    current_bp = count_backpack_blank_maps()
-    if current_bp >= MIN_BACKPACK_MAPS and current_bp > 0:
+    current_bp = count_backpack_blank_scrolls()
+    if current_bp >= MIN_BACKPACK_SCROLLS and current_bp > 0:
         return True
 
-    satchel_map_stack = get_satchel_blank_maps()
-    if not satchel_map_stack:
+    satchel_scroll_stack = get_satchel_blank_scrolls()
+    if not satchel_scroll_stack:
         return False
 
-    amt_available = getattr(satchel_map_stack, "Amount", 1) or 1
-    amt_needed = max(RESTOCK_BATCH_SIZE, TARGET_BACKPACK_MAPS - current_bp)
+    amt_available = getattr(satchel_scroll_stack, "Amount", 1) or 1
+    amt_needed = max(RESTOCK_BATCH_SIZE, TARGET_BACKPACK_SCROLLS - current_bp)
     amt_to_move = min(amt_available, amt_needed)
 
     if amt_to_move <= 0:
         return False
 
-    update_status(f"Restocking {amt_to_move} blank maps...")
-    API.MoveItem(satchel_map_stack.Serial, API.Backpack, amt=amt_to_move)
+    update_status(f"Restocking {amt_to_move} blank scrolls...")
+    API.MoveItem(satchel_scroll_stack.Serial, API.Backpack, amt=amt_to_move)
     API.Pause(0.6)
     update_stats()
-    return count_backpack_blank_maps() >= 1
+    return count_backpack_blank_scrolls() >= 1
 
 
 def find_nearby_trash_barrel():
@@ -646,7 +647,7 @@ def find_nearby_trash_barrel():
 
 
 def get_recommended_item(skill: float) -> Tuple[str, int]:
-    """Returns optimal (map_name, blank_map_cost) for current skill level."""
+    """Returns optimal (map_name, blank_scroll_cost) for current skill level."""
     for min_sk, max_sk, name, cost in PROGRESSION_LADDER:
         if min_sk <= skill < max_sk:
             return name, cost
@@ -740,7 +741,7 @@ def deposit_ingots_to_satchel() -> None:
 
 
 def craft_pen_with_tinkering() -> bool:
-    """Crafts a replacement Mapmaker's Pen using Tinkering tools and iron ingots."""
+    """Crafts a replacement Mapmaker's Pen using Tinkering tools, iron ingots, and blank scrolls."""
     global tools_crafted, is_paused, btn_pause
     if not AUTO_CRAFT_PEN:
         return False
@@ -762,18 +763,18 @@ def craft_pen_with_tinkering() -> bool:
     if count_backpack_ingots() < 1:
         restock_ingots_from_satchel(4)
 
-    # Some shards require 1 blank map or scroll to tinker a mapmaker's pen
-    total_maps = count_backpack_blank_maps() + (count_satchel_blank_maps() if satchel_serial else 0)
-    if total_maps < 1:
-        update_status("Need Blank Map")
-        API.SysMsg(f"[Cartography] Need at least 1 blank map/scroll to craft {tool_name}!")
+    # Mapmaker's pens require 1 blank scroll (or blank map) to tinker
+    total_scrolls = count_backpack_blank_scrolls() + (count_satchel_blank_scrolls() if satchel_serial else 0)
+    if total_scrolls < 1:
+        update_status("Need Blank Scroll")
+        API.SysMsg(f"[Cartography] Need at least 1 blank scroll to craft {tool_name}!")
         return False
 
-    if count_backpack_blank_maps() < 1:
-        restock_maps_from_satchel()
+    if count_backpack_blank_scrolls() < 1:
+        restock_scrolls_from_satchel()
 
     update_status(f"Tinkering {tool_name}...")
-    API.SysMsg(f"[Cartography] Crafting replacement {tool_name} via Tinkering (1 ingot)...")
+    API.SysMsg(f"[Cartography] Crafting replacement {tool_name} via Tinkering (1 ingot + 1 scroll)...")
 
     count_before = count_mapmaker_pens()
 
@@ -859,7 +860,7 @@ def craft_pen_with_tinkering() -> bool:
 # ==============================================================================
 
 def craft_cycle() -> bool:
-    """Executes a single craft attempt, restocks blank maps, and stores/trashes crafted maps."""
+    """Executes a single craft attempt, restocks blank scrolls, and stores/trashes crafted maps."""
     global total_crafted, total_failed, total_stored, total_trashed, current_recipe_name
 
     # 1. Check weight before crafting
@@ -871,7 +872,7 @@ def craft_cycle() -> bool:
     # 2. Get current skill and recipe info
     c_skill_obj = API.GetSkill("Cartography")
     current_skill = float(c_skill_obj.Value) if c_skill_obj else 0.0
-    rec_name, map_cost = get_recommended_item(current_skill)
+    rec_name, scroll_cost = get_recommended_item(current_skill)
 
     # Stop if target skill reached
     if current_skill >= TARGET_SKILL:
@@ -879,16 +880,16 @@ def craft_cycle() -> bool:
         API.SysMsg(f"[Cartography] Congratulations! Target skill {TARGET_SKILL:.1f} reached!")
         return False
 
-    # 3. Check total blank maps available
-    total_maps = count_backpack_blank_maps() + (count_satchel_blank_maps() if satchel_serial else 0)
-    if total_maps < 1:
-        update_status("Out of Blank Maps")
-        API.SysMsg("[Cartography] Out of blank maps in backpack and satchel!")
+    # 3. Check total blank scrolls available
+    total_scrolls = count_backpack_blank_scrolls() + (count_satchel_blank_scrolls() if satchel_serial else 0)
+    if total_scrolls < 1:
+        update_status("Out of Scrolls")
+        API.SysMsg("[Cartography] Out of blank scrolls/maps in backpack and satchel!")
         return False
 
-    # Maintain backpack blank map buffer if needed
-    if not DIRECT_SATCHEL_CRAFTING and count_backpack_blank_maps() < MIN_BACKPACK_MAPS:
-        restock_maps_from_satchel()
+    # Maintain backpack blank scroll buffer if needed
+    if not DIRECT_SATCHEL_CRAFTING and count_backpack_blank_scrolls() < MIN_BACKPACK_SCROLLS:
+        restock_scrolls_from_satchel()
 
     # 4. Ensure Mapmaker's Pen is available
     pen = get_mapmaker_pen()
@@ -929,11 +930,11 @@ def craft_cycle() -> bool:
         on_pause_clicked()
         return True
 
-    # Check if missing blank maps
-    if any("sufficient" in t or "enough blank" in t or "more blank" in t for t in j_text) or API.InJournal("blank map"):
-        if satchel_serial and count_satchel_blank_maps() >= 1:
-            API.SysMsg("[Cartography] Server requires blank maps in root backpack. Restocking from satchel...")
-            restock_maps_from_satchel()
+    # Check if missing blank scrolls
+    if any("sufficient" in t or "enough" in t or "more scroll" in t or "more blank" in t for t in j_text) or API.InJournal("blank scroll") or API.InJournal("blank map") or API.InJournal("scroll"):
+        if satchel_serial and count_satchel_blank_scrolls() >= 1:
+            API.SysMsg("[Cartography] Server requires blank scrolls in root backpack. Restocking from satchel...")
+            restock_scrolls_from_satchel()
             return True
 
     # Check craft success or failure
@@ -1037,7 +1038,7 @@ def main():
             API.SysMsg("[Cartography] No trash barrel selected. Crafted maps will remain in backpack.")
 
     # 4. Satchel Setup
-    API.SysMsg("[Cartography] Target your Resource Satchel for Blank Maps/Ingots (or press ESC for backpack only)...")
+    API.SysMsg("[Cartography] Target your Resource Satchel for Blank Scrolls/Maps/Ingots (or press ESC for backpack only)...")
     sat_serial = API.RequestTarget(timeout=6.0)
     if sat_serial and sat_serial != API.Player.Serial:
         satchel_serial = sat_serial
@@ -1056,9 +1057,9 @@ def main():
     create_control_gump()
     update_stats()
 
-    # Initial check and restock of blank maps if needed
-    if not DIRECT_SATCHEL_CRAFTING and count_backpack_blank_maps() < MIN_BACKPACK_MAPS:
-        restock_maps_from_satchel()
+    # Initial check and restock of blank scrolls if needed
+    if not DIRECT_SATCHEL_CRAFTING and count_backpack_blank_scrolls() < MIN_BACKPACK_SCROLLS:
+        restock_scrolls_from_satchel()
 
     update_status("Running")
     API.SysMsg(f"[Cartography] Training started. Current skill: {current_skill:.1f} | Recommended: {recommended_recipe_name}")
