@@ -379,6 +379,37 @@ An automated, resource-efficient Cartography training engine with interactive co
   - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 
+#### [TrainCooking.py](FesterUO/TrainCooking.py)
+
+An automated, resource-efficient Cooking training engine with interactive control Gump, resource satchel support, dual storage/trash disposal, heat source awareness, and Tinkering skillet upkeep:
+
+- **Optimal Cooking Progression:** Automatically monitors your Cooking skill and recommends the optimal recipe in each tier from 0 to 100.0 (GM):
+  - **0.0 – 50.0:** Fish Steak / Cooked Ribs (1 raw fish steak / cut of ribs)
+  - **50.0 – 65.0:** Dough / Bread Loaf (flour + water)
+  - **65.0 – 80.0:** Pan of Cookies / Meat Pie (sweet dough / ribs)
+  - **80.0 – 100.0:** Baked Fruit Pie / Miso Soup (fruit / miso / dough)
+- **Universal Dual-Mode Engine:**
+  - **Craft Gump Mode (Default):** Uses standard cooking tools (Skillet, Flour Sifter, Rolling Pin) with high-speed "Make Last" crafting.
+  - **Direct Heat Source Mode:** Automatically uses raw food directly on fires, ovens, stoves, forges, or heating stands for classic or shard-specific mechanics.
+- **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next recipe. Players can click **"Set Recipe"** on the Gump at any time to open the craft menu and select any custom recipe.
+- **Dual Crafted Food Management (Storage & Trash Disposal):**
+  - **Storage Container:** Allows targeting a food chest, cooler, or pouch on startup or via the Gump's **"Storage"** button to automatically store all completed cooked food.
+  - **Trash Barrel:** Auto-detects nearby Trash Barrels or allows targeting one via the Gump's **"Trash Can"** button to automatically discard cooked food and avoid overweight.
+  - Deposits cooked food via backpack serial diff and amount increases, handling both stackable food (fish steaks, ribs) and individual items (pies, loaves).
+- **Resource Satchel Integration:**
+  - Supports direct satchel crafting or maintains a lightweight working buffer of raw ingredients in the backpack.
+  - Automatically restocks raw food from the satchel when backpack reserves run low.
+- **Tool Upkeep via Tinkering:** Detects broken or missing Skillets and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (2 ingots each).
+- **Heat Source Awareness:** Auto-detects nearby campfires, ovens, stoves, hearths, forges, or portable heating stands.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafted`, `Storing...`, `Trashing...`, `Tinkering Skillet...`, `Paused`, `Finished`)
+  - Live Cooking skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Stored**, **Trashed**, and **Failed** items
+  - Live Satchel and Backpack ingredient counts, plus tool/mode and destination indicator
+  - Live character weight indicator (`Weight: Cur / Max`)
+  - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
 #### [MoveItemsBetweenContainers.py](FesterUO/MoveItemsBetweenContainers.py)
 
 A quick and reliable container-to-container item organizer and transfer utility script:

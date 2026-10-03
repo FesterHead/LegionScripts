@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `FesterUO/TrainCooking.py`: Automated resource-efficient Cooking skill training script with interactive control Gump created by FesterHead:
+  - Progresses through the optimal cooking progression ladder from 0.0 to 100.0 (Fish Steak / Cooked Ribs -> Dough / Bread Loaf -> Pan of Cookies / Meat Pie -> Baked Fruit Pie / Miso Soup).
+  - Features universal crafting engine with dual-mode support: Standard Craft Gump with "Make Last" using Skillets, Flour Sifters, or Rolling Pins, and Direct Heat Source cooking mode using raw food directly on fires, ovens, stoves, forges, or heating stands.
+  - Supports dual cooked food handling: Automatically transfers completed food into a designated storage container / cooler or nearby Trash Barrel via backpack serial diff, preventing weight overloads and backpack clutter.
+  - Features smart resource satchel integration supporting direct satchel crafting or automated restocking of raw ingredients into the backpack.
+  - Supports tool upkeep via Tinkering: Automatically detects missing or broken Skillets and crafts replacements on the fly using Tinker's Tools and iron ingots (2 ingots each).
+  - Features heat source awareness, auto-detecting nearby campfires, ovens, stoves, hearths, forges, or portable heating stands.
+  - Features an interactive control Gump displaying real-time training status, live Cooking skill and cap with gain tracking, Recipe recommendation, Crafted / Stored / Trashed / Failed counters, Satchel & Backpack ingredient counts, Tool & Destination indicators, Weight indicator, and interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons.
 - Added `FesterUO/TrainCartography.py`: Automated resource-efficient Cartography skill training script with interactive control Gump created by FesterHead:
   - Progresses through the optimal map ladder from 0.0 to 100.0/120.0 (Local Map -> City Map -> Sea Chart -> World Map), consuming 1 blank map per craft.
   - Supports dual crafted map handling: Automatically transfers completed maps into a designated storage container / map box or nearby Trash Barrel via backpack serial diff, preventing weight overloads and backpack clutter.
