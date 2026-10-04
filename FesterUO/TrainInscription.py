@@ -72,6 +72,9 @@ GUMP_BTN_MAKE_LAST = 21  # Universal "Make Last" button
 AUTO_CRAFT_PEN = True
 MAX_TOOL_CRAFT_ATTEMPTS = 8
 
+# Dress configuration profile to load on startup (e.g., "Sorcery", "LRC", "Mage")
+DRESS_PROFILE: str = "Sorcery"
+
 # Enable verbose debug messages in client console
 DEBUG = False
 
@@ -760,32 +763,82 @@ def handle_mana_recovery(target_mana: Optional[int] = None) -> bool:
     cur_mana = API.Player.Mana if API.Player.Mana is not None else 0
     max_mana = API.Player.ManaMax if API.Player.ManaMax is not None else 0
 
-    threshold = max_mana if MEDITATE_UPTO_MAX else (target_mana if target_mana is not None else max_mana)
+    target = target_mana if target_mana is not None else max_mana
+    if cur_mana >= target:
+        return True
 
-    if cur_mana < (target_mana if target_mana is not None else threshold):
-        update_status(f"Regenerating Mana ({cur_mana}/{threshold})...")
-        while API.Player and (API.Player.Mana or 0) < threshold and not API.StopRequested and not is_stopped:
-            cur_mana = API.Player.Mana if API.Player.Mana is not None else 0
-            update_status(f"Regenerating Mana ({cur_mana}/{threshold})...")
-            update_stats()
+    display_max = max_mana if max_mana > 0 else target
+    update_status(f"Regenerating Mana ({cur_mana}/{display_max})...")
+    API.SysMsg(f"[Inscription] Low mana ({cur_mana}/{target}). Regenerating mana...")
 
-            if USE_MEDITATION and not armor_blocks_meditation and not API.BuffExists("Meditation"):
+    in_trance = False
+
+    while not API.StopRequested and not is_stopped:
+        if not check_ui_events():
+            return False
+
+        if not API.Player:
+            return True
+
+        cur_mana = API.Player.Mana if API.Player.Mana is not None else 0
+        max_mana = API.Player.ManaMax if API.Player.ManaMax is not None else 0
+        display_max = max_mana if max_mana > 0 else target
+        update_status(f"Regenerating Mana ({cur_mana}/{display_max})...")
+        update_stats()
+
+        # 1. Check if server indicates mana is full ("You are at peace.")
+        if API.InJournal("at peace") or API.InJournal("you are at peace"):
+            API.SysMsg("[Inscription] Mana fully restored (at peace).")
+            break
+
+        # 2. Check if mana reached target or max threshold (with 1 mana tolerance for bonus stat desync)
+        effective_threshold = (max_mana - 1) if (MEDITATE_UPTO_MAX and max_mana > 0) else target
+        if cur_mana >= effective_threshold:
+            API.SysMsg(f"[Inscription] Mana restored ({cur_mana}/{display_max}).")
+            break
+
+        # 3. Handle active meditation or passive regen
+        if USE_MEDITATION and not armor_blocks_meditation:
+            # Check journal for active meditation trance state
+            if API.InJournal("meditative trance") or API.InJournal("enter a meditative trance"):
+                in_trance = True
+
+            if API.InJournal("lost your concentration") or API.InJournal("lose your concentration"):
+                in_trance = False
+
+            if API.InJournal("regenerative forces") or API.InJournal("cannot penetrate your armor"):
+                armor_blocks_meditation = True
+                in_trance = False
+                API.SysMsg("[Inscription] Armor blocks Meditation ('Regenerative forces cannot penetrate your armor').")
+                API.SysMsg("[Inscription] Switched to passive mana regen. (Tip: Wear all-leather, cloth, or Mage Armor to meditate faster).")
+
+            # Only activate Meditation skill if not already meditating in trance
+            if not in_trance and not API.BuffExists("Meditation"):
                 API.ClearJournal()
                 API.UseSkill("Meditation")
-                if not wait_with_ui(MEDITATE_DELAY):
+                # Wait for server response to Meditation attempt
+                if not wait_with_ui(1.5):
                     return False
-                if API.InJournal("regenerative forces") or API.InJournal("cannot penetrate your armor"):
-                    armor_blocks_meditation = True
-                    API.SysMsg("[Inscription] Armor blocks Meditation ('Regenerative forces cannot penetrate your armor').")
-                    API.SysMsg("[Inscription] Switched to passive mana regen. (Tip: Wear all-leather, cloth, or Mage Armor to meditate faster).")
-                elif API.InJournal("cannot focus") or API.InJournal("must wait"):
+                if API.InJournal("at peace") or API.InJournal("you are at peace"):
+                    API.SysMsg("[Inscription] Mana fully restored (at peace).")
+                    break
+                if API.InJournal("meditative trance") or API.InJournal("enter a meditative trance"):
+                    in_trance = True
+                elif API.InJournal("must wait") or API.InJournal("cannot focus"):
                     if not wait_with_ui(2.0):
                         return False
             else:
-                if not wait_with_ui(1.5):
+                # In active trance or passive regen: wait while monitoring mana and journal
+                if not wait_with_ui(0.8):
                     return False
+        else:
+            # Passive mana regen
+            if not wait_with_ui(1.0):
+                return False
 
+    update_stats()
     return not (is_stopped or API.StopRequested)
+
 
 
 # ==============================================================================
@@ -1168,6 +1221,16 @@ def main():
     global satchel_serial, storage_serial, trash_barrel_serial, current_recipe_name, recommended_recipe_name
 
     API.SysMsg("=== FesterUO Inscription Trainer ===")
+
+    # 0. Load Dress Profile
+    if DRESS_PROFILE:
+        available = API.GetAvailableDressOutfits()
+        if available and DRESS_PROFILE not in available:
+            API.SysMsg(f"[Inscription] Note: Dress profile '{DRESS_PROFILE}' not found in TazUO. Available: {', '.join(available)}")
+        else:
+            API.SysMsg(f"[Inscription] Equipping dress profile '{DRESS_PROFILE}'...")
+            API.Dress(DRESS_PROFILE)
+            API.Pause(0.8)
 
     # 1. Initial skill and recipe recommendation
     i_skill_obj = API.GetSkill("Inscription")

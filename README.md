@@ -364,6 +364,7 @@ An automated, resource-efficient Inscription training engine with interactive co
   - Automatically detects 100% Lower Reagent Cost (LRC) suits and completely bypasses reagent requirements.
   - If LRC < 100%, automatically monitors and restocks required reagents from the resource satchel.
   - Automatically restocks blank scrolls from the satchel when backpack reserves run low.
+- **Startup Dress Profile:** Automatically equips the configured dress profile / macro (default `"Sorcery"`) at startup, ensuring your LRC suit and spellcasting gear are equipped prior to beginning training.
 - **Tool Upkeep via Tinkering & Pen Discrimination:** Detects broken or missing Scribe's Pens and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each). Strictly verifies pen tooltips via `API.ItemNameAndProps` to ensure Mapmaker's Pens (which share identical graphics `0x0FBF` / `0x0FC0`) are never mistakenly selected or used.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
   - Real-time training status (`Crafted`, `Regenerating Mana...`, `Storing...`, `Trashing...`, `Tinkering Scribe's Pen...`, `Paused`, `Finished`)
