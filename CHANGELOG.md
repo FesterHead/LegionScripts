@@ -33,14 +33,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prompts the player to target a SOURCE container, then a DESTINATION container with timeout and cancellation handling.
   - Automatically sends an open request to the source container prior to querying items, ensuring container contents are fully received from the server.
   - Safely transfers all top-level items between containers while respecting classic drag/drop delays and responsive `API.StopRequested` checks.
+- Added `FesterUO/MoveResources.py`: Targeted resource, reagent, and gem sorting and transfer script with interactive control Gump created by FesterHead:
+  - Prompts the player to target a SOURCE container, then a DESTINATION container, and automatically transfers all Reagents, Gems, and Crafting Resources (including optional gold/silver currency).
+  - Strictly preserves and leaves untouched in the source container all spell scrolls (1st–8th circle, Necro, Weaving, Mysticism), blank scrolls, recipe scrolls, power scrolls, maps, weapons, armor, shields, clothing, wearable jewelry (rings, bracelets, necklaces, earrings), and spellbooks.
+  - Features comprehensive item graphics and keyword recognition covering Magery, Necromancy, and Pagan reagents; standard and special ML/SA gems; ingots, ore, boards, logs, shafts, feathers, arrows, bolts, leather, hides, cloth, wool, cotton, scales, bones, granite, sand, bandages, bottles, and raw meat.
+  - Features an interactive control Gump displaying real-time transfer status, live counters for **Reagents Moved**, **Gems Moved**, **Resources Moved**, **Total Moved**, and **Items Skipped** (equipment/scrolls preserved), and **Pause/Resume** and **Stop** buttons.
+  - Safely pre-opens both containers to ensure server synchronization, validates that targets are distinct, and incorporates responsive cancellation with `API.StopRequested` safety.
 
 ### Fixed
 
+- Fixed Southeast targeting, cross-boat obstruction, and journal cross-contamination in `FesterUO/FishAuto.py`:
+  - Aligned `FISHING_SPOTS` with the exact manual fishing locations identified by the player: Northwest (`(-2, 0)`), Southeast Beam (`(2, 1)` - upper starboard spot behind mast), and Southeast Stern (`(2, 2)` - lower starboard spot clear of the sail).
+  - Added `SPOT_FALLBACKS` dictionary for every fishing spot to dynamically switch to adjacent clear water tiles if line-of-sight is temporarily blocked or rejected.
+  - Updated `is_open_water()` with `API.GetMultisAt()` detection to identify boat deck, mast, and railing multis, preventing the targeting solver from mistaking boat hull tiles for open water.
+  - Fixed journal cross-contamination where depletion messages from Northwest carried over to Southeast via historical journal queries; `is_spot_depleted()` now checks `API.InJournal()` strictly reset via `API.ClearJournal()` before each cast.
+  - Re-engineered cast execution in `fish_spot()` to wait reactively for server responses (catches, junk, misses, depletion, or obstacles) and dynamically adjust target distances outward if an obstruction is encountered.
+  - Decoupled `combat_triggered` in `main()` so that spot skips or target timeouts do not falsely halt the script into combat pause mode unless an actual hostile mobile is verified.
 - Fixed infinite cast loop, false spot depletion, and boat obstruction in `FesterUO/FishAuto.py`:
   - Corrected `FISHING_SPOTS` relative directional vectors for Northeast-bound vessels from diagonal `(-1, -1)` / `(1, 1)` (which cast towards the bow/stern along the boat's length) to perpendicular beam offsets `(-1, 0)` for Port (Northwest) and `(1, 0)` for Starboard (Southeast), casting directly into open ocean off the boat railings.
-  - Separated `DEPLETED_KEYWORDS` (`"biting here"`, `"no fish here"`, `"already fished"`) from targeting/obstruction errors in `OBSTACLE_KEYWORDS` (`"what water"`, `"cannot see that"`, etc.), preventing lingering server messages from falsely triggering spot depletion after a single cast.
-  - Increased base railing offset distance in `find_side_water_spot` from 2 to 3-4 tiles, ensuring casts completely clear the boat multi on both sides.
-  - Implemented dynamic distance stepping in `fish_spot()`: automatically detects `"What water do you want to fish in?"` or line-of-sight obstruction messages and steps casting distance further out into open water, or cleanly advances to the next spot after 3 failed attempts rather than hanging in an infinite loop.
+  - Separated `DEPLETED_KEYWORDS` (`"biting here"`, `"no fish here"`, `"already fished"`) from targeting/obstruction errors in `OBSTACLE_KEYWORDS` (`"cannot see that"`, `"can't fish there"`, etc.).
+  - Removed `"what water"` from keywords, as `"What water do you want to fish in?"` is the server's standard prompt when double-clicking a fishing pole, which was falsely triggering obstruction aborts.
 
 ## [1.3.0] - 2026-09-30
 

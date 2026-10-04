@@ -443,6 +443,27 @@ A quick and reliable container-to-container item organizer and transfer utility 
 - **Client Synchronization:** Uses `API.Pause(0.65)` between moves to prevent item drag/drop desynchronization or server packet drops.
 - **Attribution:** Created by FesterHead.
 
+#### [MoveResources.py](FesterUO/MoveResources.py)
+
+An intelligent container-to-container resource sorting and transfer script with an interactive control Gump:
+
+- **Targeted Categorical Transfer:** Prompts the player to target a SOURCE container, then a DESTINATION container, and automatically transfers all **Reagents**, **Gems**, and **Crafting Resources** (including optional gold/silver currency).
+- **Strict Equipment & Scroll Exclusions:** Strictly ignores and leaves untouched in the source container:
+  - All scrolls (Magery 1st–8th circle, Necromancy, Spellweaving, Mysticism, blank scrolls, recipe scrolls, power scrolls, and maps)
+  - All weapons (swords, axes, maces, staves, spears, bows, crossbows, wands, etc.)
+  - All wearable armor and clothing (helmets, gorgets, tunics, sleeves, gloves, leggings, cloaks, footwear, shields)
+  - All wearable jewelry (rings, bracelets, necklaces, earrings) and spellbooks.
+- **Comprehensive Coverage:**
+  - **Reagents:** Full Magery (8 standard), Necromancy (5), Mysticism, and Pagan reagents.
+  - **Gems:** All standard gems (Amber, Amethyst, Citrine, Diamond, Emerald, Ruby, Sapphire, Star Sapphire, Tourmaline) and Mondain's Legacy / Stygian Abyss special gems.
+  - **Resources:** Ingots, ore, boards, logs, shafts, feathers, arrows, bolts, leather, hides, cloth, wool, cotton, scales, bones, granite, sand, bandages, empty bottles, and cooking staples.
+- **Interactive Control Gump:** Movable, on-screen Gump displaying:
+  - Real-time action status (`Targeting...`, `Transferring...`, `Paused`, `Finished`)
+  - Live counters for **Reagents Moved**, **Gems Moved**, **Resources Moved**, **Total Moved**, and **Items Skipped** (equipment/scrolls preserved)
+  - Interactive **Pause/Resume** and **Stop** buttons.
+- **Container Pre-Opening & Validation:** Automatically opens both source and destination containers to force the game server to send full container contents before filtering, refusing to run if source and destination are identical.
+- **Attribution:** Created by FesterHead.
+
 ---
 
 ## ⚖️ Best Practices for Writing Legion Scripts

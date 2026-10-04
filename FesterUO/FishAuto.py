@@ -34,7 +34,7 @@ Usage:
     5. Monitor and control execution using the on-screen Gump.
 """
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 import API
 
 # ==============================================================================
@@ -69,13 +69,23 @@ FISH_CAUGHT_KEYWORDS: List[str] = [
 FISHING_DELAY: float = 3.0
 
 # Side fishing spots relative to the boat:
-# For a boat facing Northeast, Port (Northwest) is (-1, 0) and Starboard (Southeast) is (1, 0).
-# Targeting perpendicular to the keel casts directly off the boat sides into open water,
-# completely clearing the mast, sail, bow, and stern.
+# For a boat facing Northeast, Port (Northwest) is (-2, 0).
+# Starboard (Southeast) spots are angled aft of the mast/sail into open water
+# corresponding to the manual fishing spots (avoiding the unfurled canvas sail):
+# - Southeast Beam: (2, 1) [upper mark]
+# - Southeast Stern: (2, 2) [lower mark]
 FISHING_SPOTS: List[Tuple[Tuple[int, int], str]] = [
-    ((-1, 0), "Northwest"),
-    (( 1, 0), "Southeast"),
+    ((-2,  0), "Northwest"),
+    (( 2,  1), "Southeast Beam"),
+    (( 2,  2), "Southeast Stern"),
 ]
+
+# Fallback candidate offsets for each spot if an obstacle is encountered
+SPOT_FALLBACKS: Dict[Tuple[int, int], List[Tuple[int, int]]] = {
+    (-2,  0): [(-3, 0), (-2, -1), (-3, -1), (-1, -1)],
+    ( 2,  1): [(3, 1), (3, 2), (4, 1), (2, 0)],
+    ( 2,  2): [(3, 2), (2, 3), (1, 2), (3, 3)],
+}
 
 # Known UO water graphic ranges (land and static)
 LAND_WATER_GRAPHICS = {0x00A8, 0x00A9, 0x00AA, 0x00AB, 0x0136, 0x0137}
@@ -132,11 +142,12 @@ DEPLETED_KEYWORDS: List[str] = [
 
 # Obstacle journal keywords indicating the cast hit the boat, mast, railing, or is out of reach
 OBSTACLE_KEYWORDS: List[str] = [
-    "what water",
     "cannot see that",
     "can't see that",
     "cannot be seen",
     "can't be seen",
+    "can't fish there",
+    "cannot fish there",
     "obstruct",
     "can't reach",
     "too far away",
@@ -418,17 +429,9 @@ def get_fishing_pole():
 
 def is_spot_depleted() -> Tuple[bool, str]:
     """
-    Checks if the current fishing spot is depleted or unreachable by inspecting
-    recent journal entries with case-insensitive matching.
+    Checks if the current fishing spot is depleted by checking journal keywords
+    received since the last ClearJournal() call.
     """
-    entries = API.GetJournalEntries(4.0)
-    if entries:
-        for entry in entries:
-            text = str(entry.Text).lower()
-            for kw in DEPLETED_KEYWORDS:
-                if kw in text:
-                    return True, entry.Text
-
     for kw in DEPLETED_KEYWORDS:
         if API.InJournal(kw):
             return True, kw
@@ -473,16 +476,27 @@ def is_open_water(tx: int, ty: int) -> bool:
     Checks if the coordinates (tx, ty) represent open fishable water
     and are not obstructed by the boat multi (deck, mast, gunwales) or land obstacles.
     """
-    # 1. Check statics: if any static is a boat multi part (deck, mast, gunwale), it's not open water
-    statics = API.GetStaticsAt(tx, ty)
-    if statics:
-        for s in statics:
-            if getattr(s, "Graphic", 0) in STATIC_WATER_GRAPHICS:
-                return True
-            if getattr(s, "IsImpassible", False) or getattr(s, "Impassible", False):
-                return False
+    # 1. Check if occupied by any multi (boat deck, mast, plank, hull)
+    try:
+        multis = API.GetMultisAt(tx, ty)
+        if multis:
+            return False
+    except Exception:
+        pass
 
-    # 2. Check land tile
+    # 2. Check statics: if any static is impassible
+    try:
+        statics = API.GetStaticsAt(tx, ty)
+        if statics:
+            for s in statics:
+                if getattr(s, "Graphic", 0) in STATIC_WATER_GRAPHICS:
+                    return True
+                if getattr(s, "IsImpassible", False) or getattr(s, "Impassible", False):
+                    return False
+    except Exception:
+        pass
+
+    # 3. Check land tile
     tile = API.GetTile(tx, ty)
     if not tile:
         return False
@@ -498,37 +512,30 @@ def is_open_water(tx: int, ty: int) -> bool:
     return False
 
 
-def find_side_water_spot(dir_x: int, dir_y: int, min_dist: int = 3, max_dist: int = 4) -> Tuple[int, int]:
+def find_side_water_spot(dir_x: int, dir_y: int) -> Tuple[int, int]:
     """
     Finds a clear open water tile offset (dx, dy) to the side of the boat (NW or SE).
-    Checks distances 3 to 4 so it clears the boat hull, mast, and railings regardless
-    of whether the player is standing on the port or starboard railing.
+    Scans distances from 2 to 6 to clear the boat hull, mast, and railings.
+    Tiles occupied by multis (boat components) are automatically skipped.
     """
     px = API.Player.X
     py = API.Player.Y
 
-    # 1. Try along the direct ray off the side
-    for dist in range(min_dist, max_dist + 1):
+    # For Southeast (dir_x > 0), start scan at 4 to clear across the boat deck/mast.
+    # For Northwest (dir_x < 0), start scan at 2 off the port railing.
+    start_dist = 4 if dir_x > 0 else 2
+
+    for dist in range(start_dist, 7):
         dx = dir_x * dist
         dy = dir_y * dist
-        if is_open_water(px + dx, py + dy):
+        tx = px + dx
+        ty = py + dy
+        if is_open_water(tx, ty):
             return dx, dy
 
-    # 2. Try adjacent side angles off the railing
-    for dist in range(min_dist, max_dist + 1):
-        for off1, off2 in [
-            (dist, max(1, dist - 1)),
-            (max(1, dist - 1), dist),
-            (dist, 1),
-            (1, dist),
-        ]:
-            dx = dir_x * off1
-            dy = dir_y * off2
-            if is_open_water(px + dx, py + dy):
-                return dx, dy
-
-    # Fallback to 3-tile side offset (clearing the boat railing)
-    return dir_x * 3, dir_y * 3
+    # Fallback: dist 5 for SE across the boat, dist 2 for NW
+    fallback_dist = 5 if dir_x > 0 else 2
+    return dir_x * fallback_dist, dir_y * fallback_dist
 
 
 
@@ -711,10 +718,10 @@ def cast_at_offset(offset: Tuple[int, int]) -> bool:
     return not API.HasTarget()
 
 
-def fish_spot(dir_x: int, dir_y: int, spot_name: str) -> bool:
+def fish_spot(offset: Tuple[int, int], spot_name: str) -> bool:
     """
-    Repeatedly casts at a side water spot until depleted or interrupted by an enemy.
-    Dynamically adjusts casting distance if the boat hull/railing obstructs the cast.
+    Repeatedly casts at a specific relative water offset until depleted or interrupted by an enemy.
+    If an obstacle or rejected target is encountered, tries alternative offsets for the spot.
     Returns True if depleted or skipped, False if stopped.
     """
     pole = get_fishing_pole()
@@ -729,14 +736,15 @@ def fish_spot(dir_x: int, dir_y: int, spot_name: str) -> bool:
         API.SysMsg("Error: Fishing pole not found!")
         return False
 
-    current_dist = 3
-    offset = find_side_water_spot(dir_x, dir_y, min_dist=current_dist, max_dist=4)
+    current_offset = offset
+    fallbacks = SPOT_FALLBACKS.get(offset, [])
+    fallback_idx = 0
 
     update_status(f"Fishing {spot_name}...")
-    debug_msg(f"Fishing {spot_name} at offset {offset}")
+    debug_msg(f"Fishing {spot_name} at offset {current_offset}")
 
     consecutive_target_fails = 0
-    consecutive_invalid_water = 0
+    consecutive_obstacles = 0
 
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():
@@ -756,134 +764,109 @@ def fish_spot(dir_x: int, dir_y: int, spot_name: str) -> bool:
         API.ClearJournal()
         API.UseObject(pole)
 
-        cast_completed = False
-        if API.WaitForTarget(timeout=5):
-            success = cast_at_offset(offset)
-            if not success:
-                consecutive_target_fails += 1
-                debug_msg(f"{spot_name}: Target not accepted (#{consecutive_target_fails}), cancelling cursor.")
-                API.CancelTarget()
-                if consecutive_target_fails >= 2:
-                    API.SysMsg(f"{spot_name}: Boat or obstacle in the way, moving to next spot.")
-                    return True
-            else:
-                consecutive_target_fails = 0
-                cast_completed = True
-            API.Pause(FISHING_DELAY)
-        else:
-            debug_msg(f"{spot_name}: Target cursor timeout, retrying...")
+        # 2. Wait for target cursor (up to 3.0s, with 1 retry)
+        got_target = API.WaitForTarget(timeout=3)
+        if not got_target:
+            debug_msg(f"{spot_name}: Target cursor timeout, waiting and retrying...")
             API.Pause(0.8)
+            API.ClearJournal()
             API.UseObject(pole)
-            if API.WaitForTarget(timeout=5):
-                success = cast_at_offset(offset)
-                if not success:
-                    consecutive_target_fails += 1
-                    API.CancelTarget()
-                    if consecutive_target_fails >= 2:
-                        API.SysMsg(f"{spot_name}: Target failed, moving to next spot.")
-                        return True
-                else:
+            got_target = API.WaitForTarget(timeout=3)
+
+        if not got_target:
+            debug_msg(f"{spot_name}: Target cursor failed to appear.")
+            consecutive_target_fails += 1
+            if consecutive_target_fails >= 2:
+                API.SysMsg(f"{spot_name}: Cannot use fishing pole, moving to next spot.")
+                return True
+            continue
+
+        # 3. Target the water offset
+        target_sent = cast_at_offset(current_offset)
+        if not target_sent:
+            consecutive_target_fails += 1
+            debug_msg(f"{spot_name}: Target cursor not accepted (#{consecutive_target_fails})")
+            API.CancelTarget()
+            if consecutive_target_fails >= 2:
+                if fallback_idx < len(fallbacks):
+                    current_offset = fallbacks[fallback_idx]
+                    fallback_idx += 1
+                    API.SysMsg(f"{spot_name}: Adjusting target offset to {current_offset}...")
                     consecutive_target_fails = 0
-                    cast_completed = True
-                API.Pause(FISHING_DELAY)
-            else:
-                debug_msg(f"{spot_name}: Target failed.")
+                else:
+                    API.SysMsg(f"{spot_name}: Target failed repeatedly, moving to next spot.")
+                    return True
+            API.Pause(0.5)
+            continue
+
+        consecutive_target_fails = 0
+
+        # 4. Wait for cast outcome from server
+        wait_start = 0.0
+        max_wait = max(4.0, FISHING_DELAY + 1.0)
+        cast_resolved = False
+
+        while wait_start < max_wait and not API.StopRequested and not is_stopped:
+            API.Pause(0.25)
+            wait_start += 0.25
+            if not check_ui_events():
+                return False
+
+            enemy = find_hostile_enemy()
+            if enemy:
+                handle_enemy_combat(enemy)
+                return False
+
+            # Check spot depletion
+            depleted, reason = is_spot_depleted()
+            if depleted:
+                API.SysMsg(f"{spot_name} depleted: '{reason}'")
                 return True
 
-        # Check if the server rejected the target tile as an obstacle or invalid water
-        is_obstructed = False
-        for okw in OBSTACLE_KEYWORDS:
-            if API.InJournal(okw):
-                is_obstructed = True
+            # Check obstacle
+            if API.InJournalAny(OBSTACLE_KEYWORDS):
+                consecutive_obstacles += 1
+                debug_msg(f"{spot_name}: Obstacle detected (#{consecutive_obstacles})")
+                if fallback_idx < len(fallbacks):
+                    current_offset = fallbacks[fallback_idx]
+                    fallback_idx += 1
+                    API.SysMsg(f"{spot_name}: Obstacle in the way, adjusting offset to {current_offset}...")
+                    API.ClearJournal()
+                else:
+                    API.SysMsg(f"{spot_name}: Obstructed by boat railing/mast, moving to next spot.")
+                    return True
+                cast_resolved = True
                 break
 
-        if is_obstructed:
-            consecutive_invalid_water += 1
-            debug_msg(f"{spot_name}: Obstacle or invalid water detected. Attempt #{consecutive_invalid_water}")
-            if consecutive_invalid_water < 3 and current_dist < 5:
-                current_dist += 1
-                offset = (dir_x * current_dist, dir_y * current_dist)
-                API.SysMsg(f"{spot_name}: Boat railing in the way, adjusting distance to {current_dist} tiles ({offset})...")
-                API.ClearJournal()
-                API.Pause(0.5)
-                continue
-            else:
-                API.SysMsg(f"{spot_name}: Obstructed by boat, moving to next spot.")
-                return True
-        else:
-            consecutive_invalid_water = 0
-
-        # 2. Check for enemy that may have spawned from the cast
-        enemy = find_hostile_enemy()
-        if enemy:
-            handle_enemy_combat(enemy)
-            return False
-
-        # 3. Check for catches (junk vs fish) and clean up
-        if cast_completed:
-            caught_junk = False
-            caught_fish = False
-
-            # Check journal for junk keywords first (server auto-toss or pull out an item)
-            for jkw in JUNK_JOURNAL_KEYWORDS:
-                if API.InJournal(jkw):
-                    caught_junk = True
-                    break
-
-            entries = API.GetJournalEntries(FISHING_DELAY + 2.0)
-            if entries and not caught_junk:
-                for entry in entries:
-                    t = str(entry.Text).lower()
-                    if any(jkw in t for jkw in JUNK_JOURNAL_KEYWORDS):
-                        caught_junk = True
-                        break
-
-            if caught_junk:
+            # Check junk
+            if API.InJournalAny(JUNK_JOURNAL_KEYWORDS):
                 debug_msg(f"{spot_name}: Junk caught!")
                 increment_junk_count()
-            else:
-                # Check for fish catch (excluding junk phrases and failed casts)
-                for kw in FISH_CAUGHT_KEYWORDS:
-                    if API.InJournal(kw):
-                        caught_fish = True
-                        break
+                dispose_junk(already_counted=True)
+                cast_resolved = True
+                break
 
-                if caught_fish and entries:
-                    valid_fish_entry = False
-                    for entry in entries:
-                        t = str(entry.Text).lower()
-                        if "fail to catch" in t or "biting here" in t or "no fish" in t:
-                            continue
-                        if any(jkw in t for jkw in JUNK_JOURNAL_KEYWORDS) or "item :" in t or "item:" in t:
-                            continue
-                        if any(kw in t for kw in FISH_CAUGHT_KEYWORDS):
-                            valid_fish_entry = True
-                            break
-                    caught_fish = valid_fish_entry
-                elif not caught_fish and entries:
-                    for entry in entries:
-                        t = str(entry.Text).lower()
-                        if "fail to catch" in t or "biting here" in t or "no fish" in t:
-                            continue
-                        if any(jkw in t for jkw in JUNK_JOURNAL_KEYWORDS) or "item :" in t or "item:" in t:
-                            continue
-                        if any(kw in t for kw in FISH_CAUGHT_KEYWORDS):
-                            caught_fish = True
-                            break
+            # Check fish caught
+            if API.InJournalAny(FISH_CAUGHT_KEYWORDS):
+                debug_msg(f"{spot_name}: Fish caught!")
+                increment_fish_count()
+                run_fish_organizer()
+                dispose_junk(already_counted=False)
+                cast_resolved = True
+                break
 
-                if caught_fish:
-                    debug_msg(f"{spot_name}: Fish caught!")
-                    increment_fish_count()
-                    run_fish_organizer()
+            # Check failed to catch
+            if API.InJournal("fail to catch") or API.InJournal("fail"):
+                debug_msg(f"{spot_name}: Failed to catch anything, casting again...")
+                dispose_junk(already_counted=False)
+                cast_resolved = True
+                break
 
-            # Clean up any physical junk remaining in backpack (for shards without auto-toss)
-            dispose_junk(already_counted=caught_junk)
+        if not cast_resolved:
+            dispose_junk(already_counted=False)
 
-        # 5. Check spot depletion
-        depleted, reason = is_spot_depleted()
-        if depleted:
-            API.SysMsg(f"{spot_name} depleted: '{reason}'")
-            return True
+        # Brief pause between casts for server tick recovery
+        API.Pause(0.5)
 
     return False
 
@@ -928,8 +911,8 @@ def main():
             cycle += 1
             debug_msg(f"=== Fishing Cycle #{cycle} ===")
 
-            # Fish side spots (Northwest, then Southeast) off the boat railings
-            for (dir_x, dir_y), spot_name in FISHING_SPOTS:
+            # Fish side spots (Northwest, then Southeast Beam & Stern) off the boat railings
+            for offset, spot_name in FISHING_SPOTS:
                 if API.StopRequested or is_stopped:
                     break
 
@@ -940,8 +923,10 @@ def main():
                     combat_triggered = True
                     break
 
-                if not fish_spot(dir_x, dir_y, spot_name):
-                    combat_triggered = True
+                if not fish_spot(offset, spot_name):
+                    enemy = find_hostile_enemy()
+                    if enemy:
+                        combat_triggered = True
                     break
 
                 # Check combat immediately after spot finishes
