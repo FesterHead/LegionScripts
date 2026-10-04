@@ -125,12 +125,26 @@ IRON_INGOT_HUE = 0
 # Trash barrel graphics
 TRASH_BARREL_GRAPHICS = {0x0E77}
 
+# Reagent map by spell name for custom recipe support
+SPELL_REAGENT_MAP: Dict[str, List[str]] = {
+    "Reactive Armor": ["Garlic", "Spiders' Silk", "Sulfurous Ash"],
+    "Poison": ["Nightshade"],
+    "Lightning": ["Mandrake Root", "Sulfurous Ash"],
+    "Magic Reflection": ["Garlic", "Mandrake Root", "Spiders' Silk"],
+    "Energy Bolt": ["Black Pearl", "Nightshade"],
+    "Flamestrike": ["Spiders' Silk", "Sulfurous Ash"],
+    "Recall": ["Black Pearl", "Bloodmoss", "Mandrake Root"],
+    "Fireball": ["Black Pearl"],
+    "Blade Spirits": ["Black Pearl", "Mandrake Root", "Nightshade"],
+    "Greater Heal": ["Garlic", "Ginseng", "Mandrake Root", "Spiders' Silk"],
+}
+
 # Optimal Inscription Progression Ladder: (min_skill, max_skill, spell_name, circle, mana_cost, [reagents])
 PROGRESSION_LADDER: List[Tuple[float, float, str, int, int, List[str]]] = [
     (0.0, 30.0, "Reactive Armor", 1, 4, ["Garlic", "Spiders' Silk", "Sulfurous Ash"]),
     (30.0, 45.0, "Poison", 3, 9, ["Nightshade"]),
-    (45.0, 65.0, "Lightning", 4, 11, ["Mandrake Root", "Sulfurous Ash"]),
-    (65.0, 75.0, "Magic Reflection", 5, 14, ["Garlic", "Mandrake Root", "Spiders' Silk"]),
+    (45.0, 70.0, "Lightning", 4, 11, ["Mandrake Root", "Sulfurous Ash"]),
+    (70.0, 75.0, "Magic Reflection", 5, 14, ["Garlic", "Mandrake Root", "Spiders' Silk"]),
     (75.0, 90.0, "Energy Bolt", 6, 20, ["Black Pearl", "Nightshade"]),
     (90.0, 120.0, "Flamestrike", 7, 40, ["Spiders' Silk", "Sulfurous Ash"]),
 ]
@@ -158,6 +172,7 @@ btn_stop = None
 satchel_serial: Optional[int] = None
 storage_serial: Optional[int] = None
 trash_barrel_serial: Optional[int] = None
+active_pen_serial: Optional[int] = None
 
 is_paused: bool = False
 is_stopped: bool = False
@@ -283,6 +298,8 @@ def on_satchel_clicked() -> None:
     if new_serial and new_serial != API.Player.Serial:
         satchel_serial = new_serial
         API.SysMsg(f"[Inscription] Satchel updated: 0x{satchel_serial:X}")
+        API.UseObject(satchel_serial)
+        API.Pause(0.4)
         update_stats()
         if count_backpack_scrolls() < MIN_BACKPACK_SCROLLS:
             restock_scrolls_from_satchel()
@@ -498,32 +515,99 @@ def is_overburdened() -> bool:
     return False
 
 
+def get_pen_info(item) -> Tuple[bool, str]:
+    """
+    Analyzes an item and returns (is_pen, pen_type).
+    pen_type is 'scribe', 'mapmaker', or 'unknown'.
+    Queries tooltip properties from the server if name is not yet cached.
+    """
+    if not item or item.Graphic not in PEN_GRAPHICS:
+        return False, "none"
+
+    name = str(getattr(item, "Name", "") or "").lower()
+
+    if not any(kw in name for kw in ["map", "cartograph", "scribe", "inscript"]):
+        props = str(API.ItemNameAndProps(item.Serial, wait=True, timeout=2) or "").lower()
+        if props:
+            name = f"{name} {props}"
+
+    if "scribe" in name or "inscript" in name:
+        return True, "scribe"
+    if "map" in name or "cartograph" in name:
+        return True, "mapmaker"
+
+    return True, "unknown"
+
+
+def is_valid_scribe_pen(item) -> bool:
+    """
+    Returns True ONLY if the pen is verified to be a Scribe's Pen and NEVER a Mapmaker's Pen.
+    """
+    global active_pen_serial
+    if not item or item.Graphic not in PEN_GRAPHICS:
+        return False
+
+    # If this is our known active scribe pen, accept it
+    if active_pen_serial and item.Serial == active_pen_serial:
+        return True
+
+    is_pen, p_type = get_pen_info(item)
+    if not is_pen:
+        return False
+
+    # Strictly reject any Mapmaker's Pen!
+    if p_type == "mapmaker":
+        return False
+
+    # Validated Scribe's Pen
+    if p_type == "scribe":
+        return True
+
+    return False
+
+
 def get_scribe_pen():
-    """Finds a usable Scribe's Pen in player hands or backpack."""
+    """Finds a verified Scribe's Pen in player hands or backpack."""
+    global active_pen_serial
+
+    # 1. If active pen is known and still in player possession, use it
+    if active_pen_serial:
+        item = API.FindItem(active_pen_serial)
+        if item and item.Graphic in PEN_GRAPHICS:
+            is_pen, p_type = get_pen_info(item)
+            if p_type != "mapmaker":
+                return item
+        active_pen_serial = None
+
+    # 2. Check hands
     for layer in ["OneHanded", "TwoHanded"]:
         item = API.FindLayer(layer)
-        if item and item.Graphic in PEN_GRAPHICS:
+        if item and is_valid_scribe_pen(item):
+            active_pen_serial = item.Serial
             return item
 
+    # 3. Check main backpack
     items = API.ItemsInContainer(API.Backpack, recursive=False)
     if items:
         for item in items:
-            if item.Graphic in PEN_GRAPHICS:
+            if is_valid_scribe_pen(item):
+                active_pen_serial = item.Serial
                 return item
+
     return None
 
 
 def count_scribe_pens() -> int:
-    """Counts usable Scribe's Pens."""
+    """Counts usable Scribe's Pens, strictly excluding Mapmaker's Pens."""
     cnt = 0
     for layer in ["OneHanded", "TwoHanded"]:
         item = API.FindLayer(layer)
-        if item and item.Graphic in PEN_GRAPHICS:
+        if item and is_valid_scribe_pen(item):
             cnt += 1
     items = API.ItemsInContainer(API.Backpack, recursive=False)
     if items:
         for item in items:
-            if item.Graphic in PEN_GRAPHICS:
+            if is_valid_scribe_pen(item):
                 cnt += 1
     return cnt
 
@@ -792,7 +876,7 @@ def deposit_ingots_to_satchel() -> None:
 
 def craft_pen_with_tinkering() -> bool:
     """Crafts a replacement Scribe's Pen using Tinkering tools and iron ingots."""
-    global tools_crafted, is_paused, btn_pause
+    global tools_crafted, is_paused, btn_pause, active_pen_serial
     if not AUTO_CRAFT_PEN:
         return False
 
@@ -816,7 +900,12 @@ def craft_pen_with_tinkering() -> bool:
     update_status(f"Tinkering {tool_name}...")
     API.SysMsg(f"[Inscription] Crafting replacement {tool_name} via Tinkering (1 ingot)...")
 
-    count_before = count_scribe_pens()
+    # Close any currently open craft gump (e.g. stale Inscription gump from previous pen)
+    if API.HasGump():
+        API.CloseGump()
+        API.Pause(0.3)
+
+    bp_pens_before = {item.Serial for item in (API.ItemsInContainer(API.Backpack, recursive=False) or []) if item.Graphic in PEN_GRAPHICS}
 
     for attempt in range(1, MAX_TOOL_CRAFT_ATTEMPTS + 1):
         if API.StopRequested or is_stopped:
@@ -857,18 +946,21 @@ def craft_pen_with_tinkering() -> bool:
             update_status(f"Craft 1 {tool_name} in menu")
             return True
 
-        count_after = count_scribe_pens()
-        if count_after > count_before or get_scribe_pen() is not None:
+        bp_pens_after = {item.Serial for item in (API.ItemsInContainer(API.Backpack, recursive=False) or []) if item.Graphic in PEN_GRAPHICS}
+        new_pens = bp_pens_after - bp_pens_before
+        if new_pens:
+            new_serial = list(new_pens)[0]
+            active_pen_serial = new_serial
             tools_crafted += 1
-            API.SysMsg(f"[Inscription] Successfully crafted new {tool_name}!")
+            API.SysMsg(f"[Inscription] Successfully crafted new {tool_name} (0x{new_serial:X})!")
             update_stats()
             if API.HasGump():
-                API.ReplyGump(0)
+                API.CloseGump()
                 API.Pause(0.3)
             deposit_ingots_to_satchel()
             return True
 
-        if any("you create" in t for t in j_text) and count_after <= count_before:
+        if any("you create" in t for t in j_text) and not new_pens:
             API.SysMsg(f"[Inscription] Tinkering 'Make Last' is currently set to a different item, not {tool_name}.")
             API.SysMsg(f"[Inscription] In the open Tinkering menu: Click 'Tools' -> '{tool_name}' once to craft it, then click Resume on the Gump.")
             is_paused = True
@@ -882,7 +974,7 @@ def craft_pen_with_tinkering() -> bool:
             API.Pause(0.5)
 
     if API.HasGump():
-        API.ReplyGump(0)
+        API.CloseGump()
         API.Pause(0.3)
 
     deposit_ingots_to_satchel()
@@ -892,7 +984,8 @@ def craft_pen_with_tinkering() -> bool:
     if btn_pause:
         btn_pause.SetText("Resume")
     update_status(f"Craft 1 {tool_name}")
-    return True
+    return False
+
 
 
 # ==============================================================================
@@ -906,8 +999,11 @@ def craft_cycle() -> bool:
     # 1. Check weight before crafting
     if is_overburdened():
         update_status("Overweight")
-        API.SysMsg("[Inscription] Weight limit reached! Please lighten your backpack.")
-        return False
+        API.SysMsg("[Inscription] Weight limit reached! Please lighten your backpack, then click Resume on the Gump.")
+        is_paused = True
+        if btn_pause:
+            btn_pause.SetText("Resume")
+        return True
 
     # 2. Get current skill and recipe info
     i_skill_obj = API.GetSkill("Inscription")
@@ -929,27 +1025,38 @@ def craft_cycle() -> bool:
     total_scrolls = count_backpack_scrolls() + (count_satchel_scrolls() if satchel_serial else 0)
     if total_scrolls < 1:
         update_status("Out of Scrolls")
-        API.SysMsg("[Inscription] Out of blank scrolls in backpack and satchel!")
-        return False
+        API.SysMsg("[Inscription] Out of blank scrolls in backpack and satchel! Add scrolls, then click Resume on the Gump.")
+        is_paused = True
+        if btn_pause:
+            btn_pause.SetText("Resume")
+        return True
 
     # Maintain backpack scroll buffer if needed
     if not DIRECT_SATCHEL_CRAFTING and count_backpack_scrolls() < MIN_BACKPACK_SCROLLS:
         restock_scrolls_from_satchel()
 
     # 5. Check reagents (if LRC < 100)
-    has_regs, missing_reg = check_reagent_availability(reagents)
+    active_reagents = SPELL_REAGENT_MAP.get(current_recipe_name, reagents)
+    has_regs, missing_reg = check_reagent_availability(active_reagents)
     if not has_regs:
         update_status(f"Need {missing_reg}")
         API.SysMsg(f"[Inscription] Missing required reagent: {missing_reg} (and LRC < 100%)!")
-        return False
+        API.SysMsg(f"[Inscription] Add {missing_reg} to your backpack/satchel and click Resume, or click 'Set Recipe' to choose a different spell.")
+        is_paused = True
+        if btn_pause:
+            btn_pause.SetText("Resume")
+        return True
 
     # 6. Ensure Scribe's Pen is available
     pen = get_scribe_pen()
     if not pen:
         if not craft_pen_with_tinkering():
             update_status("No Pen")
-            API.SysMsg("[Inscription] Out of Scribe's Pens! Please equip or carry a scribe's pen.")
-            return False
+            API.SysMsg("[Inscription] Out of Scribe's Pens! Please equip or carry a scribe's pen, then click Resume on the Gump.")
+            is_paused = True
+            if btn_pause:
+                btn_pause.SetText("Resume")
+            return True
         pen = get_scribe_pen()
         if not pen:
             return True
@@ -1021,6 +1128,10 @@ def craft_cycle() -> bool:
 
         # Handle storage or trashing of crafted scroll
         if new_item:
+            if getattr(new_item, "Name", None):
+                clean_name = str(new_item.Name).lower().replace("a spell scroll of ", "").replace("a scroll of ", "").strip()
+                if clean_name:
+                    current_recipe_name = clean_name.title()
             if storage_serial:
                 update_status(f"Storing {new_item.Name or 'scroll'}...")
                 API.MoveItem(new_item.Serial, storage_serial)
@@ -1095,6 +1206,8 @@ def main():
     if sat_serial and sat_serial != API.Player.Serial:
         satchel_serial = sat_serial
         API.SysMsg(f"[Inscription] Satchel set: 0x{satchel_serial:X}")
+        API.UseObject(satchel_serial)
+        API.Pause(0.4)
     else:
         satchel_serial = None
         API.SysMsg("[Inscription] Using backpack resources only.")

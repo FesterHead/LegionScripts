@@ -205,7 +205,10 @@ RESOURCE_GRAPHICS: Set[int] = {
     0x103D,                  # Dough
     0x103E,                  # Sweet Dough
     0x09EC,                  # Jar of Honey
-    0x09B5,                  # Eggs
+    # Imbuing & Special Essences
+    0x2D88, 0x2D89, 0x2D8A, 0x2D8B, 0x2D8C, 0x2D8D, 0x2D8E, 0x2D8F,
+    0x2D90, 0x2D91, 0x2D92, 0x2D93, 0x2D94, 0x2D95, 0x2D96, 0x2D97,
+    0x2D98, 0x2D99, 0x2D9A, 0x2D9B,
 }
 
 # Currency
@@ -219,7 +222,7 @@ RESOURCE_NAME_KEYWORDS: List[str] = [
     "bolt", "hide", "leather", "cut cloth", "bolt of cloth", "wool",
     "cotton", "yarn", "thread", "dragon scale", "scale", "granite",
     "sand", "bandage", "empty bottle", "raw fish", "fish steak",
-    "raw rib", "raw bird", "raw meat", "dough", "flour",
+    "raw rib", "raw bird", "raw meat", "dough", "flour", "essence",
 ]
 
 # ==============================================================================
@@ -263,6 +266,17 @@ JEWELRY_GRAPHICS: Set[int] = {
     0x2F58, 0x2F59, 0x2F5A, 0x2F5B,  # Talismans
 }
 
+# Wearable Clothing / Shorts / Pants Graphics
+CLOTHING_EXCLUSIONS_GRAPHICS: Set[int] = {
+    0x152E, 0x152F,  # Short Pants / Shorts
+    0x1539, 0x153A,  # Long Pants
+    0x1537, 0x1538,  # Kilt
+    0x1516, 0x1517,  # Skirt
+    0x279B, 0x27E6,  # Hakama
+    0x2799, 0x27E4,  # Tattsuke-Hakama
+    0x2FC3,          # Elven Pants
+}
+
 EXCLUDED_NAME_KEYWORDS: List[str] = [
     # Scrolls & Literature
     "scroll", "recipe", "map", "spellbook", "runebook", "tome", "book",
@@ -277,6 +291,7 @@ EXCLUDED_NAME_KEYWORDS: List[str] = [
     "shield", "buckler", "helm", "helmet", "coif", "cap", "hat", "mask",
     "gorget", "tunic", "breastplate", "chest", "armor", "armour", "arms",
     "sleeves", "gloves", "gauntlets", "leggings", "greaves", "pants",
+    "shorts", "short pants", "trousers", "breeches",
     "skirt", "kilt", "robe", "cloak", "dress", "shirt", "doublet",
     "surcoat", "boots", "shoes", "sandals", "belt", "sash", "apron",
     # Wearable Jewelry
@@ -495,6 +510,8 @@ def is_explicitly_excluded(item) -> bool:
     if graphic in BOOK_GRAPHICS:
         return True
     if graphic in JEWELRY_GRAPHICS:
+        return True
+    if graphic in CLOTHING_EXCLUSIONS_GRAPHICS:
         return True
 
     # 2. Check name keywords for scrolls, weapons, equipment, and jewelry

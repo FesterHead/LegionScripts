@@ -350,8 +350,8 @@ An automated, resource-efficient Inscription training engine with interactive co
 - **Resource-Efficient Spell Progression:** Automatically monitors your Inscription skill and crafts the lowest-cost, single/dual-reagent spells in each tier from 0 to 120 (GM / Legendary):
   - **0.0 – 30.0:** Reactive Armor (Circle 1, 4 Mana, 1 blank scroll, Garlic / Spiders' Silk / Sulfurous Ash)
   - **30.0 – 45.0:** Poison (Circle 3, 9 Mana, 1 blank scroll, Nightshade — _only 1 reagent!_)
-  - **45.0 – 65.0:** Lightning (Circle 4, 11 Mana, 1 blank scroll, Mandrake Root / Sulfurous Ash)
-  - **65.0 – 75.0:** Magic Reflection (Circle 5, 14 Mana, 1 blank scroll, Garlic / Mandrake Root / Spiders' Silk)
+  - **45.0 – 70.0:** Lightning (Circle 4, 11 Mana, 1 blank scroll, Mandrake Root / Sulfurous Ash)
+  - **70.0 – 75.0:** Magic Reflection (Circle 5, 14 Mana, 1 blank scroll, Garlic / Mandrake Root / Spiders' Silk)
   - **75.0 – 90.0:** Energy Bolt (Circle 6, 20 Mana, 1 blank scroll, Black Pearl / Nightshade)
   - **90.0 – 120.0:** Flamestrike (Circle 7, 40 Mana, 1 blank scroll, Spiders' Silk / Sulfurous Ash)
 - **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next spell. Players can click **"Set Recipe"** on the Gump at any time to manually choose any recipe or custom spell from the open craft menu.
@@ -364,7 +364,7 @@ An automated, resource-efficient Inscription training engine with interactive co
   - Automatically detects 100% Lower Reagent Cost (LRC) suits and completely bypasses reagent requirements.
   - If LRC < 100%, automatically monitors and restocks required reagents from the resource satchel.
   - Automatically restocks blank scrolls from the satchel when backpack reserves run low.
-- **Tool Upkeep via Tinkering:** Detects broken or missing Scribe's Pens and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
+- **Tool Upkeep via Tinkering & Pen Discrimination:** Detects broken or missing Scribe's Pens and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each). Strictly verifies pen tooltips via `API.ItemNameAndProps` to ensure Mapmaker's Pens (which share identical graphics `0x0FBF` / `0x0FC0`) are never mistakenly selected or used.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
   - Real-time training status (`Crafted`, `Regenerating Mana...`, `Storing...`, `Trashing...`, `Tinkering Scribe's Pen...`, `Paused`, `Finished`)
   - Live Inscription skill level, skill cap, and automatic skill gain announcements
@@ -451,12 +451,12 @@ An intelligent container-to-container resource sorting and transfer script with 
 - **Strict Equipment & Scroll Exclusions:** Strictly ignores and leaves untouched in the source container:
   - All scrolls (Magery 1st–8th circle, Necromancy, Spellweaving, Mysticism, blank scrolls, recipe scrolls, power scrolls, and maps)
   - All weapons (swords, axes, maces, staves, spears, bows, crossbows, wands, etc.)
-  - All wearable armor and clothing (helmets, gorgets, tunics, sleeves, gloves, leggings, cloaks, footwear, shields)
+  - All wearable armor and clothing (helmets, gorgets, tunics, sleeves, gloves, leggings, shorts, pants, cloaks, footwear, shields)
   - All wearable jewelry (rings, bracelets, necklaces, earrings) and spellbooks.
 - **Comprehensive Coverage:**
   - **Reagents:** Full Magery (8 standard), Necromancy (5), Mysticism, and Pagan reagents.
   - **Gems:** All standard gems (Amber, Amethyst, Citrine, Diamond, Emerald, Ruby, Sapphire, Star Sapphire, Tourmaline) and Mondain's Legacy / Stygian Abyss special gems.
-  - **Resources:** Ingots, ore, boards, logs, shafts, feathers, arrows, bolts, leather, hides, cloth, wool, cotton, scales, bones, granite, sand, bandages, empty bottles, and cooking staples.
+  - **Resources:** Ingots, ore, boards, logs, shafts, feathers, arrows, bolts, leather, hides, cloth, wool, cotton, scales, bones, granite, sand, bandages, empty bottles, cooking staples, and imbuing/special essences.
 - **Interactive Control Gump:** Movable, on-screen Gump displaying:
   - Real-time action status (`Targeting...`, `Transferring...`, `Paused`, `Finished`)
   - Live counters for **Reagents Moved**, **Gems Moved**, **Resources Moved**, **Total Moved**, and **Items Skipped** (equipment/scrolls preserved)

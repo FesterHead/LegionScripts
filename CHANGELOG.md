@@ -35,13 +35,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Safely transfers all top-level items between containers while respecting classic drag/drop delays and responsive `API.StopRequested` checks.
 - Added `FesterUO/MoveResources.py`: Targeted resource, reagent, and gem sorting and transfer script with interactive control Gump created by FesterHead:
   - Prompts the player to target a SOURCE container, then a DESTINATION container, and automatically transfers all Reagents, Gems, and Crafting Resources (including optional gold/silver currency).
-  - Strictly preserves and leaves untouched in the source container all spell scrolls (1st–8th circle, Necro, Weaving, Mysticism), blank scrolls, recipe scrolls, power scrolls, maps, weapons, armor, shields, clothing, wearable jewelry (rings, bracelets, necklaces, earrings), and spellbooks.
-  - Features comprehensive item graphics and keyword recognition covering Magery, Necromancy, and Pagan reagents; standard and special ML/SA gems; ingots, ore, boards, logs, shafts, feathers, arrows, bolts, leather, hides, cloth, wool, cotton, scales, bones, granite, sand, bandages, bottles, and raw meat.
+  - Strictly preserves and leaves untouched in the source container all spell scrolls (1st–8th circle, Necro, Weaving, Mysticism), blank scrolls, recipe scrolls, power scrolls, maps, weapons, armor, shields, clothing (including shorts and pants), wearable jewelry (rings, bracelets, necklaces, earrings), and spellbooks.
+  - Features comprehensive item graphics and keyword recognition covering Magery, Necromancy, and Pagan reagents; standard and special ML/SA gems; ingots, ore, boards, logs, shafts, feathers, arrows, bolts, leather, hides, cloth, wool, cotton, scales, bones, granite, sand, bandages, bottles, raw meat, and imbuing/special essences.
   - Features an interactive control Gump displaying real-time transfer status, live counters for **Reagents Moved**, **Gems Moved**, **Resources Moved**, **Total Moved**, and **Items Skipped** (equipment/scrolls preserved), and **Pause/Resume** and **Stop** buttons.
   - Safely pre-opens both containers to ensure server synchronization, validates that targets are distinct, and incorporates responsive cancellation with `API.StopRequested` safety.
 
 ### Fixed
 
+- Fixed pen tool confusion and premature termination at 65.0 Inscription in `FesterUO/TrainInscription.py`:
+  - In Ultima Online, Scribe's Pens and Mapmaker's Pens share identical graphic IDs (`0x0FBF` and `0x0FC0`). Added pen discrimination via `get_pen_info()` and `is_valid_scribe_pen()` with active OPL tooltip querying (`API.ItemNameAndProps`) to strictly verify Scribe's Pens and reject Mapmaker's Pens.
+  - Added `active_pen_serial` tracking and backpack serial diff detection during Tinkering auto-crafting, preventing the script from accidentally picking up Mapmaker's Pens or opening the Cartography menu.
+  - Extended the **Lightning** training bracket from 45.0 to 70.0 in `PROGRESSION_LADDER` (Circle 4 spells gain skill up to 70.0), allowing players to train to 70 without switching prematurely to Magic Reflection and requiring Garlic when only using Mandrake Root and Sulfurous Ash.
+  - Fixed premature script termination on missing reagents, out of scrolls, or weight limit: `craft_cycle()` now pauses execution (`is_paused = True`), leaves the control Gump interactive, and prompts the user to add materials or change spells via **Set Recipe** and click **Resume**, instead of destroying the Gump and exiting.
+  - Added `SPELL_REAGENT_MAP` to dynamically check reagents for the active crafted recipe (supporting manual "Set Recipe" selections like Lightning or Recall) rather than strictly forcing the default recommended spell's reagents.
+  - Ensured resource satchel container contents are immediately synced with TazUO via `API.UseObject()` upon selection at startup and via the Gump.
 - Fixed Southeast targeting, cross-boat obstruction, and journal cross-contamination in `FesterUO/FishAuto.py`:
   - Aligned `FISHING_SPOTS` with the exact manual fishing locations identified by the player: Northwest (`(-2, 0)`), Southeast Beam (`(2, 1)` - upper starboard spot behind mast), and Southeast Stern (`(2, 2)` - lower starboard spot clear of the sail).
   - Added `SPOT_FALLBACKS` dictionary for every fishing spot to dynamically switch to adjacent clear water tiles if line-of-sight is temporarily blocked or rejected.
