@@ -364,7 +364,7 @@ An automated, resource-efficient Inscription training engine with interactive co
   - Automatically detects 100% Lower Reagent Cost (LRC) suits and completely bypasses reagent requirements.
   - If LRC < 100%, automatically monitors and restocks required reagents from the resource satchel.
   - Automatically restocks blank scrolls from the satchel when backpack reserves run low.
-- **Startup Dress Profile:** Automatically equips the configured dress profile / macro (default `"Sorcery"`) at startup, ensuring your LRC suit and spellcasting gear are equipped prior to beginning training.
+- **Autonomous Dress Profile Loading:** Automatically equips the configured dress profile / macro (default `"Sorcery"`) at startup, upon exiting every meditation cycle, and whenever resuming from pause, ensuring your spellcasting gear and LRC suit remain equipped throughout training.
 - **Tool Upkeep via Tinkering & Pen Discrimination:** Detects broken or missing Scribe's Pens and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each). Strictly verifies pen tooltips via `API.ItemNameAndProps` to ensure Mapmaker's Pens (which share identical graphics `0x0FBF` / `0x0FC0`) are never mistakenly selected or used.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
   - Real-time training status (`Crafted`, `Regenerating Mana...`, `Storing...`, `Trashing...`, `Tinkering Scribe's Pen...`, `Paused`, `Finished`)
@@ -463,6 +463,21 @@ An intelligent container-to-container resource sorting and transfer script with 
   - Live counters for **Reagents Moved**, **Gems Moved**, **Resources Moved**, **Total Moved**, and **Items Skipped** (equipment/scrolls preserved)
   - Interactive **Pause/Resume** and **Stop** buttons.
 - **Container Pre-Opening & Validation:** Automatically opens both source and destination containers to force the game server to send full container contents before filtering, refusing to run if source and destination are identical.
+- **Attribution:** Created by FesterHead.
+
+### UOAlive
+
+#### [ChopTreeAutoUOAlive.py](UOAlive/ChopTreeAutoUOAlive.py)
+
+An automated roaming lumberjacking script tailored for the UOAlive shard with board conversion, 50-tree memory, and interactive control Gump:
+
+- **Dress Profile Auto-Load:** Automatically enables the saved `"Lumberjack"` dress configuration on startup.
+- **Nearest Tree Navigation:** Scans for tree statics within `SEARCH_RADIUS` (default 25 tiles) using TazUO's native `IsTree` classifier and pathfinds directly to the nearest reachable tree (distance <= 2).
+- **Automated Log-to-Board Conversion:** Uses the equipped axe to convert chopped logs directly into boards, halving wood weight and keeping inventory manageable.
+- **50-Tree History Queue:** Remembers the last 50 visited tree coordinates via a FIFO queue (`TREE_HISTORY_LIMIT = 50`) to avoid repeatedly revisiting recently chopped trees.
+- **Capacity & Weight Monitoring with Auto-Pause:** Continuously monitors backpack weight. When full, attempts to convert any remaining logs to boards; if still overburdened, automatically pauses execution and triggers an audible chime and overhead warning (`"TOO FULL! SCRIPT PAUSED"`).
+- **Tool Maintenance & Manual Management:** Players can pause at any time using the on-screen Gump to craft new axes (Tinkering), fletch shafts/bows, or transfer boards to pack animals/banks. If an axe breaks, the script auto-pauses so players can craft or equip a replacement.
+- **Interactive Control Gump:** Styled after FesterUO's `ChopTreeAuto`, the semi-transparent dark Gump displays real-time Status, Trees Harvested & Boards Count, Lumberjacking skill with gain tracking, and STR / DEX / Weight monitoring, along with interactive **Pause/Resume** and **Stop** buttons.
 - **Attribution:** Created by FesterHead.
 
 ---

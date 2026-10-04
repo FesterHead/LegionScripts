@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `UOAlive/ChopTreeAutoUOAlive.py`: Automated roaming lumberjacking script for the UOAlive shard created by FesterHead:
+  - Automatically loads and equips the configured "Lumberjack" dress profile.
+  - Automatically scans for nearby tree statics, navigates to the nearest unvisited tree within reach, and chops it until depleted.
+  - Converts harvested logs into boards on the fly using the axe (supporting recursive backpack scanning across all wood varieties with action latency retry handling), halving wood weight and keeping backpack space organized.
+  - Maintains a FIFO history tracking the last 50 visited trees to prevent revisiting recently chopped spots.
+  - Features an interactive control Gump styled after FesterUO's `ChopTreeAuto`, showing Status, Trees Harvested & Boards Count, Lumberjacking skill with gain alerts, STR / DEX / Weight monitoring, and responsive Pause/Resume and Stop controls.
+  - Features weight monitoring with automatic pausing and audible/overhead alerts when full, allowing manual tool crafting, fletching, or board unloading before resuming.
+  - Detects missing/broken axes and auto-pauses so players can craft or equip a new tool without stopping the script.
 - Added `FesterUO/LobsterTrapAuto.py`: Automated lobster and crab trap deployment, retrieval, and recycling script with interactive control Gump created by FesterHead:
   - Deploys up to 5 lobster traps from your backpack into the surrounding ocean at well-spaced relative water offsets (Port Bow, Port Railing, Port Stern, Starboard Bow, Starboard Stern).
   - Actively monitors deployed trap buoys with elapsed timers and bob detection (~60-65s cycle).
@@ -49,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed premature script termination on missing reagents, out of scrolls, or weight limit: `craft_cycle()` now pauses execution (`is_paused = True`), leaves the control Gump interactive, and prompts the user to add materials or change spells via **Set Recipe** and click **Resume**, instead of destroying the Gump and exiting.
   - Added `SPELL_REAGENT_MAP` to dynamically check reagents for the active crafted recipe (supporting manual "Set Recipe" selections like Lightning or Recall) rather than strictly forcing the default recommended spell's reagents.
   - Ensured resource satchel container contents are immediately synced with TazUO via `API.UseObject()` upon selection at startup and via the Gump.
-  - Added configurable `DRESS_PROFILE = "Sorcery"` to automatically equip the saved "Sorcery" dress macro / outfit at script startup with outfit availability validation.
+  - Added configurable `DRESS_PROFILE = "Sorcery"` to automatically equip the saved "Sorcery" dress macro / outfit at script startup, upon exiting every meditation cycle, and when resuming from pause.
   - Fixed meditation loop hang in `handle_mana_recovery()`: added server `"at peace"` journal detection to immediately resume crafting when mana finishes regenerating, added trance state tracking to prevent spamming `UseSkill("Meditation")` during active trance, and added a 1-mana tolerance threshold to avoid infinite loops caused by bonus stat rounding or desync.
 - Fixed Southeast targeting, cross-boat obstruction, and journal cross-contamination in `FesterUO/FishAuto.py`:
   - Aligned `FISHING_SPOTS` with the exact manual fishing locations identified by the player: Northwest (`(-2, 0)`), Southeast Beam (`(2, 1)` - upper starboard spot behind mast), and Southeast Stern (`(2, 2)` - lower starboard spot clear of the sail).

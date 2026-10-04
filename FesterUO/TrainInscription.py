@@ -279,6 +279,7 @@ def on_pause_clicked() -> None:
     is_paused = not is_paused
     if not is_paused:
         armor_blocks_meditation = False  # Allow re-testing meditation if player changed gear
+        equip_dress_profile()
     if btn_pause:
         btn_pause.SetText("Resume" if is_paused else "Pause")
     update_status("Paused" if is_paused else "Running")
@@ -751,6 +752,19 @@ def get_recommended_item(skill: float) -> Tuple[str, int, int, List[str]]:
 # Mana Recovery & Meditation
 # ==============================================================================
 
+def equip_dress_profile() -> None:
+    """Equips the configured dress profile (e.g. 'Sorcery') if specified."""
+    if not DRESS_PROFILE:
+        return
+    available = API.GetAvailableDressOutfits()
+    if available and DRESS_PROFILE not in available:
+        API.SysMsg(f"[Inscription] Note: Dress profile '{DRESS_PROFILE}' not found in TazUO. Available: {', '.join(available)}")
+        return
+    API.SysMsg(f"[Inscription] Equipping dress profile '{DRESS_PROFILE}'...")
+    API.Dress(DRESS_PROFILE)
+    API.Pause(0.6)
+
+
 def handle_mana_recovery(target_mana: Optional[int] = None) -> bool:
     """
     Restores mana by meditating or pausing until mana reaches target_mana (or max mana).
@@ -837,6 +851,11 @@ def handle_mana_recovery(target_mana: Optional[int] = None) -> bool:
                 return False
 
     update_stats()
+
+    # Re-equip dress profile upon exiting meditation
+    if DRESS_PROFILE and not is_stopped and not API.StopRequested:
+        equip_dress_profile()
+
     return not (is_stopped or API.StopRequested)
 
 
@@ -1223,14 +1242,7 @@ def main():
     API.SysMsg("=== FesterUO Inscription Trainer ===")
 
     # 0. Load Dress Profile
-    if DRESS_PROFILE:
-        available = API.GetAvailableDressOutfits()
-        if available and DRESS_PROFILE not in available:
-            API.SysMsg(f"[Inscription] Note: Dress profile '{DRESS_PROFILE}' not found in TazUO. Available: {', '.join(available)}")
-        else:
-            API.SysMsg(f"[Inscription] Equipping dress profile '{DRESS_PROFILE}'...")
-            API.Dress(DRESS_PROFILE)
-            API.Pause(0.8)
+    equip_dress_profile()
 
     # 1. Initial skill and recipe recommendation
     i_skill_obj = API.GetSkill("Inscription")
