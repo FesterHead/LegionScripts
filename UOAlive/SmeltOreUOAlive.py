@@ -150,14 +150,18 @@ def update_stats() -> None:
     global last_mining_skill, last_str, last_dex
     global lbl_pet_ore, lbl_ingots, lbl_skill, lbl_stats
 
-    # 1. Pet Ore remaining
+    # 1. Stored Ore remaining
     if lbl_pet_ore:
         p_ore = get_pack_animal_ore_count()
-        pname = "Pet"
+        avail_ores, cont_serial = get_available_ores()
         animal = find_nearby_pack_animal(PACK_ANIMAL_MAX_DISTANCE)
-        if animal:
-            pname = getattr(animal, "Name", "Pet") or "Pet"
-        lbl_pet_ore.Text = f"Pet Ore: {p_ore} remaining ({pname[:10]})"
+        if animal and cont_serial == getattr(animal.Backpack, "Serial", None):
+            src_name = getattr(animal, "Name", "Pet") or "Pet"
+        elif cont_serial:
+            src_name = "Bag"
+        else:
+            src_name = "None"
+        lbl_pet_ore.Text = f"Stored Ore: {p_ore} remaining ({src_name[:10]})"
 
     # 2. Backpack Ingots & Smelted count
     if lbl_ingots:
@@ -214,6 +218,20 @@ def trigger_insufficient_ore_pause(reason: str = "Not enough metal-bearing ore i
         update_status("Paused: Not Enough Ore")
         API.HeadMsg("NOT ENOUGH ORE!", API.Player, 32)
         API.SysMsg(f"{reason} Auto-paused for player inspection.", 32)
+        if ALERT_SOUND > 0:
+            API.PlaySound(ALERT_SOUND)
+
+
+def trigger_bulk_pile_pause() -> None:
+    """Auto-pauses when a bulk ore stack is encountered in Skill Gain Mode."""
+    global is_paused, btn_pause
+    if not is_paused:
+        is_paused = True
+        if btn_pause:
+            btn_pause.SetText("Resume")
+        update_status("Paused: Bulk Pile in Pack")
+        API.HeadMsg("BULK ORE IN PACK! PAUSED", API.Player, 32)
+        API.SysMsg("Bulk ore pile in backpack prevented from smelting! Put in pet or sub-bag, or switch to Bulk Mode.", 32)
         if ALERT_SOUND > 0:
             API.PlaySound(ALERT_SOUND)
 
@@ -557,6 +575,12 @@ def find_nearby_pack_animal(max_distance: int = PACK_ANIMAL_MAX_DISTANCE):
         if not mob or mob.Serial == API.Player.Serial or getattr(mob, "IsDead", False):
             continue
         graphic = getattr(mob, "Graphic", 0)
+        name = str(getattr(mob, "Name", "") or "").lower()
+
+        # Fire Beetles (0x0317 with 'fire' in name) are mobile forges, NOT pack animals!
+        if graphic == 0x0317 and "fire" in name:
+            continue
+
         if graphic in PACK_ANIMAL_GRAPHICS:
             dist = chebyshev_distance(px, py, mob.X, mob.Y)
             if dist <= max_distance and dist < min_dist:
@@ -568,6 +592,35 @@ def find_nearby_pack_animal(max_distance: int = PACK_ANIMAL_MAX_DISTANCE):
         return closest_mob
 
     return None
+
+
+def get_backpack_subcontainer():
+    """Finds a pouch, bag, or box inside the player's backpack to use for storing/splitting bulk ore."""
+    items = API.ItemsInContainer(API.Backpack, recursive=False)
+    if not items:
+        return None
+
+    candidates = []
+    for item in items:
+        g = getattr(item, "Graphic", 0)
+        if getattr(item, "IsContainer", False) or g in [
+            0x0E75, 0x0E76, 0x0E79, 0x0E7D, 0x0E7E, 0x0E80, 0x09B0, 0x0E40, 0x0E41, 0x0E42, 0x0E43
+        ]:
+            candidates.append(item)
+
+    # First priority: check if any subcontainer already holds ore
+    for cand in candidates:
+        cand_serial = getattr(cand, "Serial", None)
+        if cand_serial:
+            sub_items = API.ItemsInContainer(cand_serial, recursive=False)
+            if sub_items:
+                for si in sub_items:
+                    sig = getattr(si, "Graphic", 0)
+                    siname = str(getattr(si, "Name", "") or "").lower()
+                    if sig in ORE_GRAPHICS or ("ore" in siname and "scoreboard" not in siname):
+                        return cand
+
+    return candidates[0] if candidates else None
 
 
 def get_pack_animal_container(animal, open_if_needed: bool = False):
@@ -594,7 +647,7 @@ def get_pack_animal_container(animal, open_if_needed: bool = False):
 
     if open_if_needed:
         API.UseObject(animal_serial)
-        API.Pause(0.5)
+        wait_with_ui(0.5)
 
         if hasattr(animal, "Backpack") and animal.Backpack:
             pack_container_serial = getattr(animal.Backpack, "Serial", animal.Backpack)
@@ -632,11 +685,42 @@ def get_pack_animal_ores() -> List:
     return ores
 
 
+def get_available_ores() -> Tuple[List, Optional[int]]:
+    """Returns available ore items from Pack Animal or Backpack Subcontainer."""
+    # 1. Check pack animal
+    animal = find_nearby_pack_animal(PACK_ANIMAL_MAX_DISTANCE)
+    if animal:
+        container = get_pack_animal_container(animal, open_if_needed=True)
+        if container:
+            cont_serial = getattr(container, "Serial", container)
+            items = API.ItemsInContainer(cont_serial, recursive=False)
+            if items:
+                ores = [i for i in items if getattr(i, "Graphic", 0) in ORE_GRAPHICS or ("ore" in str(getattr(i, "Name", "") or "").lower() and "scoreboard" not in str(getattr(i, "Name", "") or "").lower())]
+                if ores:
+                    return ores, cont_serial
+
+    # 2. Check backpack subcontainer
+    sub = get_backpack_subcontainer()
+    if sub:
+        sub_serial = getattr(sub, "Serial", sub)
+        items = API.ItemsInContainer(sub_serial, recursive=False)
+        if items is None:
+            API.UseObject(sub_serial)
+            wait_with_ui(0.4)
+            items = API.ItemsInContainer(sub_serial, recursive=False)
+        if items:
+            ores = [i for i in items if getattr(i, "Graphic", 0) in ORE_GRAPHICS or ("ore" in str(getattr(i, "Name", "") or "").lower() and "scoreboard" not in str(getattr(i, "Name", "") or "").lower())]
+            if ores:
+                return ores, sub_serial
+
+    return [], None
+
+
 def get_pack_animal_ore_count() -> int:
-    """Counts total ore units remaining in the pack animal."""
-    ores = get_pack_animal_ores()
+    """Counts total ore units remaining in the pack animal or subcontainer."""
+    avail_ores, _ = get_available_ores()
     total = 0
-    for o in ores:
+    for o in avail_ores:
         total += getattr(o, "Amount", 1) or 1
     return total
 
@@ -720,54 +804,131 @@ def target_forge(forge) -> bool:
 # Smelting Engine
 # ==============================================================================
 
-def offload_excess_backpack_ore_to_pet() -> int:
+def offload_bulk_backpack_ore() -> bool:
     """
-    In Skill Gain Mode, offloads bulk ore stacks (> 1 or > 2 for small ore) from backpack
-    to the pack animal so ore can be pulled and smelted in single skill-gain batches.
-    Returns the number of bulk stacks offloaded.
+    Moves any bulk ore stacks (> 1 or > 2 for small ore) from the main backpack
+    into either the Pack Animal or a backpack sub-container (pouch/bag).
+    Returns True if any bulk stacks were moved or if no bulk stacks exist.
     """
-    if not skill_gain_mode:
-        return 0
+    main_items = API.ItemsInContainer(API.Backpack, recursive=False)
+    if not main_items:
+        return True
 
-    animal = find_nearby_pack_animal(PACK_ANIMAL_MAX_DISTANCE)
-    if not animal:
-        return 0
-
-    container = get_pack_animal_container(animal, open_if_needed=True)
-    if not container:
-        return 0
-
-    cont_serial = getattr(container, "Serial", container)
-    bp_items = get_all_backpack_items()
-    moved_stacks = 0
-
-    for item in bp_items:
-        if API.StopRequested or is_stopped or is_paused:
-            break
+    bulk_ores = []
+    for item in main_items:
         g = getattr(item, "Graphic", 0)
         name = str(getattr(item, "Name", "") or "").lower()
         amt = getattr(item, "Amount", 1) or 1
-        item_serial = getattr(item, "Serial", None)
-        if (g in ORE_GRAPHICS or ("ore" in name and "scoreboard" not in name)) and item_serial:
+        if (g in ORE_GRAPHICS or ("ore" in name and "scoreboard" not in name)):
             min_req = get_min_smelt_amount(g)
             if amt > min_req:
-                update_status(f"Offloading {amt} ore to pet...")
-                debug_msg(f"Moving bulk ore stack [0x{item_serial:X}] ({amt} pieces) to pet...")
-                API.MoveItem(item_serial, cont_serial, 0)
+                bulk_ores.append(item)
+
+    if not bulk_ores:
+        return True
+
+    # Destination 1: Pack Animal
+    animal = find_nearby_pack_animal(PACK_ANIMAL_MAX_DISTANCE)
+    if animal:
+        container = get_pack_animal_container(animal, open_if_needed=True)
+        if container:
+            dest_serial = getattr(container, "Serial", container)
+            moved_any = False
+            for ore in bulk_ores:
+                API.MoveItem(ore.Serial, dest_serial, 0)
                 wait_with_ui(ACTION_DELAY)
-                moved_stacks += 1
+                if not API.FindItem(ore.Serial):
+                    moved_any = True
+            if moved_any:
+                update_stats()
+                return True
 
-    if moved_stacks > 0:
-        API.SysMsg(f"Offloaded {moved_stacks} bulk ore stack(s) to pack pet for skill-gain training.", 68)
-        update_stats()
+    # Destination 2: Backpack Sub-Container (pouch, bag, wooden box)
+    subcontainer = get_backpack_subcontainer()
+    if subcontainer:
+        dest_serial = getattr(subcontainer, "Serial", subcontainer)
+        moved_any = False
+        for ore in bulk_ores:
+            if getattr(ore, "Container", None) == dest_serial:
+                continue
+            API.MoveItem(ore.Serial, dest_serial, 0)
+            wait_with_ui(ACTION_DELAY)
+            moved_any = True
+        if moved_any:
+            update_stats()
+            return True
 
-    return moved_stacks
+    return False
+
+
+def offload_single_small_ore(ore) -> bool:
+    """
+    Moves an unsmeltable single small ore (amt < 2) from the main backpack
+    into the other backpack (subcontainer) or pack animal, combining with
+    existing small ore of the same hue if present.
+    """
+    ore_serial = getattr(ore, "Serial", None)
+    if not ore_serial or not API.FindItem(ore_serial):
+        return False
+
+    ore_hue = getattr(ore, "Hue", 0)
+    ore_graphic = getattr(ore, "Graphic", 0x19B7)
+
+    # Priority 1: Backpack Subcontainer (the other backpack)
+    sub = get_backpack_subcontainer()
+    dest_serial = None
+    if sub:
+        dest_serial = getattr(sub, "Serial", sub)
+    else:
+        # Priority 2: Pack Animal
+        animal = find_nearby_pack_animal(PACK_ANIMAL_MAX_DISTANCE)
+        if animal:
+            pet_cont = get_pack_animal_container(animal, open_if_needed=True)
+            if pet_cont:
+                dest_serial = getattr(pet_cont, "Serial", pet_cont)
+
+    if not dest_serial:
+        return False
+
+    # Check for matching small ore stack of same graphic and hue in destination to combine onto
+    target_dest = dest_serial
+    items_in_dest = API.ItemsInContainer(dest_serial, recursive=False) or []
+    for item in items_in_dest:
+        if getattr(item, "Graphic", 0) == ore_graphic and getattr(item, "Hue", 0) == ore_hue:
+            target_dest = getattr(item, "Serial", item)
+            break
+
+    API.SysMsg("Combining single small ore into other backpack...", 68)
+    API.MoveItem(ore_serial, target_dest, 0)
+    wait_with_ui(ACTION_DELAY)
+    update_stats()
+    return True
+
+
+def offload_unsmeltable_small_ores() -> bool:
+    """Finds and offloads any single small ore pieces (< 2) in the main backpack."""
+    main_items = API.ItemsInContainer(API.Backpack, recursive=False)
+    if not main_items:
+        return False
+    moved_any = False
+    for item in main_items:
+        g = getattr(item, "Graphic", 0)
+        amt = getattr(item, "Amount", 1) or 1
+        if g == 0x19B7 and amt < 2:
+            if offload_single_small_ore(item):
+                moved_any = True
+    return moved_any
 
 
 def smelt_backpack_ore(forge) -> int:
     """
-    Smelts any ore stacks currently in the player's backpack at the forge.
-    In Skill Gain Mode, offloads any bulk stacks to the pet first to ensure single-piece smelting.
+    Smelts ore stacks in the player's main backpack at the forge.
+    In Skill Gain Mode:
+      - Automatically offloads any bulk stacks to the pet or sub-bag first.
+      - Refuses to smelt any stack with amt > min_req (1 for med/large, 2 for small).
+      - Only smelts exact 1-piece or 2-piece piles for maximum skill gain.
+    In Bulk Mode:
+      - Smelts full stacks directly.
     Returns the number of ore units successfully smelted.
     """
     global total_ore_smelted, unsmeltable_serials
@@ -775,11 +936,17 @@ def smelt_backpack_ore(forge) -> int:
         return 0
 
     if skill_gain_mode:
-        offload_excess_backpack_ore_to_pet()
+        offload_bulk_backpack_ore()
 
-    bp_items = get_all_backpack_items()
+    # Automatically move any lone small ore (1 piece) to other backpack to combine
+    offload_unsmeltable_small_ores()
+
+    main_bp_items = API.ItemsInContainer(API.Backpack, recursive=False)
+    if not main_bp_items:
+        return 0
+
     bp_ores = []
-    for item in bp_items:
+    for item in main_bp_items:
         graphic = getattr(item, "Graphic", 0)
         name = str(getattr(item, "Name", "") or "").lower()
         if graphic in ORE_GRAPHICS or ("ore" in name and "scoreboard" not in name):
@@ -801,12 +968,22 @@ def smelt_backpack_ore(forge) -> int:
 
         amt = getattr(ore, "Amount", 1) or 1
         graphic = getattr(ore, "Graphic", 0)
+        min_req = get_min_smelt_amount(graphic)
 
         # Check if single small ore piece which cannot be smelted
         if graphic == 0x19B7 and amt < 2:
-            debug_msg(f"Small ore [0x{ore_serial:X}] has only {amt} piece (requires 2). Skipping.")
+            debug_msg(f"Small ore [0x{ore_serial:X}] has only {amt} piece (requires 2). Combining into other backpack.")
+            if offload_single_small_ore(ore):
+                continue
             unsmeltable_serials.add(ore_serial)
             trigger_insufficient_ore_pause("There is not enough metal-bearing ore in this pile to make an ingot.")
+            break
+
+        # CRITICAL SAFETY FOR SKILL GAIN: Never smelt bulk stacks in Skill Gain Mode!
+        if skill_gain_mode and amt > min_req:
+            API.SysMsg(f"Skill Gain Mode safety: refusing to smelt bulk stack of {amt} ore!", 32)
+            API.SysMsg("Please place bulk ore in your pet or a sub-bag so it can be smelted 1-2 at a time.", 32)
+            trigger_bulk_pile_pause()
             break
 
         mode_tag = " (Skill Gain)" if skill_gain_mode else ""
@@ -849,27 +1026,40 @@ def smelt_backpack_ore(forge) -> int:
 
 def pull_ore_batch_from_pet(batch_size: int = MAX_BATCH_ORE) -> bool:
     """
-    Pulls a safe batch amount of ore from the pack animal into the player's backpack.
-    In Skill Gain Mode, pulls the minimum pieces (1 for large/med, 2 for small) to maximize skill gain.
-    In Bulk Mode, pulls up to batch_size based on player free weight.
+    Pulls an ore batch from the Pack Animal or a backpack subcontainer into the main backpack.
+    In Skill Gain Mode: pulls exactly 1 (or 2 for small ore) piece.
+    In Bulk Mode: pulls up to batch_size based on player free weight.
     Returns True if an ore batch was moved, False if no ore remains.
     """
-    pet_ores = get_pack_animal_ores()
-    if not pet_ores:
+    available_ores, cont_serial = get_available_ores()
+    if not available_ores:
         return False
 
     # Check player weight room
+    sub = get_backpack_subcontainer()
+    is_subcontainer = bool(sub and getattr(sub, "Serial", None) == cont_serial)
+
     cur_wt = API.Player.Weight or 0
     max_wt = API.Player.WeightMax or 400
-    free_room = max_wt - cur_wt - WEIGHT_BUFFER
-    if free_room <= 15:
-        API.SysMsg("Backpack too heavy to pull more ore! Auto-pausing.", 32)
-        trigger_overweight_pause()
-        return False
 
-    # Find the first smeltable ore stack in the pet
+    # Only external transfers from a pack animal add weight to the player
+    if not is_subcontainer:
+        if skill_gain_mode:
+            # Need room for 1 large/medium ore (12 stones) or 2 small ore (4 stones)
+            if cur_wt + 12 > max_wt:
+                API.SysMsg(f"Backpack too heavy to pull ore from pet! (Wt: {cur_wt}/{max_wt}). Please lighten pack or bank ingots.", 32)
+                trigger_overweight_pause()
+                return False
+        else:
+            free_room = max_wt - cur_wt - WEIGHT_BUFFER
+            if free_room < 12:
+                API.SysMsg("Backpack too heavy to pull bulk ore! Auto-pausing.", 32)
+                trigger_overweight_pause()
+                return False
+
+    # Find the first smeltable ore stack
     target_ore = None
-    for ore in pet_ores:
+    for ore in available_ores:
         ore_s = getattr(ore, "Serial", None)
         if ore_s in unsmeltable_serials:
             continue
@@ -894,14 +1084,16 @@ def pull_ore_batch_from_pet(batch_size: int = MAX_BATCH_ORE) -> bool:
         needed = get_min_smelt_amount(ore_graphic)
         move_amt = min(ore_amount, needed)
     else:
-        # Large ore weighs 12 stones each. Calculate safe quantity
-        safe_qty = max(2, min(batch_size, free_room // 12))
+        free_room = max(0, max_wt - cur_wt - WEIGHT_BUFFER)
+        safe_qty = max(2, min(batch_size, free_room // 12)) if not is_subcontainer else batch_size
         move_amt = min(ore_amount, safe_qty)
 
-    update_status(f"Pulling {move_amt} ore from pet...")
-    debug_msg(f"Moving {move_amt} ore [0x{ore_serial:X}] from pet to backpack...")
+    src_label = "sub-bag" if is_subcontainer else "pack pet"
+    update_status(f"Pulling {move_amt} ore ({src_label})...")
+    debug_msg(f"Moving {move_amt} ore [0x{ore_serial:X}] from {src_label} to main backpack...")
 
-    API.MoveItem(ore_serial, API.Backpack, amt=move_amt)
+    # Use positional argument for amt to ensure exact stack split in TazUO
+    API.MoveItem(ore_serial, API.Backpack, move_amt)
     wait_with_ui(ACTION_DELAY)
     return True
 
@@ -963,32 +1155,31 @@ def main():
         if not check_ui_events():
             break
 
-        # Step 2: Check remaining ore in pack pet
-        pet_ores = get_pack_animal_ores()
-        # Filter for smeltable, non-excluded backpack ores
-        bp_items = get_all_backpack_items()
+        # Step 2: Check remaining available ores in pet or subcontainer
+        available_ores, _ = get_available_ores()
+        main_bp_items = API.ItemsInContainer(API.Backpack, recursive=False)
         smeltable_bp_ores = [
-            i for i in bp_items
+            i for i in main_bp_items
             if (getattr(i, "Graphic", 0) in ORE_GRAPHICS or ("ore" in str(getattr(i, "Name", "") or "").lower() and "scoreboard" not in str(getattr(i, "Name", "") or "").lower()))
             and getattr(i, "Serial", None) not in unsmeltable_serials
             and is_ore_smeltable(i)
         ]
 
-        has_smeltable_pet_ore = any(
+        has_smeltable_available = any(
             getattr(o, "Serial", None) not in unsmeltable_serials and is_ore_smeltable(o)
-            for o in pet_ores
+            for o in available_ores
         )
 
-        if not has_smeltable_pet_ore and not smeltable_bp_ores:
+        if not has_smeltable_available and not smeltable_bp_ores:
             update_status("Finished! All ore smelted.")
-            API.SysMsg(f"All ore from pack animal successfully smelted! Total ore processed: {total_ore_smelted}.", 68)
+            API.SysMsg(f"All ore successfully smelted! Total ore processed: {total_ore_smelted}.", 68)
             if unsmeltable_serials:
                 API.SysMsg(f"{len(unsmeltable_serials)} unsmeltable small ore pile(s) (< 2 pieces) remaining in pack.", 53)
             if ALERT_SOUND > 0:
                 API.PlaySound(ALERT_SOUND)
             break
 
-        # Step 3: Pull a safe batch of ore from the pack animal
+        # Step 3: Pull next batch (1-2 ore in Skill Gain Mode, up to 30 in Bulk Mode)
         if not pull_ore_batch_from_pet(MAX_BATCH_ORE):
             if is_paused:
                 continue

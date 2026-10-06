@@ -19,14 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Features comprehensive weight and tool breakage monitoring with audible chimes and overhead warning alerts.
 
 - Added `UOAlive/SmeltOreUOAlive.py`: Automated pack animal ore extraction and smelting script for UOAlive created by FesterHead:
-  - Automatically connects to a nearby Pack Llama, Pack Horse, or Giant Beetle's backpack.
+  - Automatically connects to a nearby Pack Llama, Pack Horse, or Giant Beetle's backpack (with Fire Beetle filtering to prevent mobile forge conflict).
   - Automatically detects nearby forges (ground items, map statics, and Fire Beetles) with support for manual forge targeting (`Set Forge`).
   - Implements Dual Smelting Modes:
-    - **Skill Gain Mode (Default):** Extracts minimum smeltable amounts (1 medium/large ore, 2 small ore) per attempt to maximize Mining skill gain checks; automatically offloads existing bulk backpack ore to the pet for single-piece extraction.
+    - **Skill Gain Mode (Default):** Extracts minimum smeltable amounts (1 medium/large ore, 2 small ore) per attempt to maximize Mining skill gain checks; automatically offloads existing bulk backpack ore to the pet or a backpack sub-bag for single-piece extraction.
     - **Bulk Mode:** Moves safe bulk batches (up to 30 ore) based on remaining backpack weight for rapid ingot conversion.
-  - Features an interactive control Gump (330x215) displaying real-time status, Pet Ore remaining, Backpack Ingots & Smelted counters (with active mode), live Mining skill with gain announcements, character stats (STR, DEX, Weight, Forge connection), and responsive Mode Toggle, Set Forge, Pause/Resume, Pack Pet, and Stop buttons.
+  - Enforces strict skill-gain guardrails: completely prohibits smelting bulk piles (`Amount > 1-2`) in Skill Gain Mode to prevent wasting ore without skill gains.
+  - Features smart internal subcontainer recognition: pulling ore from an in-backpack subcontainer adds 0 stones to total character weight and avoids false overweight pauses while smelting down heavy ore.
+  - Uses positional stack splitting in `API.MoveItem` to guarantee exact single/double piece extractions without moving entire piles.
+  - Features an interactive control Gump (330x215) displaying real-time status, Stored Ore remaining, Backpack Ingots & Smelted counters (with active mode), live Mining skill with gain announcements, character stats (STR, DEX, Weight, Forge connection), and responsive Mode Toggle, Set Forge, Pause/Resume, Pack Pet, and Stop buttons.
   - Implements time-sliced `wait_with_ui()` delays and per-ore UI event dispatching for instantaneous Pause/Resume button responsiveness.
-  - Adds automatic detection and auto-pause (`trigger_insufficient_ore_pause`) when encountering unsmeltable ore piles (such as small ore pieces requiring at least 2 pieces to make an ingot) or server messages stating "There is not enough metal-bearing ore in this pile to make an ingot."
+  - Automatically moves any solitary small ore (`0x19B7` with `amt < 2`) in the main backpack into the subcontainer/other backpack and drops it onto matching hue stacks to combine, eliminating pauses and manual intervention.
+  - Adds automatic detection and auto-pause (`trigger_insufficient_ore_pause` and `trigger_bulk_pile_pause`) when encountering unsmeltable ore piles or unsplittable bulk stacks.
 
 - Added `UOAlive/ChopAndMineAutoUOAlive.py`: Combined roaming lumberjack and opportunistic miner script for UOAlive created by FesterHead:
   - Roams from tree to tree using native tree static detection and pathfinding within `SEARCH_RADIUS` (25 tiles).
