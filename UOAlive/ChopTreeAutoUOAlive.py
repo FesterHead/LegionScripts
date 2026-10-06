@@ -14,23 +14,27 @@ Description:
     - Repeatedly swings the equipped axe until the tree is depleted.
     - Automatically converts harvested logs into boards using the axe,
       halving wood weight and keeping backpack space organized.
+    - Automatically detects nearby pack animals (Pack Horse, Pack Llama, Giant Beetle)
+      and transfers cut boards directly into their pack to maximize carrying capacity.
     - Keeps track of the last 50 visited trees in a FIFO history queue
       to prevent repeating recently chopped trees.
     - Moves on to the next nearest tree when nothing is left.
     - Features an interactive control Gump styled identically to FesterUO's
-      ChopTreeAuto, displaying real-time Status, Trees Harvested, Boards,
-      Lumberjacking skill with gain tracking, and STR / DEX / Weight monitoring.
-    - Features a Pause/Resume button to pause manually at any time to make new
-      tools (Tinkering), fletch shafts/bows, or do log/board management.
+      ChopTreeAuto, displaying real-time Status, Trees Harvested, Boards (Backpack & Pet),
+      Lumberjacking skill with gain tracking, and STR / DEX / Weight / Pack Pet monitoring.
+    - Features interactive Pause/Resume, Pack Pet (manual pet targeting / re-detection),
+      and Stop buttons.
     - Automatically pauses and triggers an audible and visual overhead alert
-      when weight capacity is reached, resuming smoothly once unloaded.
+      when weight capacity is reached (after offloading to pack animal),
+      resuming smoothly once unloaded.
 
 Usage:
     1. Ensure you have an axe equipped or in your backpack.
-    2. Configure a "Lumberjack" dress profile in TazUO (optional but recommended).
-    3. Stand near an area with trees.
-    4. Start the script in TazUO.
-    5. Use the on-screen Gump to monitor progress, Pause/Resume, or Stop.
+    2. (Optional) Bring along a Pack Horse, Pack Llama, or Giant Beetle.
+    3. Configure a "Lumberjack" dress profile in TazUO (optional but recommended).
+    4. Stand near an area with trees.
+    5. Start the script in TazUO.
+    6. Use the on-screen Gump to monitor progress, Pause/Resume, Pack Pet, or Stop.
 """
 
 from collections import deque
@@ -66,6 +70,10 @@ PATHFIND_TIMEOUT: float = 12.0
 # Alert sound played when auto-pausing (0x1F8 = classic system notice chime)
 ALERT_SOUND: int = 0x1F8
 
+# Automatically offload converted boards to a nearby Pack Horse, Pack Llama, or Beetle
+AUTO_PACK_ANIMAL_TRANSFER: bool = True
+PACK_ANIMAL_MAX_DISTANCE: int = 3
+
 # ==============================================================================
 # Graphics Definitions
 # ==============================================================================
@@ -94,6 +102,13 @@ LOG_GRAPHICS: List[int] = [
 # Board graphics (all standard and special wood varieties)
 BOARD_GRAPHICS: List[int] = [
     0x1BD7, 0x1BD8, 0x1BD9, 0x1BDA, 0x1BDB, 0x1BDC, 0x1BE1, 0x1BE2
+]
+
+# Pack animals (Pack Horse, Pack Llama, Giant Beetle)
+PACK_ANIMAL_GRAPHICS: List[int] = [
+    0x0123,  # Pack Horse (291)
+    0x0124,  # Pack Llama (292)
+    0x0317,  # Giant Beetle (791)
 ]
 
 # Journal keywords indicating a tree has no more wood or cannot be harvested
@@ -127,11 +142,14 @@ lbl_trees = None
 lbl_skill = None
 lbl_stats = None
 btn_pause = None
+btn_pet = None
 btn_stop = None
 
 is_paused: bool = False
 is_stopped: bool = False
 trees_harvested_count: int = 0
+pack_animal_serial: Optional[int] = None
+pack_container_serial: Optional[int] = None
 
 last_skill: Optional[float] = None
 last_str: Optional[int] = None
@@ -151,16 +169,26 @@ def increment_trees_harvested() -> None:
     global trees_harvested_count, lbl_trees
     trees_harvested_count += 1
     if lbl_trees:
-        lbl_trees.Text = f"Trees: {trees_harvested_count} | Boards: {get_backpack_board_count()}"
+        bp_b = get_backpack_board_count()
+        pet_b = get_pack_animal_board_count()
+        if pet_b > 0 or pack_animal_serial:
+            lbl_trees.Text = f"Trees: {trees_harvested_count} | Boards: {bp_b} (Pet: {pet_b})"
+        else:
+            lbl_trees.Text = f"Trees: {trees_harvested_count} | Boards: {bp_b}"
 
 
 def update_stats() -> None:
-    """Updates Lumberjacking skill, Strength, Dexterity, and Weight on the Gump."""
+    """Updates Lumberjacking skill, Strength, Dexterity, Weight, and Pack Pet on the Gump."""
     global last_skill, last_str, last_dex, lbl_skill, lbl_stats, lbl_trees
 
-    # Update Trees & Boards count display
+    # Update Trees & Boards count display (backpack + pack pet)
     if lbl_trees:
-        lbl_trees.Text = f"Trees: {trees_harvested_count} | Boards: {get_backpack_board_count()}"
+        bp_b = get_backpack_board_count()
+        pet_b = get_pack_animal_board_count()
+        if pet_b > 0 or pack_animal_serial:
+            lbl_trees.Text = f"Trees: {trees_harvested_count} | Boards: {bp_b} (Pet: {pet_b})"
+        else:
+            lbl_trees.Text = f"Trees: {trees_harvested_count} | Boards: {bp_b}"
 
     # Update Lumberjacking skill
     skill_obj = API.GetSkill("Lumberjacking") or API.GetSkill("Lumberjack")
@@ -173,14 +201,19 @@ def update_stats() -> None:
             API.SysMsg(f"Lumberjacking gained +{gain:.1f}! New skill: {val:.1f}")
         last_skill = val
 
-    # Update STR, DEX, and Backpack Weight
+    # Update STR, DEX, Backpack Weight, and Pack Pet indicator
     cur_str = API.Player.Strength
     cur_dex = API.Player.Dexterity
     cur_wt = API.Player.Weight
     max_wt = API.Player.WeightMax
     if lbl_stats and cur_str is not None and cur_dex is not None:
         wt_str = f"{cur_wt}/{max_wt}" if cur_wt is not None and max_wt is not None else "--/--"
-        lbl_stats.Text = f"STR: {cur_str} | DEX: {cur_dex} | Wt: {wt_str}"
+        pet_str = ""
+        animal = find_nearby_pack_animal(max_distance=PACK_ANIMAL_MAX_DISTANCE)
+        if animal:
+            pname = getattr(animal, "Name", "Pet") or "Pet"
+            pet_str = f" | {pname[:12]}"
+        lbl_stats.Text = f"STR: {cur_str} | DEX: {cur_dex} | Wt: {wt_str}{pet_str}"
         if last_str is not None and cur_str > last_str:
             API.SysMsg(f"Strength increased to {cur_str}!")
         if last_dex is not None and cur_dex > last_dex:
@@ -221,7 +254,8 @@ def on_pause_clicked() -> None:
     """Callback triggered when the Pause/Resume button is clicked on the Gump."""
     global is_paused, btn_pause
     if is_paused:
-        # Player is attempting to resume. Check if they are still overburdened.
+        # Player is attempting to resume. First attempt offloading boards to pack animal.
+        transfer_boards_to_pack_animal()
         if is_overburdened():
             API.SysMsg("Still too full! Please store boards or lighten your pack before resuming.", 32)
             API.HeadMsg("STILL OVERWEIGHT!", API.Player, 32)
@@ -246,6 +280,36 @@ def on_pause_clicked() -> None:
         API.SysMsg("Auto lumberjack paused.")
 
 
+def on_pack_pet_clicked() -> None:
+    """Allows player to manually select their Pack Horse, Pack Llama, or Giant Beetle."""
+    global pack_animal_serial, pack_container_serial
+    API.SysMsg("Target your Pack Horse, Pack Llama, or Beetle (or press ESC to auto-detect)...")
+    target_serial = API.RequestTarget(timeout=10.0)
+    if target_serial and target_serial != API.Player.Serial:
+        mob = API.FindMobile(target_serial)
+        if mob:
+            pack_animal_serial = target_serial
+            pack_container_serial = None
+            name = getattr(mob, "Name", "Pack Pet") or "Pack Pet"
+            API.SysMsg(f"Pack animal set to {name} [0x{target_serial:X}].", 68)
+            container = get_pack_animal_container(mob, open_if_needed=True)
+            if container:
+                pack_container_serial = getattr(container, "Serial", container)
+            transfer_boards_to_pack_animal()
+            update_stats()
+            return
+
+    # Fallback: scan and auto-detect nearest pack animal
+    animal = find_nearby_pack_animal(max_distance=4)
+    if animal:
+        name = getattr(animal, "Name", "Pack Pet") or "Pack Pet"
+        API.SysMsg(f"Auto-detected nearby {name} [0x{animal.Serial:X}].", 68)
+        transfer_boards_to_pack_animal()
+    else:
+        API.SysMsg("No pack animal detected within reach.", 53)
+    update_stats()
+
+
 def on_stop_clicked() -> None:
     """Callback triggered when the Stop button is clicked on the Gump."""
     global is_stopped
@@ -264,50 +328,56 @@ def on_gump_disposed() -> None:
 
 def create_control_gump():
     """Initializes and renders the interactive UOAlive Auto Lumberjack Gump."""
-    global gump, lbl_status, lbl_trees, lbl_skill, lbl_stats, btn_pause, btn_stop
+    global gump, lbl_status, lbl_trees, lbl_skill, lbl_stats, btn_pause, btn_pet, btn_stop
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
-    gump.SetRect(100, 100, 240, 150)
+    gump.SetRect(100, 100, 320, 160)
 
     # Semi-transparent dark background
     bg = API.Gumps.CreateGumpColorBox(0.8, "#1A1A1A")
-    bg.SetRect(0, 0, 240, 150)
+    bg.SetRect(0, 0, 320, 160)
     gump.Add(bg)
 
     # Title label (gold hue 53)
     title = API.Gumps.CreateGumpLabel("UOAlive Auto Lumberjack", 53)
-    title.SetPos(10, 8)
+    title.SetPos(12, 8)
     gump.Add(title)
 
     # Status label
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)
-    lbl_status.SetPos(10, 30)
+    lbl_status.SetPos(12, 30)
     gump.Add(lbl_status)
 
     # Trees harvested and boards counter
     lbl_trees = API.Gumps.CreateGumpLabel("Trees: 0 | Boards: 0", 996)
-    lbl_trees.SetPos(10, 50)
+    lbl_trees.SetPos(12, 52)
     gump.Add(lbl_trees)
 
     # Skill label
     lbl_skill = API.Gumps.CreateGumpLabel("Lumberjack: --", 996)
-    lbl_skill.SetPos(10, 70)
+    lbl_skill.SetPos(12, 74)
     gump.Add(lbl_skill)
 
     # Stats and Weight label
     lbl_stats = API.Gumps.CreateGumpLabel("STR: -- | DEX: -- | Wt: --/--", 996)
-    lbl_stats.SetPos(10, 90)
+    lbl_stats.SetPos(12, 96)
     gump.Add(lbl_stats)
 
     # Pause / Resume button
-    btn_pause = API.Gumps.CreateSimpleButton("Pause", 70, 22)
-    btn_pause.SetPos(15, 116)
+    btn_pause = API.Gumps.CreateSimpleButton("Pause", 85, 24)
+    btn_pause.SetPos(15, 124)
     API.Gumps.AddControlOnClick(btn_pause, on_pause_clicked)
     gump.Add(btn_pause)
 
+    # Pack Pet button
+    btn_pet = API.Gumps.CreateSimpleButton("Pack Pet", 95, 24)
+    btn_pet.SetPos(112, 124)
+    API.Gumps.AddControlOnClick(btn_pet, on_pack_pet_clicked)
+    gump.Add(btn_pet)
+
     # Stop button
-    btn_stop = API.Gumps.CreateSimpleButton("Stop", 70, 22)
-    btn_stop.SetPos(155, 116)
+    btn_stop = API.Gumps.CreateSimpleButton("Stop", 85, 24)
+    btn_stop.SetPos(220, 124)
     API.Gumps.AddControlOnClick(btn_stop, on_stop_clicked)
     gump.Add(btn_stop)
 
@@ -341,6 +411,9 @@ def check_ui_events() -> bool:
         on_stop_clicked()
         return False
 
+    if btn_pet and getattr(btn_pet, "HasBeenClicked", lambda: False)():
+        on_pack_pet_clicked()
+
     if btn_pause and getattr(btn_pause, "HasBeenClicked", lambda: False)():
         on_pause_clicked()
 
@@ -354,6 +427,8 @@ def check_ui_events() -> bool:
         if btn_stop and getattr(btn_stop, "HasBeenClicked", lambda: False)():
             on_stop_clicked()
             return False
+        if btn_pet and getattr(btn_pet, "HasBeenClicked", lambda: False)():
+            on_pack_pet_clicked()
         if btn_pause and getattr(btn_pause, "HasBeenClicked", lambda: False)():
             on_pause_clicked()
             if not is_paused:
@@ -467,6 +542,178 @@ def get_backpack_board_count() -> int:
         if graphic in BOARD_GRAPHICS or ("board" in name and "scoreboard" not in name and "chessboard" not in name):
             total += getattr(item, "Amount", 1) or 1
     return total
+
+
+def find_nearby_pack_animal(max_distance: int = PACK_ANIMAL_MAX_DISTANCE):
+    """
+    Finds a nearby Pack Horse, Pack Llama, or Giant Beetle.
+    If a specific animal was selected via Gump, it is prioritized if still in reach.
+    Otherwise, scans surrounding mobiles for pack animals within max_distance.
+    """
+    global pack_animal_serial
+
+    # Check cached or targeted animal first
+    if pack_animal_serial:
+        mob = API.FindMobile(pack_animal_serial)
+        if mob and not getattr(mob, "IsDead", False):
+            if chebyshev_distance(API.Player.X, API.Player.Y, mob.X, mob.Y) <= max_distance:
+                return mob
+
+    # Scan for nearby pack animals
+    mobiles = API.GetAllMobiles()
+    if not mobiles:
+        return None
+
+    px = API.Player.X
+    py = API.Player.Y
+    closest_mob = None
+    min_dist = max_distance + 1
+
+    for mob in mobiles:
+        if not mob or mob.Serial == API.Player.Serial or getattr(mob, "IsDead", False):
+            continue
+        graphic = getattr(mob, "Graphic", 0)
+        if graphic in PACK_ANIMAL_GRAPHICS:
+            dist = chebyshev_distance(px, py, mob.X, mob.Y)
+            if dist <= max_distance and dist < min_dist:
+                min_dist = dist
+                closest_mob = mob
+
+    if closest_mob:
+        pack_animal_serial = closest_mob.Serial
+        return closest_mob
+
+    return None
+
+
+def get_pack_animal_container(animal, open_if_needed: bool = False):
+    """
+    Retrieves the backpack/container item for the pack animal.
+    Attempts multiple discovery methods:
+    1. Cached container serial
+    2. animal.Backpack property
+    3. API.FindLayer("Backpack", animal.Serial)
+    4. Opening animal container via API.UseObject (only if open_if_needed is True)
+    """
+    global pack_container_serial
+    if not animal:
+        return None
+
+    animal_serial = getattr(animal, "Serial", animal)
+
+    # Strategy 1: Cached container serial
+    if pack_container_serial:
+        cont = API.FindItem(pack_container_serial)
+        if cont:
+            return cont
+
+    # Strategy 2: animal.Backpack property
+    if hasattr(animal, "Backpack") and animal.Backpack:
+        pack_container_serial = getattr(animal.Backpack, "Serial", animal.Backpack)
+        return animal.Backpack
+
+    # Strategy 3: FindLayer Backpack
+    layer_item = API.FindLayer("Backpack", animal_serial)
+    if layer_item:
+        pack_container_serial = getattr(layer_item, "Serial", layer_item)
+        return layer_item
+
+    # Strategy 4: Open pack animal container once if requested to populate TazUO client cache
+    if open_if_needed:
+        API.UseObject(animal_serial)
+        API.Pause(0.5)
+
+        if hasattr(animal, "Backpack") and animal.Backpack:
+            pack_container_serial = getattr(animal.Backpack, "Serial", animal.Backpack)
+            return animal.Backpack
+
+        layer_item = API.FindLayer("Backpack", animal_serial)
+        if layer_item:
+            pack_container_serial = getattr(layer_item, "Serial", layer_item)
+            return layer_item
+
+    return None
+
+
+def get_pack_animal_board_count() -> int:
+    """Counts total boards currently inside the pack animal's backpack."""
+    try:
+        animal = find_nearby_pack_animal(PACK_ANIMAL_MAX_DISTANCE)
+        if not animal:
+            return 0
+
+        container = get_pack_animal_container(animal, open_if_needed=False)
+        if not container:
+            return 0
+
+        cont_serial = getattr(container, "Serial", container)
+        items = API.ItemsInContainer(cont_serial, recursive=False)
+        if not items:
+            return 0
+
+        total = 0
+        for item in items:
+            graphic = getattr(item, "Graphic", 0)
+            name = str(getattr(item, "Name", "") or "").lower()
+            if graphic in BOARD_GRAPHICS or ("board" in name and "scoreboard" not in name and "chessboard" not in name):
+                total += getattr(item, "Amount", 1) or 1
+        return total
+    except Exception:
+        return 0
+
+
+def transfer_boards_to_pack_animal() -> int:
+    """
+    Transfers board stacks from the player's backpack to the nearby pack animal's backpack.
+    Returns the number of board stacks transferred.
+    """
+    if not AUTO_PACK_ANIMAL_TRANSFER:
+        return 0
+
+    animal = find_nearby_pack_animal(PACK_ANIMAL_MAX_DISTANCE)
+    if not animal:
+        return 0
+
+    container = get_pack_animal_container(animal, open_if_needed=True)
+    if not container:
+        return 0
+
+    dest_serial = getattr(container, "Serial", container)
+    animal_name = getattr(animal, "Name", "Pack Pet") or "Pack Pet"
+
+    # Find board stacks in player backpack
+    items = get_all_backpack_items()
+    board_serials: List[int] = []
+    for item in items:
+        graphic = getattr(item, "Graphic", 0)
+        name = str(getattr(item, "Name", "") or "").lower()
+        if graphic in BOARD_GRAPHICS or ("board" in name and "scoreboard" not in name and "chessboard" not in name):
+            serial = getattr(item, "Serial", None)
+            if serial and serial not in board_serials:
+                board_serials.append(serial)
+
+    if not board_serials:
+        return 0
+
+    transferred = 0
+    for serial in board_serials:
+        if API.StopRequested or is_stopped:
+            break
+
+        # Re-verify distance
+        if chebyshev_distance(API.Player.X, API.Player.Y, animal.X, animal.Y) > PACK_ANIMAL_MAX_DISTANCE:
+            debug_msg("Pack animal moved out of range during transfer.")
+            break
+
+        API.MoveItem(serial, dest_serial, 0)
+        API.Pause(0.6)
+        transferred += 1
+
+    if transferred > 0:
+        API.SysMsg(f"Transferred {transferred} board stack(s) to {animal_name}.", 68)
+        update_stats()
+
+    return transferred
 
 
 def chebyshev_distance(x1: int, y1: int, x2: int, y2: int) -> int:
@@ -618,6 +865,8 @@ def convert_logs_to_boards(axe=None) -> int:
 
     if converted_count > 0:
         API.SysMsg(f"Converted logs into boards ({converted_count} stack(s) cut).")
+        if AUTO_PACK_ANIMAL_TRANSFER:
+            transfer_boards_to_pack_animal()
 
     update_stats()
     return converted_count
@@ -747,6 +996,8 @@ def chop_tree(axe, tree) -> None:
         if is_overburdened():
             # First attempt converting any loose logs to boards to halve weight
             convert_logs_to_boards(axe)
+            if AUTO_PACK_ANIMAL_TRANSFER:
+                transfer_boards_to_pack_animal()
             if is_overburdened():
                 trigger_overweight_pause()
                 if not check_ui_events():
@@ -862,6 +1113,8 @@ def main():
 
     # Initial conversion of any loose logs already in backpack
     convert_logs_to_boards(axe)
+    if AUTO_PACK_ANIMAL_TRANSFER:
+        transfer_boards_to_pack_animal()
 
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():
@@ -880,6 +1133,8 @@ def main():
         # Check weight before locating next tree
         if is_overburdened():
             convert_logs_to_boards(axe)
+            if AUTO_PACK_ANIMAL_TRANSFER:
+                transfer_boards_to_pack_animal()
             if is_overburdened():
                 trigger_overweight_pause()
                 if not check_ui_events():
@@ -925,6 +1180,8 @@ def main():
 
         # Convert any leftover logs to boards
         convert_logs_to_boards(axe)
+        if AUTO_PACK_ANIMAL_TRANSFER:
+            transfer_boards_to_pack_animal()
 
         API.Pause(0.5)
 

@@ -9,14 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `UOAlive/MiningAutoUOAlive.py`: Automated roaming mining script for UOAlive created by FesterHead:
+  - Automatically loads and equips the configured "Miner" dress profile (or pickaxe/shovel from backpack).
+  - Scans for nearby mineable mountain rock statics, cave floors/walls, boulders, and mountain land tiles within `SEARCH_RADIUS` (25 tiles).
+  - Navigates adjacent to deposits within reach (distance <= 2) using intelligent walkable stand pathfinding.
+  - Automatically detects nearby pack animals (Pack Llama, Pack Horse, Giant Beetle) within 3 tiles and offloads newly mined ore stacks directly into their backpack.
+  - Maintains a FIFO history tracking the last 150 visited veins with a 2-tile depletion radius to prevent re-mining exhausted veins.
+  - Features an interactive control Gump (330x165) displaying real-time Status, Veins Mined & Ore count (Backpack + Pet totals), live Mining skill with gain announcements, STR / DEX / Weight / Pack Pet status, and responsive Pause/Resume, Pack Pet, and Stop buttons.
+  - Features comprehensive weight and tool breakage monitoring with audible chimes and overhead warning alerts.
+
+- Added `UOAlive/SmeltOreUOAlive.py`: Automated pack animal ore extraction and smelting script for UOAlive created by FesterHead:
+  - Automatically connects to a nearby Pack Llama, Pack Horse, or Giant Beetle's backpack.
+  - Automatically detects nearby forges (ground items, map statics, and Fire Beetles) with support for manual forge targeting (`Set Forge`).
+  - Implements Dual Smelting Modes:
+    - **Skill Gain Mode (Default):** Extracts minimum smeltable amounts (1 medium/large ore, 2 small ore) per attempt to maximize Mining skill gain checks; automatically offloads existing bulk backpack ore to the pet for single-piece extraction.
+    - **Bulk Mode:** Moves safe bulk batches (up to 30 ore) based on remaining backpack weight for rapid ingot conversion.
+  - Features an interactive control Gump (330x215) displaying real-time status, Pet Ore remaining, Backpack Ingots & Smelted counters (with active mode), live Mining skill with gain announcements, character stats (STR, DEX, Weight, Forge connection), and responsive Mode Toggle, Set Forge, Pause/Resume, Pack Pet, and Stop buttons.
+  - Implements time-sliced `wait_with_ui()` delays and per-ore UI event dispatching for instantaneous Pause/Resume button responsiveness.
+  - Adds automatic detection and auto-pause (`trigger_insufficient_ore_pause`) when encountering unsmeltable ore piles (such as small ore pieces requiring at least 2 pieces to make an ingot) or server messages stating "There is not enough metal-bearing ore in this pile to make an ingot."
+
+- Added `UOAlive/ChopAndMineAutoUOAlive.py`: Combined roaming lumberjack and opportunistic miner script for UOAlive created by FesterHead:
+  - Roams from tree to tree using native tree static detection and pathfinding within `SEARCH_RADIUS` (25 tiles).
+  - Checks for nearby mineable mountain rock faces, cave statics, and boulders within mining reach (distance <= 2) upon arriving at each tree.
+  - Automatically switches to the `"Miner"` dress profile, mines unvisited rock and cave spots until depleted, and offloads mined ore directly to a nearby pack animal (Pack Llama, Pack Horse, Giant Beetle).
+  - Automatically switches back to the `"Lumberjack"` dress profile, chops the tree until depleted, converts harvested logs to boards with an axe, and offloads cut boards to the pack animal.
+  - Features dual FIFO tracking for recently visited trees (last 50) and mined veins (last 150) to prevent looping.
+  - Features an interactive, spacious control Gump (330x190) displaying real-time status, Trees & Boards (Backpack & Pet totals), Veins & Ore (Backpack & Pet totals), dual skill bars for Lumberjacking and Mining with gain tracking, character stats (STR / DEX / Weight / Pack Pet), and responsive Pause/Resume, Pack Pet, and Stop buttons.
+  - Comprehensive weight monitoring with auto-pause and audible/overhead alerts.
+
 - Added `UOAlive/ChopTreeAutoUOAlive.py`: Automated roaming lumberjacking script for the UOAlive shard created by FesterHead:
   - Automatically loads and equips the configured "Lumberjack" dress profile.
   - Automatically scans for nearby tree statics, navigates to the nearest unvisited tree within reach, and chops it until depleted.
   - Converts harvested logs into boards on the fly using the axe (supporting recursive backpack scanning across all wood varieties with action latency retry handling), halving wood weight and keeping backpack space organized.
+  - Automatically detects nearby pack animals (Pack Horse, Pack Llama, Giant Beetle) within 3 tiles and offloads cut boards directly to the pack animal's backpack, significantly extending roaming chopping runs.
   - Maintains a FIFO history tracking the last 50 visited trees to prevent revisiting recently chopped spots.
-  - Features an interactive control Gump styled after FesterUO's `ChopTreeAuto`, showing Status, Trees Harvested & Boards Count, Lumberjacking skill with gain alerts, STR / DEX / Weight monitoring, and responsive Pause/Resume and Stop controls.
+  - Features an interactive control Gump styled after FesterUO's `ChopTreeAuto`, showing Status, Trees Harvested & Boards Count (backpack and pet totals), Lumberjacking skill with gain alerts, STR / DEX / Weight / Pack Pet monitoring, and responsive Pause/Resume, Pack Pet targeting, and Stop controls.
   - Features weight monitoring with automatic pausing and audible/overhead alerts when full, allowing manual tool crafting, fletching, or board unloading before resuming.
-  - Detects missing/broken axes and auto-pauses so players can craft or equip a new tool without stopping the script.
+- Added `UOAlive/HuntBirdsUOAlive.py`: Automated bird and eagle targeting utility script for feather harvesting on UOAlive created by FesterHead:
+  - Automatically enables War Mode upon startup and actively keeps War Mode engaged during hunting.
+  - Scans for nearby birds, eagles, chickens, and fowl within a configurable detection radius using graphic IDs and comprehensive name keywords.
+  - Automatically targets and attacks the closest valid bird (`API.Attack`), locking the client's Last Target (`API.SetLastTarget`) for rapid archery, melee, or offensive spellcasting.
+  - Features an interactive control Gump displaying real-time hunting status, current target name, distance, and health, a Birds Hunted kill counter, and a live backpack feather counter.
+  - Interactive **Pause/Resume** button automatically drops out of War Mode into Peace Mode when paused (allowing safe NPC interaction, crafting, or vendoring), and immediately re-engages War Mode upon resuming.
+  - Clean shutdown handling through `API.OnStop` ensuring War Mode is safely disabled upon termination.
 - Added `FesterUO/LobsterTrapAuto.py`: Automated lobster and crab trap deployment, retrieval, and recycling script with interactive control Gump created by FesterHead:
   - Deploys up to 5 lobster traps from your backpack into the surrounding ocean at well-spaced relative water offsets (Port Bow, Port Railing, Port Stern, Starboard Bow, Starboard Stern).
   - Actively monitors deployed trap buoys with elapsed timers and bob detection (~60-65s cycle).
