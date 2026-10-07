@@ -67,4 +67,4 @@ When generating, modifying, or refactoring scripts in this repository, strictly 
 ### 6. Script Organization
 
 - **No loose scripts in the root directory:** The repository root is strictly reserved for base client install files, IDE configurations, and project documentation.
-- **Organize by author name or shard name:** All new or refactored scripts must be placed in a dedicated subfolder categorized by **author name** (e.g., `FesterUO/`, `AuthorName/`) or target **shard name** (e.g., `Outlands/`, `UOAlive/`).
+- **Organize by author name or shard name:** All new or refactored scripts must be placed in a dedicated subfolder categorized by **author name** (e.g., `FesterUO/`, `AuthorName/`) or target **shard name** (e.g., `Outlands/`, `ShardName/`).
