@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Updated [`.gitignore`](.gitignore) and untracked base TazUO client-generated files (`API.py`, `__builtins__.py`, `_ScriptContext.cs`, `LegionScripts.csproj`) so that client updates and local API stub regenerations do not dirty git status, while keeping user workspace settings (`LegionScripts.code-workspace`) tracked.
+
 ### Added
 
 - Added `FesterUO/LobsterTrapAuto.py`: Automated lobster and crab trap deployment, retrieval, and recycling script with interactive control Gump created by FesterHead:

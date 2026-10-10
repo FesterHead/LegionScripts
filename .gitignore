@@ -41,3 +41,9 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
+
+# TazUO Base Client Files (maintained by client updates)
+API.py
+__builtins__.py
+_ScriptContext.cs
+LegionScripts.csproj
