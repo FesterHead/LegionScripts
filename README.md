@@ -166,16 +166,22 @@ An automated Anatomy skill training script with configurable skill cooldowns, au
 
 #### [Fish.py](FesterUO/Fish.py)
 
-An automated fishing script featuring an interactive on-screen control Gump, dynamic water target selector, and persistent catch statistics:
+An automated fishing script featuring an interactive on-screen control Gump, dynamic water target selector, persistent catch statistics, and automatic hostile mob defense:
 
-- **Interactive Control Gump:** Displays real-time status (`Ready`, `Click water to fish...`, `Fishing (Cast #N)...`, `Spot Depleted`), cast counts, running catch totals, and live Fishing skill tracking (`XX.X / XXX.X`).
+- **Interactive Control Gump:** Displays real-time status (`Ready`, `Click water to fish...`, `Fishing (Cast #N)...`, `Combat - Click Start when ready`, `Spot Depleted`), cast counts, running catch totals, and live Fishing skill tracking (`XX.X / XXX.X`).
 - **Start / Stop Selector Button:** Features an interactive "Start" button that prompts the player with `"Click the water where you want to fish..."` and begins automated fishing on that spot. Toggles to "Stop" during active casting to permit early cancellation.
+- **Hostile Mob Awareness & Auto-Combat Defense:** Actively scans for nearby hostile mobiles and sea monsters within 12 tiles. When an enemy is detected:
+  1. Immediately halts fishing.
+  2. Unequips the fishing pole and undresses the `"Fishing"` profile.
+  3. Equips the `"Archery"` dress profile (with backpack bow equip fallback).
+  4. Enters War Mode and attacks the hostile enemy.
+  5. Leaves the player in full manual control without automatically resuming fishing until the player clicks "Start".
 - **Spot Cast Counter:** Accurately counts casts made at the current fishing spot and automatically resets to zero whenever "Start" is clicked.
 - **Persistent Catch Totals:** Maintains running totals of standard **Fish**, **Small Fish**, and **Junk** caught across multiple spots for the entire duration the Gump remains open.
 - **Multi-Source Catch Detection:** Detects catches using both backpack inventory deltas and client journal parsing.
 - **Coordinate & Graphic Locking:** Captures `API.LastTargetPos` and `API.LastTargetGraphic` to repeatedly target the exact water tile.
 - **Depletion Detection:** Monitors the client journal for spot exhaustion messages (`"the fish don't seem to be biting here"`, `"there are no fish here"`, etc.) and finishes cleanly.
-- **Pole Detection & Outfits:** Automatically detects equipped fishing poles or finds one inside your backpack, with optional `DRESS_PROFILE` support.
+- **Pole Detection & Outfits:** Automatically detects equipped fishing poles or finds one inside your backpack, with `"Fishing"` and `"Archery"` dress profile support.
 
 #### [FishAuto.py](FesterUO/FishAuto.py)
 

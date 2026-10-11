@@ -8,8 +8,15 @@ Description:
     Automates fishing with an on-screen interactive control Gump:
     - Provides a "Start" button to initiate the water targeting selector.
     - Locks onto target water coordinates and repeatedly fishes until the spot is depleted.
+    - Hostile Mob Awareness & Auto-Combat Defense:
+        - Actively scans for hostile sea creatures and enemy mobiles (Gray, Criminal, Enemy, Murderer,
+          or matching sea monsters like Sea Serpents, Krakens, Water Elementals, Leviathans).
+        - Automatically halts fishing, unquips fishing gear, switches to the "Archery" dress profile
+          (with backpack bow equip fallback), enters War Mode, and attacks the hostile mob.
+        - Does not switch back to fishing automatically, leaving the player in full manual control
+          to finish combat and loot. Player can resume fishing anytime by clicking "Start".
     - Tracks and displays:
-        - Current fishing status (Ready, Click water to fish, Fishing, Spot Depleted, Stopped)
+        - Current fishing status (Ready, Click water to fish, Fishing, Spot Depleted, Combat, Stopped)
         - Cast count for the current spot (resets to 0 whenever Start is clicked)
         - Running total of regular Fish caught while the Gump is open
         - Running total of Small Fish caught while the Gump is open
@@ -20,8 +27,9 @@ Description:
 
 Usage:
     1. Equip a fishing pole (or have one in your backpack).
-    2. Start the script in TazUO.
-    3. Click "Start" on the Gump, then click the desired water tile when prompted.
+    2. Ensure "Fishing" and "Archery" dress profiles are configured in TazUO.
+    3. Start the script in TazUO.
+    4. Click "Start" on the Gump, then click the desired water tile when prompted.
 """
 
 from typing import List, Tuple, Optional
@@ -37,8 +45,23 @@ DEBUG: bool = False
 # For standard / default UO shards, set this to 6.0–8.0s.
 FISHING_DELAY: float = 2.0
 
-# Optional dress configuration profile to load at startup (set to None or "" to disable)
-DRESS_PROFILE: str = ""
+# Dress configuration profiles configured in TazUO client
+DRESS_PROFILE_FISHING: str = "Fishing"
+DRESS_PROFILE_COMBAT: str = "Archery"
+DRESS_PROFILE: str = DRESS_PROFILE_FISHING  # Backward compatibility alias
+
+# Combat detection range (tiles)
+ENEMY_SCAN_RADIUS: int = 12
+
+# Common sea enemy name keywords
+HOSTILE_KEYWORDS: List[str] = [
+    "serpent", "elemental", "kraken", "sea", "leviathan", "deep", "dagon"
+]
+
+# Mobiles to explicitly exclude from combat detection (e.g. harmless sea life)
+IGNORED_MOBILES: List[str] = [
+    "dolphin"
+]
 
 # Fishing pole item graphic ID
 FISHING_POLE_GRAPHIC: int = 0x0DC0
@@ -98,6 +121,7 @@ is_stopped: bool = False
 is_fishing: bool = False
 start_requested: bool = False
 stop_fishing_requested: bool = False
+combat_triggered: bool = False
 
 current_casts: int = 0
 total_fish: int = 0
@@ -149,11 +173,12 @@ def update_skill_display() -> None:
 
 def on_action_clicked() -> None:
     """Callback triggered when the Start / Stop button is clicked."""
-    global is_fishing, start_requested, stop_fishing_requested
+    global is_fishing, start_requested, stop_fishing_requested, combat_triggered
     if is_fishing:
         stop_fishing_requested = True
         update_status("Stopping...")
     else:
+        combat_triggered = False
         start_requested = True
 
 
@@ -245,15 +270,129 @@ def check_ui_events() -> bool:
 
 
 def pause_with_ui(seconds: float) -> bool:
-    """Pauses for the specified duration while pumping UI events."""
+    """Pauses for the specified duration while pumping UI events and checking for enemies."""
     elapsed = 0.0
     step = 0.1
     while elapsed < seconds:
         if API.StopRequested or is_stopped or stop_fishing_requested:
             return False
+
+        # Mob awareness check
+        enemy = find_hostile_enemy()
+        if enemy:
+            handle_enemy_combat(enemy)
+            return False
+
         API.Pause(step)
         elapsed += step
         check_ui_events()
+    return True
+
+
+def find_hostile_enemy():
+    """
+    Scans for nearby hostile mobiles (Gray, Criminal, Enemy, Murderer)
+    or creatures matching sea enemy keywords within ENEMY_SCAN_RADIUS,
+    explicitly excluding harmless sea life like dolphins.
+    """
+    hostile_notorieties = {
+        API.Notoriety.Gray,
+        API.Notoriety.Criminal,
+        API.Notoriety.Enemy,
+        API.Notoriety.Murderer
+    }
+
+    try:
+        mobiles = API.GetAllMobiles(distance=ENEMY_SCAN_RADIUS)
+        if mobiles:
+            for m in mobiles:
+                if not m or m.Serial == API.Player.Serial or m.IsDead:
+                    continue
+                name = str(m.Name).lower() if m.Name else ""
+                # Exclude friendly or ignored mobiles (e.g. dolphins)
+                if any(ign in name for ign in IGNORED_MOBILES):
+                    continue
+                # Check explicit hostile keywords (sea serpent, kraken, water elemental, etc.)
+                if any(k in name for k in HOSTILE_KEYWORDS):
+                    return m
+                # Check hostile notoriety
+                if m.Notoriety in hostile_notorieties:
+                    return m
+    except Exception as ex:
+        debug_msg(f"Enemy scan error: {ex}")
+
+    return None
+
+
+def handle_enemy_combat(enemy) -> bool:
+    """
+    When an enemy is detected:
+    1. Undresses 'Fishing' dress profile to free hands and equipment slots.
+    2. Switches to 'Archery' dress profile (or directly equips bow from backpack).
+    3. Enters War Mode.
+    4. Attacks the mob.
+    5. Stops automated fishing so player can manually fight, kill, and loot.
+       Does not switch back to fishing afterwards (player will resume manually via 'Start').
+    """
+    global combat_triggered, stop_fishing_requested, is_fishing, btn_action
+
+    combat_triggered = True
+    stop_fishing_requested = True
+
+    enemy_name = str(enemy.Name) if enemy.Name else "Hostile Enemy"
+    API.SysMsg(f"Hostile detected: {enemy_name}! Switching to Archery...")
+    update_status(f"Hostile: {enemy_name}")
+
+    # 1. Undress fishing profile before dressing archery
+    if DRESS_PROFILE_FISHING:
+        debug_msg(f"Undressing profile '{DRESS_PROFILE_FISHING}'...")
+        try:
+            API.Undress(DRESS_PROFILE_FISHING)
+            API.Pause(0.8)
+        except Exception as ex:
+            debug_msg(f"Undress error: {ex}")
+
+    # Also ensure any equipped pole in hands is moved to backpack
+    pole = get_fishing_pole()
+    if pole and pole.Container == API.Player.Serial:
+        debug_msg("Unequipping fishing pole from hands...")
+        API.MoveItem(pole.Serial, API.Backpack, 0)
+        API.Pause(0.6)
+
+    # 2. Dress Archery profile
+    if DRESS_PROFILE_COMBAT:
+        try:
+            available = API.GetAvailableDressOutfits()
+            if available and DRESS_PROFILE_COMBAT not in available:
+                API.SysMsg(f"Warning: Combat profile '{DRESS_PROFILE_COMBAT}' not found in TazUO! Available: {', '.join(available)}")
+            API.Dress(DRESS_PROFILE_COMBAT)
+            API.Pause(1.0)
+        except Exception as ex:
+            debug_msg(f"Dress combat profile error: {ex}")
+
+    # Fallback: if hands still empty or bow not equipped, search backpack for any bow
+    bow_graphics = [0x13B2, 0x0F50, 0x13FD, 0x26C2, 0x26C3, 0x27A5, 0x2D1E, 0x2D2B]
+    bow = None
+    for bg in bow_graphics:
+        found = API.FindType(bg, API.Backpack)
+        if found:
+            bow = found
+            break
+    if bow:
+        debug_msg(f"Equipping bow from backpack: {bow.Name} (0x{bow.Graphic:04X})")
+        API.UseObject(bow)
+        API.Pause(0.6)
+
+    # 3. Enter War Mode
+    API.SetWarMode(True)
+    API.Pause(0.3)
+
+    # 4. Attack mob
+    API.Attack(enemy.Serial)
+
+    API.SysMsg(f"Attacking {enemy_name}! Fishing stopped for manual combat and looting.")
+    API.SysMsg("Click 'Start' on the Gump when ready to resume fishing.")
+    update_status("Combat - Click Start when ready")
     return True
 
 
@@ -418,6 +557,16 @@ def run_fishing_session() -> None:
                 btn_action.SetText("Start")
             return
 
+        enemy = find_hostile_enemy()
+        if enemy:
+            if API.HasTarget():
+                API.CancelTarget()
+            handle_enemy_combat(enemy)
+            is_fishing = False
+            if btn_action:
+                btn_action.SetText("Start")
+            return
+
         check_ui_events()
         pos = API.LastTargetPos
         graphic = API.LastTargetGraphic
@@ -451,7 +600,10 @@ def run_fishing_session() -> None:
     # Wait for initial manual cast to finish
     before_counts = get_backpack_counts()
     if not pause_with_ui(FISHING_DELAY):
-        update_status("Stopped")
+        if combat_triggered:
+            update_status("Combat - Click Start when ready")
+        else:
+            update_status("Stopped")
         is_fishing = False
         if btn_action:
             btn_action.SetText("Start")
@@ -473,6 +625,11 @@ def run_fishing_session() -> None:
     while not API.StopRequested and not is_stopped and not stop_fishing_requested:
         check_ui_events()
         if stop_fishing_requested:
+            break
+
+        enemy = find_hostile_enemy()
+        if enemy:
+            handle_enemy_combat(enemy)
             break
 
         current_casts += 1
@@ -518,7 +675,9 @@ def run_fishing_session() -> None:
             update_status("Spot Depleted")
             break
 
-    if stop_fishing_requested:
+    if combat_triggered:
+        update_status("Combat - Click Start when ready")
+    elif stop_fishing_requested:
         update_status("Stopped")
     elif not depleted:
         update_status("Ready")
@@ -539,10 +698,13 @@ def main():
     update_status("Ready")
     update_skill_display()
 
-    if DRESS_PROFILE:
-        API.SysMsg(f"Loading dress profile '{DRESS_PROFILE}'...")
-        API.Dress(DRESS_PROFILE)
-        API.Pause(1.0)
+    if DRESS_PROFILE_FISHING:
+        API.SysMsg(f"Loading dress profile '{DRESS_PROFILE_FISHING}'...")
+        try:
+            API.Dress(DRESS_PROFILE_FISHING)
+            API.Pause(1.0)
+        except Exception as ex:
+            debug_msg(f"Dress error: {ex}")
 
     # Main event loop while Gump is open
     while not API.StopRequested and not is_stopped:

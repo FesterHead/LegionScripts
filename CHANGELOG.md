@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FesterUO/Fish.py` with hostile mob awareness, automatic combat defense, and Archery dress switching:
+  - Actively scans for nearby hostile mobiles (Gray, Criminal, Enemy, Murderer notorieties or sea monsters like Sea Serpents, Krakens, Water Elementals, and Leviathans) within a 12-tile radius.
+  - Automatically halts fishing, unquips the fishing pole to backpack, undresses the "Fishing" profile, and switches to the "Archery" dress profile (with backpack bow equip fallback).
+  - Enters War Mode and attacks the hostile mobile.
+  - Halts automated fishing with a "Combat - Click Start when ready" Gump status, leaving the player in full manual control without automatically resuming fishing until the player clicks "Start".
 - Updated [`.gitignore`](.gitignore) and untracked base TazUO client-generated files (`API.py`, `__builtins__.py`, `_ScriptContext.cs`, `LegionScripts.csproj`) so that client updates and local API stub regenerations do not dirty git status, while keeping user workspace settings (`LegionScripts.code-workspace`) tracked.
 
 ### Added
