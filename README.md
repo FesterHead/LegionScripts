@@ -433,6 +433,28 @@ An automated, resource-efficient Cooking training engine with interactive contro
   - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 
+#### [TrainMusicianship.py](FesterUO/TrainMusicianship.py)
+
+An automated Musicianship skill training script with interactive control Gump, multi-instrument auto-detection, breakage recovery, and automated container restocking:
+
+- **Multi-Instrument Auto-Detection:** Automatically scans the player's backpack for any valid musical instrument:
+  - Lute, Lap Harp, Standing Harp, Drum, Tambourine, Tambourine with Tassel, Bamboo Flute, Fire Horn, and Aud-Char.
+  - Displays the active instrument name and live count of spare instruments in the backpack.
+- **Seamless Breakage Recovery:** Monitors journal output and inventory changes for broken or exhausted instruments (`"broke your instrument"`, `"worn out"`, `"destroyed"`), automatically switching to the next available instrument in the backpack without missing a beat.
+- **Automated Restock Container Integration:**
+  - Allows designating a restock container (chest, satchel, crate, or pouch) via configuration or in-game targeting via the Gump's **"Restock"** button.
+  - Automatically opens the container and pulls fresh instruments into the backpack whenever backpack reserves run dry.
+- **Graceful Depletion Pausing:** If all instruments are exhausted, the script safely pauses execution with player alerts and keeps the control Gump active so training can be resumed with a single click after restocking.
+- **Smart Cooldown & Cooldown Handling:** Respects standard UO instrument delays (`PLAY_DELAY`, default 6.0s) and actively reacts to server cooldown wait messages (`"must wait to perform another action"`).
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Playing <Instrument>...`, `Waiting cooldown...`, `Restocking...`, `Out of Instruments`, `Paused`, `Complete!`)
+  - Live Musicianship skill level, skill cap, and session gain tracking (`+X.X`) with system message gain announcements
+  - Active instrument name and backpack count
+  - Running counters for **Played** and **Broken** instruments
+  - Restock container indicator (`Set (0xSerial)` or `Not Set`)
+  - Interactive **Pause/Resume**, **Restock**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
 #### [MoveItemsBetweenContainers.py](FesterUO/MoveItemsBetweenContainers.py)
 
 A quick and reliable container-to-container item organizer and transfer utility script:

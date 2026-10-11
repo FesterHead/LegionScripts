@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `FesterUO/TrainMusicianship.py`: Automated Musicianship skill training script with interactive control Gump created by FesterHead:
+  - Multi-Instrument Auto-Detection: Automatically detects and utilizes all standard UO musical instruments (Lute, Lap Harp, Standing Harp, Drum, Tambourine, Bamboo Flute, Fire Horn, and Aud-Char) directly from the player's backpack.
+  - Seamless Breakage Recovery: Monitors journal output and backpack inventory for broken or worn-out instruments, automatically cycling to the next spare instrument without interrupting training.
+  - Automated Restock Container Integration: Supports setting an instrument restock container (chest, satchel, or crate) via configuration or in-game targeting via the "Set Restock" Gump button, restocking fresh batches when backpack reserves deplete.
+  - Graceful Depletion Pausing: Safely pauses training and alerts the player if all instruments are exhausted, leaving the interactive Gump running so the player can restock and click **Resume**.
+  - Dynamic Cooldown Management: Enforces standard UO instrument cooldowns (`PLAY_DELAY`, default 6.0s) with active detection and handling of server cooldown wait messages.
+  - Interactive Control Gump: Features a semi-transparent dark UI displaying live Musicianship skill with gain tracking (+X.X), active instrument name and backpack count, Played and Broken counters, Restock container indicator, and interactive **Pause/Resume**, **Restock**, and **Stop** buttons.
 - Added `FesterUO/LobsterTrapAuto.py`: Automated lobster and crab trap deployment, retrieval, and recycling script with interactive control Gump created by FesterHead:
   - Deploys up to 5 lobster traps from your backpack into the surrounding ocean at well-spaced relative water offsets (Port Bow, Port Railing, Port Stern, Starboard Bow, Starboard Stern).
   - Actively monitors deployed trap buoys with elapsed timers and bob detection (~60-65s cycle).
