@@ -487,6 +487,27 @@ An intelligent container-to-container resource sorting and transfer script with 
 - **Container Pre-Opening & Validation:** Automatically opens both source and destination containers to force the game server to send full container contents before filtering, refusing to run if source and destination are identical.
 - **Attribution:** Created by FesterHead.
 
+#### [MoveArtifacts.py](FesterUO/MoveArtifacts.py)
+
+A targeted container-to-container equipment mover that scans items via active OPL tooltip inspection (`API.ItemNameAndProps`) to identify and transfer Weapons, Armor, Shields, and Jewelry matching configured Artifact and Magic Item rarity tiers:
+
+- **Comprehensive Artifact Tier Coverage:**
+  - Automatically identifies and moves all Artifact tiers: **Legendary Artifact**, **Major Artifact**, **Greater Artifact**, **Lesser Artifact**, **Minor Artifact**, and classic **Artifact Rarity** (Doom, Tokuno, Stealable, and Paragon artifacts).
+- **Magic Item Tier Support:**
+  - Transfers **Greater Magic Items** and **Major Magic Items** by default, with an optional toggle for **Lesser Magic Items**.
+- **Broad Equipment Support:**
+  - **Weapons:** One-handed, two-handed, swords, maces, fencing, axes, bows, crossbows, staves, wands, and throwing weapons.
+  - **Armor & Shields:** Helmets, caps, masks, gorgets, tunics, breastplates, arms, sleeves, gloves, gauntlets, leggings, pants, kilts, and shields.
+  - **Jewelry:** Rings, bracelets, necklaces, earrings, and talismans.
+- **Strict Non-Equipment Preservation:**
+  - Automatically skips and preserves non-qualifying items in the source container, including mundane equipment, low-tier magic items, crafting resources, ingots, ore, boards, leather, reagents, gems, spell scrolls, and books.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time status display (`Targeting...`, `Scanning equipment...`, `Moving <Item>...`, `Paused`, `Finished`)
+  - Running counters for **Weapons Moved**, **Armor & Shields**, **Jewelry Moved**, **Total Moved**, and **Items Skipped**
+  - Interactive **Pause/Resume** and **Stop** buttons
+- **Pre-Opening Synchronization & Safety:** Automatically opens both source and destination containers to ensure full server inventory synchronization, validating container uniqueness and respecting `API.StopRequested` cancellation.
+- **Attribution:** Created by FesterHead.
+
 ---
 
 ## ⚖️ Best Practices for Writing Legion Scripts

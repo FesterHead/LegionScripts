@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `FesterUO/MoveArtifacts.py`: Targeted Weapon, Armor, Shield, and Jewelry Artifact and Magic Item Mover with interactive control Gump created by FesterHead:
+  - Interactive Container Targeting: Prompts the player to select a SOURCE container and DESTINATION container with timeout and graceful cancellation handling.
+  - Active OPL Tooltip Evaluation: Inspects item property lists using `API.ItemNameAndProps` to evaluate exact rarity and artifact tiers directly from the game server.
+  - Comprehensive Artifact Tier Coverage: Transfers all artifact tiers including Legendary Artifact, Major Artifact, Greater Artifact, Lesser Artifact, Minor Artifact, and classic Artifact Rarity (Doom, Tokuno, Stealable, and Paragon artifacts).
+  - Magic Item Tier Filtering: Supports transferring Greater Magic Items, Major Magic Items, and optional Lesser Magic Items.
+  - Wide Equipment Category Support: Filters and moves qualifying Weapons (1H, 2H, ranged, staves, wands), Armor (helms, gorgets, tunics, arms, gloves, leggings), Shields, and Jewelry (rings, bracelets, earrings, necklaces, talismans).
+  - Preservation of Non-Qualifying Items: Strictly leaves untouched in the source container all mundane items, low-tier magic equipment, reagents, gems, resources, scrolls, and books.
+  - Interactive Control Gump: Features a semi-transparent dark UI with live status, running counters for **Weapons Moved**, **Armor & Shields**, **Jewelry Moved**, **Total Moved**, and **Items Skipped**, and **Pause/Resume** and **Stop** buttons.
 - Added `FesterUO/TrainMusicianship.py`: Automated Musicianship skill training script with interactive control Gump created by FesterHead:
   - Multi-Instrument Auto-Detection: Automatically detects and utilizes all standard UO musical instruments (Lute, Lap Harp, Standing Harp, Drum, Tambourine, Bamboo Flute, Fire Horn, and Aud-Char) directly from the player's backpack.
   - Seamless Breakage Recovery: Monitors journal output and backpack inventory for broken or worn-out instruments, automatically cycling to the next spare instrument without interrupting training.
