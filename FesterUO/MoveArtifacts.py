@@ -75,8 +75,8 @@ MOVE_JEWELRY: bool = True
 MOVE_ALL_ARTIFACTS: bool = True         # Matches Legendary, Major, Greater, Lesser, Minor, and Artifact Rarity
 
 # Magic item tiers to move
-MOVE_GREATER_MAGIC: bool = True        # Greater Magic Item
-MOVE_MAJOR_MAGIC: bool = True          # Major Magic Item
+MOVE_GREATER_MAGIC: bool = False        # Greater Magic Item
+MOVE_MAJOR_MAGIC: bool = False          # Major Magic Item
 MOVE_LESSER_MAGIC: bool = False        # Lesser Magic Item (set to True if desired)
 
 # Enable verbose debug messages in the client console/journal
