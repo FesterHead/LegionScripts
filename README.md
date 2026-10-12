@@ -461,6 +461,34 @@ An automated Musicianship skill training script with interactive control Gump, m
   - Interactive **Pause/Resume**, **Restock**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 
+#### [TrainTailoring.py](FesterUO/TrainTailoring.py)
+
+An automated, resource-efficient Tailoring training engine with interactive control Gump, resource satchel support, automated cutting/recycling with Scissors, trash barrel disposal, and Tinkering sewing kit upkeep:
+
+- **Optimal Tailoring Progression:** Automatically monitors your Tailoring skill and recommends the lowest-cost, most resource-efficient recipe in each tier from 0 to 120 (GM / Legendary):
+  - **0.0 – 29.0:** Short Pants / Skirt (1–2 cut cloth)
+  - **29.0 – 41.5:** Skullcap / Bandana (2 cut cloth)
+  - **41.5 – 54.0:** Body Sash / Cap (4–11 cut cloth)
+  - **54.0 – 74.0:** Cloak / Robe (14–16 cut cloth)
+  - **74.0 – 99.6:** Oil Cloth (1 cut cloth — _ultra resource-efficient workhorse!_)
+  - **99.6 – 120.0:** Elven Shirt / Studded Suit (12 cut cloth / 14 cut leather)
+- **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next recipe. Players can click **"Set Recipe"** on the Gump at any time to open the craft menu and select any custom recipe.
+- **Automated Cutting & Recycling via Scissors:** Automatically detects Scissors in the backpack and cuts newly crafted cloth and leather items back into raw cut cloth and leather, recovering a substantial percentage of materials and drastically reducing training costs.
+- **Automated Trash Barrel Disposal (Fallback):** Auto-detects nearby Trash Barrels or allows targeting one on startup or via the Gump's **"Trash Can"** button to automatically discard items that cannot be cut (e.g. certain hats or shoes), preventing weight overloads and backpack clutter.
+- **Resource Satchel Integration:**
+  - Supports direct satchel crafting or maintains a lightweight working buffer of cloth and leather in the backpack.
+  - Automatically restocks materials from the satchel when backpack reserves run low.
+  - Supports Cut Cloth (`0x1766`, `0x1767`), Bolts of Cloth (`0x0F95`), Cut Leather (`0x1067`, `0x1081`), and Hides (`0x1078`, `0x1079`).
+- **Tool Upkeep via Tinkering:** Detects broken or missing Sewing Kits (`0x0F9D`) and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafted`, `Recycling with Scissors...`, `Trashing...`, `Tinkering Sewing Kit...`, `Restocking materials...`, `Paused`, `Finished`)
+  - Live Tailoring skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Cut**, **Trashed**, and **Failed** items
+  - Live Satchel and Backpack material counts, plus tool and trash indicators
+  - Live character weight indicator (`Weight: Cur / Max`)
+  - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
 #### [MoveItemsBetweenContainers.py](FesterUO/MoveItemsBetweenContainers.py)
 
 A quick and reliable container-to-container item organizer and transfer utility script:

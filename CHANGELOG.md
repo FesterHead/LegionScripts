@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `FesterUO/TrainTailoring.py`: Automated resource-efficient Tailoring skill training script with interactive control Gump created by FesterHead:
+  - Progresses through the optimal resource-efficient progression ladder from 0.0 to 120.0 Tailoring (Short Pants/Skirt -> Skullcap/Bandana -> Body Sash/Cap -> Cloak/Robe -> Oil Cloth [1 cloth!] -> Elven Shirt / Studded Armor).
+  - Milestone Recommendations & "Set Recipe" Manual Override: Proactively notifies the player when reaching a skill bracket to recommend the next item, and features an interactive "Set Recipe" button allowing players to manually prime any craft recipe.
+  - Automated Cutting & Recycling via Scissors: Detects Scissors in backpack and automatically cuts newly crafted cloth and leather items back into cut cloth and leather, recovering substantial materials.
+  - Automated Crafted Item Disposal (Trash Barrel Fallback): Auto-detects nearby Trash Barrels or allows targeting one at startup or via the Gump, automatically depositing items that cannot be cut into the trash barrel.
+  - Resource Satchel Integration: Supports direct satchel crafting or automated buffer restocking of cloth and leather into the backpack.
+  - Tool Upkeep via Tinkering: Automatically detects broken or missing Sewing Kits and crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
+  - Interactive Control Gump: Features a semi-transparent dark UI displaying real-time training status, live Tailoring skill and cap with gain tracking (+X.X), Recipe recommendation, Crafted / Cut / Trashed / Failed counters, Satchel & Backpack material counts, Tool & Trash indicators, and interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Trash Can**, and **Stop** buttons.
+
 - Added `FesterUO/MoveArtifacts.py`: Targeted Weapon, Armor, Shield, and Jewelry Artifact and Magic Item Mover with interactive control Gump created by FesterHead:
   - Interactive Container Targeting: Prompts the player to select a SOURCE container and DESTINATION container with timeout and graceful cancellation handling.
   - Active OPL Tooltip Evaluation: Inspects item property lists using `API.ItemNameAndProps` to evaluate exact rarity and artifact tiers directly from the game server.
