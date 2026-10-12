@@ -1031,7 +1031,7 @@ def direct_cook_cycle() -> bool:
 
     API.ClearJournal()
     API.UseObject(raw_food.Serial)
-    if not API.WaitForTarget(delay=1.5):
+    if not API.WaitForTarget(timeout=1.5):
         debug_msg("Direct cook targeting cursor did not appear.")
         return True
 
