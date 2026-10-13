@@ -156,6 +156,18 @@ A unified roaming mining and Magery skill training script that coordinates ore v
 - **Backpack Weight Protection:** Continuously checks player weight against maximum capacity (`MAX_WEIGHT_CHECK`, `WEIGHT_BUFFER = 15`) and halts safely before becoming overburdened.
 - **Attribution:** Created by FesterHead.
 
+#### [MiningAndLumberjackAndMageryAuto.py](FesterUO/MiningAndLumberjackAndMageryAuto.py)
+
+A unified roaming mining, lumberjacking, and Magery skill training script that alternates between harvesting ore veins and chopping trees while training Magery during node downtime:
+
+- **Integrated Tri-Skill Training Loop:** Seamlessly combines roaming mining, roaming lumberjacking, and batch Magery training in a single engine, completely eliminating targeting cursor and equip conflicts.
+- **Configurable Harvest Ratio Workflow:** Automatically alternates between mining and lumberjacking with configurable cycle targets (`TREES_PER_MINING_SPOT = 4`, `MINING_SPOTS_PER_CYCLE = 1` by default).
+- **Spot-Depletion Batch Magery Cycle:** Whenever an ore vein or tree is depleted, the script enters a dedicated spell session to burn available mana on skill-appropriate Magery spells up to a configurable cast limit before moving to the next node.
+- **Interactive Control Gump with Live Ratio Tuning:** Displays real-time status, tri-skill progress (**Mining**, **Lumberjacking**, **Magery**) with automatic gain tracking, Mana / Max Mana, Lower Reagent Cost (LRC %), **Veins Mined / Total Ore**, **Trees Chopped / Total Logs**, Strength and Dexterity stats, Weight monitoring, interactive stepper buttons (`[-]` / `[+]`) to dynamically tune **Veins/Cycle** and **Trees/Cycle** live in-game, a live two-column 8-reagent matrix, and interactive **Pause/Resume** and **Stop** buttons.
+- **Dual Magery Training Modes:** Supports Resist Training (Mind Blast, Energy Bolt, Flamestrike with automated self-healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
+- **Equipment & Dress Management:** Automatically switches between `"Mining"`, `"Lumberjack"`, and optional `"Mage"` dress profiles at each phase.
+- **Attribution:** Created by FesterHead.
+
 #### [HuntAnimals.py](FesterUO/HuntAnimals.py)
 
 An autonomous wildlife and bird hunting script with an interactive control Gump, multi-category wildlife selection, automated combat, and corpse carving / autolooting:

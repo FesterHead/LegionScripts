@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `FesterUO/MiningAndLumberjackAndMageryAuto.py`: Unified roaming mining, lumberjacking, and Magery skill training script with interactive ratio tuning Gump created by FesterHead:
+  - Tri-skill training engine combining ore deposit mining, static tree lumberjacking, and batch Magery training without target cursor or equipment race conditions.
+  - Alternating harvest ratio cycle (`TREES_PER_MINING_SPOT = 4`, `MINING_SPOTS_PER_CYCLE = 1` by default) with automatic dress profile switching (`"Mining"`, `"Lumberjack"`, `"Mage"`).
+  - Spot-depletion Magery training cycle: burns accumulated mana on skill-bracket appropriate spells whenever a vein or tree node is depleted before pathfinding to the next node.
+  - Supports both Resist Training (Mind Blast, Energy Bolt, Flamestrike with self-healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
+  - Interactive Movable Control Gump: Displays real-time status, Mining/Lumberjacking/Magery skill levels with gain announcements, Mana/LRC tracking, two-column 8-reagent inventory matrix, interactive stepper buttons (`[-]` / `[+]`) for **Veins/Cycle** and **Trees/Cycle**, and Pause/Resume/Stop controls.
+
 - Added `FesterUO/HuntAnimals.py`: Automated standalone animal and bird hunting script with interactive control Gump and multi-category wildlife selection created by FesterHead:
   - Multi-Category Wildlife Detection:
     - `HUNT_BIRDS` (default True): Targets wild Birds, Eagles, Chickens, Turkeys, and Cranes to generate feathers and poultry.
