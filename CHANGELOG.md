@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated `FesterUO/MiningAndLumberjackAuto.py`:
   - Added interactive Gump stepper tuning controls (`[-]` / `[+]`) for **Veins per Cycle** and **Trees per Cycle**, enabling real-time ratio adjustments on the fly in-game to match whatever area or resource density you are working in without modifying or restarting the script.
+  - Replaced invalid `API.GetItems` calls with `API.ItemsInContainer` for backpack tool and axe discovery.
 
 - Decoupled `FesterUO/HuntAnimals.py` and resource harvesting scripts to operate as completely standalone scripts:
   - Removed all inter-script combat pause semaphores (`ExternalCombatActive`) and harvester coordination persistent variables (`HarvesterRunning`, `HarvestReadyForHunt`).

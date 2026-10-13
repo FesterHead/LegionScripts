@@ -567,7 +567,7 @@ def get_backpack_mining_tool():
         shovel = API.FindType(sg, API.Backpack)
         if shovel:
             return shovel
-    items = API.GetItems(API.Backpack)
+    items = API.ItemsInContainer(API.Backpack)
     if items:
         for item in items:
             if is_mining_tool(item):
@@ -613,7 +613,7 @@ def get_backpack_axe():
         item = API.FindType(g, API.Backpack)
         if item:
             return item
-    items = API.GetItems(API.Backpack)
+    items = API.ItemsInContainer(API.Backpack)
     if items:
         for item in items:
             if is_axe_item(item):

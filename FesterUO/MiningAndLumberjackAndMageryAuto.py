@@ -345,23 +345,27 @@ def update_magery_status(text: str) -> None:
 
 
 def scan_backpack_reagents() -> Dict[str, int]:
-    """Scans backpack for quantities of the 8 standard reagents."""
-    counts = {r: 0 for r in REAGENT_DEFS}
-    backpack = API.Backpack
-    if not backpack:
+    """Scans player backpack recursively to count all 8 reagents."""
+    counts = {name: 0 for name in REAGENT_DEFS}
+    if not API.Player:
         return counts
-    items = API.GetItems(backpack)
+
+    items = API.ItemsInContainer(API.Backpack, recursive=True)
+    if not items:
+        items = API.ItemsInContainer(API.Backpack)
     if not items:
         return counts
+
     for item in items:
-        if not item:
-            continue
-        g = item.Graphic
-        amt = item.Amount or 1
-        for reg_name, reg_data in REAGENT_DEFS.items():
-            if g in reg_data["graphics"]:
+        g = getattr(item, "Graphic", 0)
+        amt = getattr(item, "Amount", 1) or 1
+        name = str(getattr(item, "Name", "") or "").lower()
+
+        for reg_name, data in REAGENT_DEFS.items():
+            if g in data["graphics"] or any(k in name for k in data["keywords"]):
                 counts[reg_name] += amt
                 break
+
     return counts
 
 
@@ -772,7 +776,7 @@ def get_backpack_mining_tool():
         shovel = API.FindType(sg, API.Backpack)
         if shovel:
             return shovel
-    items = API.GetItems(API.Backpack)
+    items = API.ItemsInContainer(API.Backpack)
     if items:
         for item in items:
             if is_mining_tool(item):
@@ -818,7 +822,7 @@ def get_backpack_axe():
         item = API.FindType(g, API.Backpack)
         if item:
             return item
-    items = API.GetItems(API.Backpack)
+    items = API.ItemsInContainer(API.Backpack)
     if items:
         for item in items:
             if is_axe_item(item):
@@ -919,26 +923,15 @@ def get_magery_spell(skill: float, cap: float) -> Optional[Tuple[str, int, List[
 
 def check_reagents(regs: List[str]) -> Tuple[bool, Optional[str]]:
     """Checks if reagents are present or bypassed by 100% Lower Reagent Cost."""
-    lrc = API.Player.LowerReagentCost or 0
+    if not API.Player:
+        return True, None
+    lrc = getattr(API.Player, "LowerReagentCost", 0) or 0
     if lrc >= 100:
         return True, None
-    backpack = API.Backpack
-    if not backpack:
-        return False, regs[0] if regs else "Reagents"
-    items = API.GetItems(backpack)
-    if not items:
-        return False, regs[0] if regs else "Reagents"
-    found = {r: False for r in regs}
-    for item in items:
-        if not item:
-            continue
-        g = item.Graphic
-        for reg in regs:
-            if g in REAGENT_DEFS[reg]["graphics"]:
-                found[reg] = True
-    for reg, ok in found.items():
-        if not ok:
-            return False, reg
+    counts = scan_backpack_reagents()
+    for r in regs:
+        if counts.get(r, 0) < 1:
+            return False, r
     return True, None
 
 
