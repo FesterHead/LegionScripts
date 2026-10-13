@@ -389,25 +389,6 @@ def check_ui_events() -> bool:
             on_pause_clicked()
             break
 
-    # Inter-script combat pause synchronization (e.g. from HuntAnimals)
-    was_combat_paused = False
-    while not API.StopRequested and not is_stopped and API.GetPersistentVar("ExternalCombatActive", "False", API.PersistentVar.Char) == "True":
-        if not was_combat_paused:
-            was_combat_paused = True
-            update_status("Combat Pause")
-            debug_msg("External combat active; holding mining loop...")
-        API.Pause(0.25)
-        API.ProcessCallbacks()
-        update_stats()
-        if btn_stop and getattr(btn_stop, "HasBeenClicked", lambda: False)():
-            on_stop_clicked()
-            return False
-
-    if was_combat_paused and not is_stopped and not API.StopRequested:
-        update_status("Resuming...")
-        if DRESS_PROFILE:
-            API.Dress(DRESS_PROFILE)
-
     return not is_stopped and not API.StopRequested
 
 
@@ -419,10 +400,6 @@ def on_stop() -> None:
     """Callback when script execution is stopped."""
     global is_stopped
     is_stopped = True
-    try:
-        API.SavePersistentVar("HarvesterRunning", "False", API.PersistentVar.Char)
-    except Exception:
-        pass
     if API.Pathfinding():
         API.CancelPathfinding()
     dispose_gump()
@@ -842,10 +819,6 @@ def mine_deposit(tool, deposit) -> None:
 
         if depleted:
             mark_vein_depleted(tx, ty)
-            try:
-                API.SavePersistentVar("HarvestReadyForHunt", "True", API.PersistentVar.Char)
-            except Exception:
-                pass
             break
 
 
@@ -867,12 +840,6 @@ def main():
     # Render on-screen control Gump
     create_control_gump()
     update_stats()
-
-    try:
-        API.SavePersistentVar("HarvesterRunning", "True", API.PersistentVar.Char)
-        API.SavePersistentVar("HarvestReadyForHunt", "False", API.PersistentVar.Char)
-    except Exception:
-        pass
 
     depleted_veins.clear()
     unreachable_coords.clear()
@@ -935,11 +902,6 @@ def main():
         mark_vein_depleted(int(target_deposit.X), int(target_deposit.Y))
 
         API.Pause(0.5)
-
-    try:
-        API.SavePersistentVar("HarvesterRunning", "False", API.PersistentVar.Char)
-    except Exception:
-        pass
 
     update_status("Finished")
     API.SysMsg("Auto miner finished.")

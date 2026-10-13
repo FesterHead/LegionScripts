@@ -9,13 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Updated `FesterUO/MiningAndLumberjackAuto.py`, `FesterUO/ChopTreeAuto.py`, and `FesterUO/MiningAuto.py` with 1-to-1 resource harvest coordination and inter-script combat pause synchronization via persistent character variables:
-  - When an external combat companion script (such as `FesterUO/HuntAnimals.py`) engages an enemy, harvesting loops safely hold execution, display a `"Combat Pause"` Gump status, and seamlessly resume their harvesting workflow and dress gear once combat clears.
-  - Automatically signals `HarvestReadyForHunt` each time an ore deposit or tree is harvested in full (depleted), enabling balanced 1 resource : 1 animal hunting cycles.
+- Decoupled `FesterUO/HuntAnimals.py` and resource harvesting scripts to operate as completely standalone scripts:
+  - Removed all inter-script combat pause semaphores (`ExternalCombatActive`) and harvester coordination persistent variables (`HarvesterRunning`, `HarvestReadyForHunt`).
+  - Restored `FesterUO/ChopTreeAuto.py`, `FesterUO/MiningAuto.py`, and `FesterUO/MiningAndLumberjackAuto.py` as fully independent harvesting scripts without external pause loops or persistent character variable signaling.
+  - Refactored `FesterUO/HuntAnimals.py` to operate purely as an independent standalone hunting script with a streamlined Gump UI (removed semaphore signal label).
 - Updated `FesterUO/HuntAnimals.py`:
-  - Added Aggressive Threat Auto-Defense (`AUTO_DEFEND_AGGRESSORS = True`) and Predator detection (`HUNT_PREDATORS = True`), prioritizing any hostile mobile, predator (panther, wolf, bear, cougar), or attacking creature as top combat priority before passive wildlife.
-  - Added 1-to-1 Harvester Coordination (`COORDINATE_WITH_HARVESTER = True`), monitoring companion harvesters (`HarvesterRunning` & `HarvestReadyForHunt`) so ambient hunting only occurs after each resource is harvested in full, preventing runaway hunting sprees while maintaining instant defensive response against threats.
-  - Fixed an issue where ambient wildlife was mistakenly rejected due to uninitialized client health packets (`mob.Hits <= 0`), added fallback to `API.NearestMobiles` for mobile discovery, corrected backpack carving tool lookup to `API.FindType`, upgraded combat pursuit to `API.PathfindEntity` with extended corpse approach range, corrected `API.WaitForTarget` keyword argument from `delay` to `timeout`, hooked `on_gump_disposed` to `API.Stop()` so right-clicking to close the Gump stops the script immediately without requiring a double toggle on reload, and added dress profile validation with case-insensitive matching and War Mode safety checks to prevent equipment change blocks.
+  - Added Aggressive Threat Auto-Defense (`AUTO_DEFEND_AGGRESSORS = True`) and Predator detection (`HUNT_PREDATORS = True`), prioritizing true hostile mobiles, predators (panther, wolf, bear, cougar), or attacking creatures as top combat priority while strictly excluding neutral/passive wildlife (cows, deer, sheep, birds) from aggressive classification.
+  - Fixed an issue where ambient wildlife was mistakenly rejected due to uninitialized client health packets (`mob.Hits <= 0`), added fallback to `API.NearestMobiles` for mobile discovery, corrected backpack carving tool lookup to `API.FindType`, upgraded combat pursuit to `API.PathfindEntity` with extended corpse approach range, corrected `API.WaitForTarget` keyword argument from `delay` to `timeout`, hooked `on_gump_disposed` to `API.Stop()` so right-clicking to close the Gump stops the script immediately without requiring a double toggle on reload, and improved dress profile equipment reliability with increased swap delays (`DRESS_DELAY = 1.25s`), hand verification retries, and War Mode safety checks to prevent equipment change blocks.
 - Updated `FesterUO/TrainCooking.py`: Corrected `API.WaitForTarget` keyword argument from `delay` to `timeout`.
 - Updated `FesterUO/Fish.py` with hostile mob awareness, automatic combat defense, and Archery dress switching:
   - Actively scans for nearby hostile mobiles (Gray, Criminal, Enemy, Murderer notorieties or sea monsters like Sea Serpents, Krakens, Water Elementals, and Leviathans) within a 12-tile radius.
@@ -26,16 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `FesterUO/HuntAnimals.py`: Automated animal and bird hunting companion script with interactive control Gump, multi-category wildlife selection, and inter-script pause semaphore created by FesterHead:
+- Added `FesterUO/HuntAnimals.py`: Automated standalone animal and bird hunting script with interactive control Gump and multi-category wildlife selection created by FesterHead:
   - Multi-Category Wildlife Detection:
     - `HUNT_BIRDS` (default True): Targets wild Birds, Eagles, Chickens, Turkeys, and Cranes to generate feathers and poultry.
     - `HUNT_PASSIVE_ANIMALS` (default True): Targets wild Hinds, Great Harts (deer), Cows, Bulls, Pigs, Boars, Sheep, Goats, Llamas, Horses, and Rabbits to generate hides/leather, raw ribs/meat, and wool.
     - `HUNT_PREDATORS` (default False): Optional toggle to hunt wild Wolves, Bears, Cougars, and Panthers.
     - Explicitly ignores players, friends, guildmates, and tamed player pets.
-  - Inter-script semaphore coordination: Activates `API.SavePersistentVar("ExternalCombatActive", "True", API.PersistentVar.Char)` when engaging, prompting companion harvesting scripts to hold actions, and automatically clears the semaphore on kill or script termination.
-  - Autonomous combat execution: Equips the `"Lumberjack"` dress profile, enters War Mode, and pursues/attacks fleeing animals until defeated.
+  - Autonomous combat execution: Equips the `"Fighting"` dress profile, enters War Mode, and pursues/attacks fleeing animals until defeated.
   - TazUO AutoLoot Integration & Corpse Carving: Automatically carves animal corpses with equipped axes or backpack bladed tools to produce leather, meat, feathers, and wool, opens the corpse, and triggers TazUO's native AutoLoot agent (`API.AutoLootContainer`) to handle looting according to client settings.
-  - Interactive control Gump: Semi-transparent dark UI with live status, animals defeated counter, active categories indicator, semaphore indicator (`PAUSED EXTERNAL` / `IDLE`), and Pause/Resume and Stop buttons.
+  - Interactive control Gump: Semi-transparent dark UI with live status, animals defeated counter, active categories indicator, and Pause/Resume and Stop buttons.
 
 - Added `FesterUO/TrainTailoring.py`: Automated resource-efficient Tailoring skill training script with interactive control Gump created by FesterHead:
   - Progresses through the optimal resource-efficient progression ladder from 0.0 to 120.0 Tailoring (Short Pants/Skirt -> Skullcap/Bandana -> Body Sash/Cap -> Cloak/Robe -> Oil Cloth [1 cloth!] -> Elven Shirt / Studded Armor).

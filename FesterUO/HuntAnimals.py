@@ -1,13 +1,14 @@
 """
-HuntAnimals.py - Automated Animal & Bird Hunting Companion Script for TazUO
+HuntAnimals.py - Automated Animal & Bird Hunting Script for TazUO
 
 Author: FesterHead
 Target Client: TazUO (Legion Scripting Engine)
 
 Description:
-    Autonomous animal and bird hunting companion script designed to run either
-    standalone or in tandem with resource gathering scripts (e.g. MiningAndLumberjackAuto,
-    ChopTreeAuto, MiningAuto).
+    Autonomous wildlife and bird hunting script designed to locate and hunt wild
+    animals, birds, and predators to gather crafting and survival resources
+    (feathers, poultry, hides/leather, raw ribs/meat, and wool). Operates as a
+    completely standalone script.
 
     Key Features:
     - Multi-Category Wildlife Detection:
@@ -19,16 +20,8 @@ Description:
         * HUNT_PREDATORS (default False): Optional toggle to also hunt wild Wolves,
           Bears, Cougars, and Panthers for additional hides and meat.
         * Explicitly ignores the player, friends, guildmates, and tamed player pets.
-    - Inter-Script Pause Semaphore Coordination:
-        * When an animal is spotted, sets the persistent character variable 'ExternalCombatActive'
-          to 'True' (via API.SavePersistentVar).
-        * Resource gathering scripts detect this semaphore and safely hold their harvesting
-          loops, yielding movement and cursor control to the hunter.
-        * Once the animal is eliminated (and corpse processing finishes),
-          sets 'ExternalCombatActive' back to 'False', allowing harvesting scripts to
-          automatically resume right where they left off.
     - Automated Combat Engagement:
-        * Equips the configured dress profile (default 'Lumberjack') to arm your weapon.
+        * Equips the configured dress profile (default 'Fighting') to arm your weapon.
         * Enters War Mode (API.SetWarMode(True)) and commands your character to attack.
         * Intelligently pathfinds to and pursues hopping, fleeing, or wandering animals until in melee range.
     - TazUO AutoLoot & Corpse Processing:
@@ -39,8 +32,7 @@ Description:
     - Interactive Control Gump:
         * Semi-transparent dark background with live status updates.
         * Running counter: Animals Defeated.
-        * Mode indicator: Birds & Passive Animals active categories.
-        * Real-time semaphore indicator: 'PAUSED EXTERNAL' / 'IDLE'.
+        * Mode indicator: Birds, Passive Animals, and Predators active categories.
         * Interactive Pause/Resume and Stop buttons.
 """
 
@@ -58,20 +50,12 @@ SEARCH_RADIUS: int = 15
 # Animal hunting category toggles
 HUNT_BIRDS: bool = True             # Birds, Eagles, Chickens, Turkeys, Cranes (feathers & poultry)
 HUNT_PASSIVE_ANIMALS: bool = True   # Deer/Harts, Cows/Bulls, Pigs/Boars, Sheep, Goats, Llamas, Horses, Rabbits (leather & ribs)
-HUNT_PREDATORS: bool = False         # Wolves, Bears, Cougars, Panthers (predator hunting)
+HUNT_PREDATORS: bool = False        # Wolves, Bears, Cougars, Panthers (predator hunting)
 AUTO_DEFEND_AGGRESSORS: bool = True # Always attack hostile/aggressive creatures and predators targeting player immediately
 
-# Coordination with resource gathering scripts (MiningAndLumberjackAuto, ChopTreeAuto, MiningAuto)
-COORDINATE_WITH_HARVESTER: bool = True  # Alternate 1 resource in full : 1 animal hunted when running alongside a harvester
-
-# Dress profile configured in TazUO to equip before attacking (e.g. "Lumberjack")
+# Dress profile configured in TazUO to equip before attacking (e.g. "Fighting")
 DRESS_PROFILE: str = "Fighting"
-DRESS_DELAY: float = 0.65
-
-# Persistent semaphore variable names used for inter-script coordination
-SEMAPHORE_VAR: str = "ExternalCombatActive"
-VAR_HARVESTER_RUNNING: str = "HarvesterRunning"
-VAR_HARVEST_READY: str = "HarvestReadyForHunt"
+DRESS_DELAY: float = 1.25
 
 # Max combat engagement timeout in seconds (to prevent getting stuck chasing unreachable animals)
 COMBAT_TIMEOUT: float = 25.0
@@ -178,7 +162,6 @@ gump = None
 lbl_status = None
 lbl_stats = None
 lbl_modes = None
-lbl_semaphore = None
 btn_pause = None
 btn_stop = None
 
@@ -190,26 +173,6 @@ def debug_msg(message: str) -> None:
     """Outputs debug message to the client log if DEBUG is enabled."""
     if DEBUG:
         API.SysMsg(f"[HuntAnimals:DEBUG] {message}")
-
-
-# ==============================================================================
-# Semaphore Management
-# ==============================================================================
-
-def set_combat_semaphore(active: bool) -> None:
-    """Sets or clears the inter-script combat pause semaphore."""
-    val = "True" if active else "False"
-    API.SavePersistentVar(SEMAPHORE_VAR, val, API.PersistentVar.Char)
-    if lbl_semaphore:
-        lbl_semaphore.Text = f"Signal: {'COMBAT' if active else 'IDLE'}"
-        lbl_semaphore.Hue = 38 if active else 68
-
-
-def update_semaphore_display(signal_text: str, hue: int = 68) -> None:
-    """Updates the semaphore display label when not in active combat."""
-    if lbl_semaphore and API.GetPersistentVar(SEMAPHORE_VAR, "False", API.PersistentVar.Char) != "True":
-        lbl_semaphore.Text = f"Signal: {signal_text}"
-        lbl_semaphore.Hue = hue
 
 
 # ==============================================================================
@@ -246,14 +209,14 @@ def on_gump_disposed() -> None:
 
 def create_control_gump() -> None:
     """Constructs the interactive control Gump."""
-    global gump, lbl_status, lbl_stats, lbl_modes, lbl_semaphore, btn_pause, btn_stop
+    global gump, lbl_status, lbl_stats, lbl_modes, btn_pause, btn_stop
 
     gump = API.Gumps.CreateGump(True, True, False)
     gump.SetPos(50, 480)
 
     # Background panel (dark aesthetic)
     bg = API.Gumps.CreateGumpColorBox(0.85, "#1A1A1A")
-    bg.SetRect(0, 0, 280, 160)
+    bg.SetRect(0, 0, 280, 135)
     gump.Add(bg)
 
     # Title
@@ -283,19 +246,14 @@ def create_control_gump() -> None:
     lbl_modes.SetPos(10, 70)
     gump.Add(lbl_modes)
 
-    # Semaphore signal label
-    lbl_semaphore = API.Gumps.CreateGumpLabel("Signal: IDLE", 68)
-    lbl_semaphore.SetPos(10, 90)
-    gump.Add(lbl_semaphore)
-
     # Control buttons
     btn_pause = API.Gumps.CreateSimpleButton("Pause", 120, 26)
-    btn_pause.SetPos(10, 120)
+    btn_pause.SetPos(10, 98)
     API.Gumps.AddControlOnClick(btn_pause, on_pause_clicked)
     gump.Add(btn_pause)
 
     btn_stop = API.Gumps.CreateSimpleButton("Stop", 120, 26)
-    btn_stop.SetPos(145, 120)
+    btn_stop.SetPos(145, 98)
     API.Gumps.AddControlOnClick(btn_stop, on_stop_clicked)
     gump.Add(btn_stop)
 
@@ -359,7 +317,10 @@ def check_ui_events() -> bool:
 # ==============================================================================
 
 def is_aggressive_mobile(mob) -> bool:
-    """Checks if a mobile is aggressive or hostile towards the player."""
+    """
+    Checks if a mobile is an actual hostile/aggressive threat targeting or threatening the player.
+    Passive wildlife (cows, deer, sheep, birds, llamas, pigs, rabbits) are NEVER considered aggressive threats.
+    """
     if not mob or mob.Serial == API.Player.Serial:
         return False
     if getattr(mob, "IsDead", False) or getattr(mob, "IsGhost", False):
@@ -367,25 +328,28 @@ def is_aggressive_mobile(mob) -> bool:
     if getattr(mob, "IsYellowHits", False):
         return False
 
-    # 1. Hostile Notoriety: Enemy, Criminal, Murderer
+    graphic = mob.Graphic
+    name = (mob.Name or "").lower()
+
+    # Passive wildlife and birds are NEVER aggressive threats
+    if graphic in PASSIVE_ANIMAL_GRAPHICS or graphic in BIRD_GRAPHICS:
+        return False
+    if any(kw in name for kw in PASSIVE_ANIMAL_KEYWORDS) or any(kw in name for kw in BIRD_NAME_KEYWORDS):
+        return False
+
+    # 1. Explicitly Hostile Notoriety: Enemy, Criminal, Murderer
     if mob.Notoriety in (API.Notoriety.Enemy, API.Notoriety.Criminal, API.Notoriety.Murderer):
         return True
 
-    # 2. Predators (Panthers, Wolves, Bears, Cougars)
-    graphic = mob.Graphic
-    name = (mob.Name or "").lower()
+    # 2. Known Predators (Panthers, Wolves, Bears, Cougars)
     is_predator = (graphic in PREDATOR_GRAPHICS) or any(kw in name for kw in PREDATOR_KEYWORDS)
-    if is_predator and (mob.Notoriety == API.Notoriety.Gray or get_mobile_distance(mob) <= 8):
+    if is_predator:
         return True
 
-    # 3. Mobile in War Mode near player (excluding friendly innocents)
-    if getattr(mob, "InWarMode", False) and get_mobile_distance(mob) <= 6:
+    # 3. Any non-passive mobile in War Mode within combat proximity (actively attacking player)
+    if getattr(mob, "InWarMode", False) and get_mobile_distance(mob) <= 8:
         if mob.Notoriety != API.Notoriety.Innocent:
             return True
-
-    # 4. Immediate close-range Gray mobile threat (within 3 tiles)
-    if mob.Notoriety == API.Notoriety.Gray and get_mobile_distance(mob) <= 3:
-        return True
 
     return False
 
@@ -568,11 +532,20 @@ def equip_dress_profile() -> bool:
         # In UO, equipment changes are rejected if currently in War Mode
         if API.Player.InWarMode:
             API.SetWarMode(False)
-            API.Pause(0.25)
+            API.Pause(0.3)
 
         API.SysMsg(f"[HuntAnimals] Equipping '{target_profile}' dress profile...")
         API.Dress(target_profile)
-        API.Pause(max(DRESS_DELAY, 0.8))
+        # Give TazUO client and server sufficient time to unequip tool and equip weapon (drag/drop delays)
+        API.Pause(max(DRESS_DELAY, 1.25))
+
+        # Verification check: did a weapon equip in either hand?
+        has_weapon = API.FindLayer("OneHanded") or API.FindLayer("TwoHanded")
+        if not has_weapon:
+            debug_msg("Hand layers still empty after dress, retrying Dress...")
+            API.Dress(target_profile)
+            API.Pause(0.6)
+
         return True
     except Exception as ex:
         API.SysMsg(f"[HuntAnimals] Error equipping dress profile: {ex}")
@@ -592,9 +565,6 @@ def engage_animal(animal, is_defense: bool = False) -> bool:
     action_type = "DEFENDING against" if is_defense else "Engaging"
     API.SysMsg(f"[HuntAnimals] {action_type} '{target_name}' (0x{target_serial:X}) at dist {dist}...")
     update_status(f"{'Defending: ' if is_defense else 'Hunting '}{target_name}...")
-
-    # Signal external script to pause
-    set_combat_semaphore(True)
 
     # 1. Equip combat dress profile to arm weapon
     equip_dress_profile()
@@ -664,9 +634,8 @@ def engage_animal(animal, is_defense: bool = False) -> bool:
                     API.PathfindEntity(corpse.Serial, distance=1, wait=True, timeout=3)
                 process_corpse(corpse.Serial)
 
-    # Release semaphore so harvesting script resumes
-    set_combat_semaphore(False)
     update_status("Scanning...")
+    API.Pause(1.0)
     return killed
 
 
@@ -679,11 +648,8 @@ def on_stop() -> None:
     # Ensure war mode is off
     API.SetWarMode(False)
 
-    # ALWAYS clear the pause semaphore so harvesting scripts do not remain stuck
-    set_combat_semaphore(False)
-
     dispose_gump()
-    API.SysMsg("[HuntAnimals] Script stopped. External pause cleared.")
+    API.SysMsg("[HuntAnimals] Script stopped.")
 
 API.OnStop(on_stop)
 
@@ -698,7 +664,6 @@ def main():
     create_control_gump()
     update_status("Scanning...")
     update_stats()
-    set_combat_semaphore(False)
 
     cats = []
     if HUNT_BIRDS:
@@ -720,8 +685,6 @@ def main():
 
     API.SysMsg(f"[HuntAnimals] Animal Hunter initialized (Radius: {SEARCH_RADIUS}t, Categories: {', '.join(cats)}, Dress: '{DRESS_PROFILE}').")
 
-    last_debug_time = 0.0
-
     # Main detection loop
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():
@@ -731,37 +694,13 @@ def main():
         if animals:
             target = animals[0]
             is_aggro = is_aggressive_mobile(target)
-
-            if is_aggro:
-                # AGGRESSIVE THREAT: Defend immediately! Self-defense takes absolute priority.
-                total_spotted += 1
-                engage_animal(target, is_defense=True)
-            else:
-                # PASSIVE ANIMAL: Check if a harvesting script is running and coordination is enabled
-                harvester_running = API.GetPersistentVar(VAR_HARVESTER_RUNNING, "False", API.PersistentVar.Char) == "True"
-                if COORDINATE_WITH_HARVESTER and harvester_running:
-                    ready_for_hunt = API.GetPersistentVar(VAR_HARVEST_READY, "False", API.PersistentVar.Char) == "True"
-                    if ready_for_hunt:
-                        # Harvester completed 1 full resource (vein/tree), grant 1 animal hunt!
-                        API.SavePersistentVar(VAR_HARVEST_READY, "False", API.PersistentVar.Char)
-                        total_spotted += 1
-                        engage_animal(target, is_defense=False)
-                    else:
-                        # Waiting for harvester to finish its current resource
-                        update_status("Awaiting harvest...")
-                        update_semaphore_display("AWAIT HARVEST", 53)
-                        API.Pause(SCAN_INTERVAL)
-                else:
-                    # Standalone hunting or harvester not running: Hunt ambient animal
-                    total_spotted += 1
-                    engage_animal(target, is_defense=False)
+            total_spotted += 1
+            engage_animal(target, is_defense=is_aggro)
         else:
             update_status("Scanning...")
-            update_semaphore_display("IDLE", 68)
             API.Pause(SCAN_INTERVAL)
 
     update_status("Finished")
-    set_combat_semaphore(False)
     API.SysMsg(f"[HuntAnimals] Hunting ended. Total Defeated: {total_killed}.")
 
 

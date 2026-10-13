@@ -154,12 +154,11 @@ A unified roaming mining and Magery skill training script that coordinates ore v
 - **Pathfinding & Depletion Memory:** Safely pathfinds within reach (`distance <= 2`) of candidate nodes, maintaining separate depletion history queues for both veins (`DEPOSIT_HISTORY_LIMIT = 150`) and trees (`TREE_HISTORY_LIMIT = 50`) to avoid revisiting depleted spots.
 - **Integrated Control Gump:** Displays real-time activity status, dual skill bars for **Mining** and **Lumberjacking** with automatic gain announcements, combined counters for **Veins Mined / Total Ore** and **Trees Chopped / Total Logs**, Strength and Dexterity stats, Weight monitoring, and interactive **Pause/Resume** and **Stop** buttons.
 - **Backpack Weight Protection:** Continuously checks player weight against maximum capacity (`MAX_WEIGHT_CHECK`, `WEIGHT_BUFFER = 15`) and halts safely before becoming overburdened.
-- **Inter-Script Combat Synchronization:** Continuously monitors the persistent character semaphore `ExternalCombatActive`. If an external combat companion (such as `HuntAnimals.py`) engages an enemy, harvesting is temporarily paused with a `"Combat Pause"` status and cleanly resumes with gear re-equipped once combat clears.
 - **Attribution:** Created by FesterHead.
 
 #### [HuntAnimals.py](FesterUO/HuntAnimals.py)
 
-An autonomous animal and bird hunting companion script with an interactive control Gump, multi-category wildlife selection, and inter-script pause semaphore coordination:
+An autonomous wildlife and bird hunting script with an interactive control Gump, multi-category wildlife selection, automated combat, and corpse carving / autolooting:
 
 - **Multi-Category Wildlife Detection:**
   - Real-time scanning for wild animals within a configurable search radius (`SEARCH_RADIUS = 15` tiles).
@@ -167,12 +166,8 @@ An autonomous animal and bird hunting companion script with an interactive contr
   - **Passive Animals (`HUNT_PASSIVE_ANIMALS = True`, default):** Targets hinds, great harts (deer), cows, bulls, pigs, boars, sheep, goats, llamas, horses, and rabbits to generate leather/hides, raw ribs/meat, and wool.
   - **Predators (`HUNT_PREDATORS = False`, optional):** Optional toggle to hunt wolves, bears, cougars, and panthers.
   - Explicitly ignores the player, friends, guildmates, and tamed player pets (`IGNORE_TAMED_PETS = True`).
-- **Inter-Script Pause Semaphore Coordination:**
-  - Sets `API.SavePersistentVar("ExternalCombatActive", "True", API.PersistentVar.Char)` as soon as a target animal is acquired.
-  - Companion harvesting scripts (such as `MiningAndLumberjackAuto.py`, `ChopTreeAuto.py`, and `MiningAuto.py`) automatically detect this semaphore and safely hold their harvesting loops.
-  - Clears `ExternalCombatActive` back to `"False"` on kill (or script stop), allowing harvesting scripts to seamlessly resume without losing state or position.
 - **Autonomous Combat Engagement:**
-  - Automatically equips the configured `"Lumberjack"` dress profile to arm weapons.
+  - Automatically equips the configured `"Fighting"` dress profile to arm weapons.
   - Enters War Mode (`API.SetWarMode(True)`) and issues attack commands.
   - Intelligently pathfinds to and pursues wandering or fleeing animals until in melee range, with timeout protection (`COMBAT_TIMEOUT = 25.0s`).
 - **TazUO AutoLoot Integration & Corpse Carving:**
@@ -182,7 +177,6 @@ An autonomous animal and bird hunting companion script with an interactive contr
   - Real-time status (`Scanning...`, `Hunting <Animal>...`, `Chasing...`, `Carving corpse...`, `Opening corpse...`, `AutoLooting...`, `Paused`, `Stopped`)
   - Running counter for **Animals Defeated**
   - Active categories indicator (`Birds: ON | Passives: ON`)
-  - Semaphore signal indicator (`Signal: PAUSED EXTERNAL` / `Signal: IDLE`)
   - Interactive **Pause/Resume** and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 

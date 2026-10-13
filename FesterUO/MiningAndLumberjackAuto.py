@@ -392,27 +392,6 @@ def check_ui_events() -> bool:
             on_pause_clicked()
             break
 
-    # Inter-script combat pause synchronization (e.g. from HuntAnimals)
-    was_combat_paused = False
-    while not API.StopRequested and not is_stopped and API.GetPersistentVar("ExternalCombatActive", "False", API.PersistentVar.Char) == "True":
-        if not was_combat_paused:
-            was_combat_paused = True
-            update_status("Combat Pause")
-            debug_msg("External combat active; holding harvest loop...")
-        API.Pause(0.25)
-        API.ProcessCallbacks()
-        update_stats()
-        if btn_stop and getattr(btn_stop, "HasBeenClicked", lambda: False)():
-            on_stop_clicked()
-            return False
-
-    if was_combat_paused and not is_stopped and not API.StopRequested:
-        update_status("Resuming...")
-        if current_mode == "mine":
-            switch_to_mining(force=True)
-        else:
-            switch_to_lumberjack(force=True)
-
     return not (is_stopped or API.StopRequested)
 
 
@@ -434,10 +413,6 @@ def wait_with_ui(seconds: float) -> bool:
 def on_stop() -> None:
     global is_stopped
     is_stopped = True
-    try:
-        API.SavePersistentVar("HarvesterRunning", "False", API.PersistentVar.Char)
-    except Exception:
-        pass
     if API.Pathfinding():
         API.CancelPathfinding()
     dispose_gump()
@@ -904,10 +879,6 @@ def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
 
         if depleted:
             mark_vein_depleted(tx, ty)
-            try:
-                API.SavePersistentVar("HarvestReadyForHunt", "True", API.PersistentVar.Char)
-            except Exception:
-                pass
             break
 
 
@@ -1077,10 +1048,6 @@ def chop_tree(tree, tree_index: int = 1, total_trees: int = 1) -> None:
 
         if depleted:
             depleted_trees.append((tx, ty))
-            try:
-                API.SavePersistentVar("HarvestReadyForHunt", "True", API.PersistentVar.Char)
-            except Exception:
-                pass
             break
 
 
@@ -1105,12 +1072,6 @@ def main():
     create_control_gump()
     update_stats()
     update_status("Started")
-
-    try:
-        API.SavePersistentVar("HarvesterRunning", "True", API.PersistentVar.Char)
-        API.SavePersistentVar("HarvestReadyForHunt", "False", API.PersistentVar.Char)
-    except Exception:
-        pass
 
     API.SysMsg(f"Harvest engine started (Radius: {SEARCH_RADIUS} tiles, Ratio: {TREES_PER_MINING_SPOT} trees / {MINING_SPOTS_PER_CYCLE} mining spot).")
 
@@ -1177,11 +1138,6 @@ def main():
                 switch_to_mining(force=True)
 
         API.Pause(0.5)
-
-    try:
-        API.SavePersistentVar("HarvesterRunning", "False", API.PersistentVar.Char)
-    except Exception:
-        pass
 
     dispose_gump()
     API.SysMsg("Combined Miner & Lumberjack finished.")
