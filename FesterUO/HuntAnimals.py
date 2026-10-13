@@ -463,19 +463,15 @@ def is_aggressive_mobile(mob) -> bool:
     if any(kw in name for kw in PASSIVE_ANIMAL_KEYWORDS) or any(kw in name for kw in BIRD_NAME_KEYWORDS):
         return False
 
-    # 1. Explicitly Hostile Notoriety: Enemy, Criminal, Murderer
-    if mob.Notoriety in (API.Notoriety.Enemy, API.Notoriety.Criminal, API.Notoriety.Murderer):
+    dist = get_mobile_distance(mob)
+
+    # 1. Any non-passive mobile actively in War Mode within combat proximity (actively attacking or targeting player)
+    if getattr(mob, "InWarMode", False) and dist <= 10:
         return True
 
-    # 2. Known Predators (Panthers, Wolves, Bears, Cougars)
-    is_predator = (graphic in PREDATOR_GRAPHICS) or any(kw in name for kw in PREDATOR_KEYWORDS)
-    if is_predator:
+    # 2. Explicitly Hostile Notoriety: Enemy or Murderer (Orange/Red)
+    if mob.Notoriety in (API.Notoriety.Enemy, API.Notoriety.Murderer):
         return True
-
-    # 3. Any non-passive mobile in War Mode within combat proximity (actively attacking player)
-    if getattr(mob, "InWarMode", False) and get_mobile_distance(mob) <= 8:
-        if mob.Notoriety != API.Notoriety.Innocent:
-            return True
 
     return False
 
