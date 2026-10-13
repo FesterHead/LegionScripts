@@ -712,7 +712,7 @@ def shear_sheep(sheep) -> bool:
     dist = get_mobile_distance(sheep)
     if dist > 2:
         update_status(f"Approaching {sheep_name} to shear...")
-        API.PathfindEntity(sheep_serial, distance=1, wait=True, timeout=5.0)
+        API.PathfindEntity(sheep_serial, distance=1, wait=True, timeout=5)
 
     # Re-verify mobile still exists and is still wooly
     current_mob = API.FindMobile(sheep_serial)
