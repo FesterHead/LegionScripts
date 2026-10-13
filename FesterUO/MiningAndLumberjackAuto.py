@@ -24,6 +24,7 @@ Description:
         * Live Mining and Lumberjacking skill tracking with automatic gain announcements.
         * Running statistics: Veins mined, Total ore, Trees chopped, Total logs/wood.
         * Character Strength, Dexterity, and Weight capacity monitoring.
+        * Live Tuning Controls: Interactive stepper buttons to tune Veins/Cycle and Trees/Cycle live in-game without editing code.
         * Interactive Pause / Resume and Stop buttons.
 """
 
@@ -186,6 +187,12 @@ lbl_mine_stats = None
 lbl_lumber_stats = None
 lbl_char_stats = None
 lbl_weight = None
+lbl_mine_spots = None
+lbl_tree_spots = None
+btn_mine_dec = None
+btn_mine_inc = None
+btn_tree_dec = None
+btn_tree_inc = None
 btn_pause = None
 btn_stop = None
 
@@ -269,6 +276,54 @@ def update_stats() -> None:
         lbl_weight.Text = f"Weight: {w} / {w_max}"
 
 
+def on_mine_spots_dec() -> None:
+    global MINING_SPOTS_PER_CYCLE, lbl_mine_spots
+    if MINING_SPOTS_PER_CYCLE > 1:
+        MINING_SPOTS_PER_CYCLE -= 1
+        if lbl_mine_spots:
+            lbl_mine_spots.Text = str(MINING_SPOTS_PER_CYCLE)
+        API.SysMsg(f"[Config] Veins per cycle set to {MINING_SPOTS_PER_CYCLE}")
+
+
+def on_mine_spots_inc() -> None:
+    global MINING_SPOTS_PER_CYCLE, lbl_mine_spots
+    if MINING_SPOTS_PER_CYCLE < 50:
+        MINING_SPOTS_PER_CYCLE += 1
+        if lbl_mine_spots:
+            lbl_mine_spots.Text = str(MINING_SPOTS_PER_CYCLE)
+        API.SysMsg(f"[Config] Veins per cycle set to {MINING_SPOTS_PER_CYCLE}")
+
+
+def on_tree_spots_dec() -> None:
+    global TREES_PER_MINING_SPOT, lbl_tree_spots
+    if TREES_PER_MINING_SPOT > 1:
+        TREES_PER_MINING_SPOT -= 1
+        if lbl_tree_spots:
+            lbl_tree_spots.Text = str(TREES_PER_MINING_SPOT)
+        API.SysMsg(f"[Config] Trees per cycle set to {TREES_PER_MINING_SPOT}")
+
+
+def on_tree_spots_inc() -> None:
+    global TREES_PER_MINING_SPOT, lbl_tree_spots
+    if TREES_PER_MINING_SPOT < 50:
+        TREES_PER_MINING_SPOT += 1
+        if lbl_tree_spots:
+            lbl_tree_spots.Text = str(TREES_PER_MINING_SPOT)
+        API.SysMsg(f"[Config] Trees per cycle set to {TREES_PER_MINING_SPOT}")
+
+
+def check_stepper_clicks() -> None:
+    """Fallback click processing for Gump stepper buttons."""
+    if btn_mine_dec and getattr(btn_mine_dec, "HasBeenClicked", lambda: False)():
+        on_mine_spots_dec()
+    if btn_mine_inc and getattr(btn_mine_inc, "HasBeenClicked", lambda: False)():
+        on_mine_spots_inc()
+    if btn_tree_dec and getattr(btn_tree_dec, "HasBeenClicked", lambda: False)():
+        on_tree_spots_dec()
+    if btn_tree_inc and getattr(btn_tree_inc, "HasBeenClicked", lambda: False)():
+        on_tree_spots_inc()
+
+
 def on_pause_clicked() -> None:
     global is_paused, btn_pause
     is_paused = not is_paused
@@ -299,13 +354,14 @@ def create_control_gump() -> None:
     """Initializes and renders the combined Miner & Lumberjack Gump."""
     global gump, lbl_status, lbl_mine_skill, lbl_lumber_skill, lbl_mine_stats, lbl_lumber_stats
     global lbl_char_stats, lbl_weight, btn_pause, btn_stop
+    global lbl_mine_spots, lbl_tree_spots, btn_mine_dec, btn_mine_inc, btn_tree_dec, btn_tree_inc
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
-    gump.SetRect(100, 100, 310, 220)
+    gump.SetRect(100, 100, 340, 242)
 
     # Semi-transparent dark background
     bg = API.Gumps.CreateGumpColorBox(0.8, "#1A1A1A")
-    bg.SetRect(0, 0, 310, 220)
+    bg.SetRect(0, 0, 340, 242)
     gump.Add(bg)
 
     # Title label (gold hue 53)
@@ -345,14 +401,51 @@ def create_control_gump() -> None:
     lbl_weight.SetPos(10, 148)
     gump.Add(lbl_weight)
 
+    # Tuning: Veins/Cycle & Trees/Cycle
+    lbl_mine_title = API.Gumps.CreateGumpLabel("Veins/Cycle:", 88)
+    lbl_mine_title.SetPos(10, 173)
+    gump.Add(lbl_mine_title)
+
+    btn_mine_dec = API.Gumps.CreateSimpleButton("-", 20, 20)
+    btn_mine_dec.SetPos(95, 172)
+    API.Gumps.AddControlOnClick(btn_mine_dec, on_mine_spots_dec)
+    gump.Add(btn_mine_dec)
+
+    lbl_mine_spots = API.Gumps.CreateGumpLabel(str(MINING_SPOTS_PER_CYCLE), 53)
+    lbl_mine_spots.SetPos(120, 173)
+    gump.Add(lbl_mine_spots)
+
+    btn_mine_inc = API.Gumps.CreateSimpleButton("+", 20, 20)
+    btn_mine_inc.SetPos(142, 172)
+    API.Gumps.AddControlOnClick(btn_mine_inc, on_mine_spots_inc)
+    gump.Add(btn_mine_inc)
+
+    lbl_tree_title = API.Gumps.CreateGumpLabel("Trees/Cycle:", 88)
+    lbl_tree_title.SetPos(175, 173)
+    gump.Add(lbl_tree_title)
+
+    btn_tree_dec = API.Gumps.CreateSimpleButton("-", 20, 20)
+    btn_tree_dec.SetPos(260, 172)
+    API.Gumps.AddControlOnClick(btn_tree_dec, on_tree_spots_dec)
+    gump.Add(btn_tree_dec)
+
+    lbl_tree_spots = API.Gumps.CreateGumpLabel(str(TREES_PER_MINING_SPOT), 53)
+    lbl_tree_spots.SetPos(285, 173)
+    gump.Add(lbl_tree_spots)
+
+    btn_tree_inc = API.Gumps.CreateSimpleButton("+", 20, 20)
+    btn_tree_inc.SetPos(307, 172)
+    API.Gumps.AddControlOnClick(btn_tree_inc, on_tree_spots_inc)
+    gump.Add(btn_tree_inc)
+
     # Buttons: Pause / Stop
-    btn_pause = API.Gumps.CreateSimpleButton("Pause", 130, 24)
-    btn_pause.SetPos(15, 175)
+    btn_pause = API.Gumps.CreateSimpleButton("Pause", 150, 25)
+    btn_pause.SetPos(15, 204)
     API.Gumps.AddControlOnClick(btn_pause, on_pause_clicked)
     gump.Add(btn_pause)
 
-    btn_stop = API.Gumps.CreateSimpleButton("Stop", 135, 24)
-    btn_stop.SetPos(160, 175)
+    btn_stop = API.Gumps.CreateSimpleButton("Stop", 150, 25)
+    btn_stop.SetPos(175, 204)
     API.Gumps.AddControlOnClick(btn_stop, on_stop_clicked)
     gump.Add(btn_stop)
 
@@ -369,6 +462,7 @@ def dispose_gump() -> None:
 def check_ui_events() -> bool:
     global is_paused, is_stopped
     API.ProcessCallbacks()
+    check_stepper_clicks()
     update_stats()
 
     if is_stopped or API.StopRequested:
@@ -384,6 +478,7 @@ def check_ui_events() -> bool:
     while is_paused and not API.StopRequested and not is_stopped:
         API.Pause(0.2)
         API.ProcessCallbacks()
+        check_stepper_clicks()
         update_stats()
         if btn_stop and getattr(btn_stop, "HasBeenClicked", lambda: False)():
             on_stop_clicked()
