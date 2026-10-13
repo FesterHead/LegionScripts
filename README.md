@@ -176,7 +176,7 @@ An autonomous wildlife and bird hunting script with an interactive control Gump,
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
   - Real-time status (`Scanning...`, `Hunting <Animal>...`, `Chasing...`, `Carving corpse...`, `Opening corpse...`, `AutoLooting...`, `Paused`, `Stopped`)
   - Running counter for **Animals Defeated**
-  - Active categories indicator (`Birds: ON | Passives: ON`)
+  - Interactive toggle checkboxes: Real-time toggles for **Birds**, **Passives**, **Predators**, and **Defend Threats** directly from the UI without needing to edit or restart the script
   - Interactive **Pause/Resume** and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 

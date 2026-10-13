@@ -32,7 +32,7 @@ Description:
     - Interactive Control Gump:
         * Semi-transparent dark background with live status updates.
         * Running counter: Animals Defeated.
-        * Mode indicator: Birds, Passive Animals, and Predators active categories.
+        * Interactive toggle checkboxes: Birds, Passives, Predators, and Defend Threats.
         * Interactive Pause/Resume and Stop buttons.
 """
 
@@ -161,7 +161,10 @@ total_killed: int = 0
 gump = None
 lbl_status = None
 lbl_stats = None
-lbl_modes = None
+cb_birds = None
+cb_passives = None
+cb_predators = None
+cb_defend = None
 btn_pause = None
 btn_stop = None
 
@@ -176,8 +179,116 @@ def debug_msg(message: str) -> None:
 
 
 # ==============================================================================
-# Gump UI Implementation
+# Gump UI Implementation & Interactive Toggles
 # ==============================================================================
+
+def on_toggle_birds() -> None:
+    """Handles runtime toggle for Birds category."""
+    global HUNT_BIRDS
+    if cb_birds:
+        val = getattr(cb_birds, "IsChecked", None)
+        if val is None and hasattr(cb_birds, "GetIsChecked"):
+            val = cb_birds.GetIsChecked()
+        if val is not None and val != HUNT_BIRDS:
+            HUNT_BIRDS = bool(val)
+        else:
+            HUNT_BIRDS = not HUNT_BIRDS
+            if hasattr(cb_birds, "SetIsChecked"):
+                cb_birds.SetIsChecked(HUNT_BIRDS)
+            else:
+                cb_birds.IsChecked = HUNT_BIRDS
+        API.SysMsg(f"[HuntAnimals] Birds hunting: {'ON' if HUNT_BIRDS else 'OFF'}")
+
+
+def on_toggle_passives() -> None:
+    """Handles runtime toggle for Passive Animals category."""
+    global HUNT_PASSIVE_ANIMALS
+    if cb_passives:
+        val = getattr(cb_passives, "IsChecked", None)
+        if val is None and hasattr(cb_passives, "GetIsChecked"):
+            val = cb_passives.GetIsChecked()
+        if val is not None and val != HUNT_PASSIVE_ANIMALS:
+            HUNT_PASSIVE_ANIMALS = bool(val)
+        else:
+            HUNT_PASSIVE_ANIMALS = not HUNT_PASSIVE_ANIMALS
+            if hasattr(cb_passives, "SetIsChecked"):
+                cb_passives.SetIsChecked(HUNT_PASSIVE_ANIMALS)
+            else:
+                cb_passives.IsChecked = HUNT_PASSIVE_ANIMALS
+        API.SysMsg(f"[HuntAnimals] Passive Animals: {'ON' if HUNT_PASSIVE_ANIMALS else 'OFF'}")
+
+
+def on_toggle_predators() -> None:
+    """Handles runtime toggle for Predators category."""
+    global HUNT_PREDATORS
+    if cb_predators:
+        val = getattr(cb_predators, "IsChecked", None)
+        if val is None and hasattr(cb_predators, "GetIsChecked"):
+            val = cb_predators.GetIsChecked()
+        if val is not None and val != HUNT_PREDATORS:
+            HUNT_PREDATORS = bool(val)
+        else:
+            HUNT_PREDATORS = not HUNT_PREDATORS
+            if hasattr(cb_predators, "SetIsChecked"):
+                cb_predators.SetIsChecked(HUNT_PREDATORS)
+            else:
+                cb_predators.IsChecked = HUNT_PREDATORS
+        API.SysMsg(f"[HuntAnimals] Predators: {'ON' if HUNT_PREDATORS else 'OFF'}")
+
+
+def on_toggle_defend() -> None:
+    """Handles runtime toggle for Aggressive Threat Auto-Defense."""
+    global AUTO_DEFEND_AGGRESSORS
+    if cb_defend:
+        val = getattr(cb_defend, "IsChecked", None)
+        if val is None and hasattr(cb_defend, "GetIsChecked"):
+            val = cb_defend.GetIsChecked()
+        if val is not None and val != AUTO_DEFEND_AGGRESSORS:
+            AUTO_DEFEND_AGGRESSORS = bool(val)
+        else:
+            AUTO_DEFEND_AGGRESSORS = not AUTO_DEFEND_AGGRESSORS
+            if hasattr(cb_defend, "SetIsChecked"):
+                cb_defend.SetIsChecked(AUTO_DEFEND_AGGRESSORS)
+            else:
+                cb_defend.IsChecked = AUTO_DEFEND_AGGRESSORS
+        API.SysMsg(f"[HuntAnimals] Auto Defend Threats: {'ON' if AUTO_DEFEND_AGGRESSORS else 'OFF'}")
+
+
+def sync_checkboxes() -> None:
+    """Synchronizes boolean variables with Gump checkbox states."""
+    global HUNT_BIRDS, HUNT_PASSIVE_ANIMALS, HUNT_PREDATORS, AUTO_DEFEND_AGGRESSORS
+    if cb_birds:
+        val = getattr(cb_birds, "IsChecked", None)
+        if val is None and hasattr(cb_birds, "GetIsChecked"):
+            val = cb_birds.GetIsChecked()
+        if val is not None and val != HUNT_BIRDS:
+            HUNT_BIRDS = bool(val)
+            API.SysMsg(f"[HuntAnimals] Birds hunting: {'ON' if HUNT_BIRDS else 'OFF'}")
+
+    if cb_passives:
+        val = getattr(cb_passives, "IsChecked", None)
+        if val is None and hasattr(cb_passives, "GetIsChecked"):
+            val = cb_passives.GetIsChecked()
+        if val is not None and val != HUNT_PASSIVE_ANIMALS:
+            HUNT_PASSIVE_ANIMALS = bool(val)
+            API.SysMsg(f"[HuntAnimals] Passive Animals: {'ON' if HUNT_PASSIVE_ANIMALS else 'OFF'}")
+
+    if cb_predators:
+        val = getattr(cb_predators, "IsChecked", None)
+        if val is None and hasattr(cb_predators, "GetIsChecked"):
+            val = cb_predators.GetIsChecked()
+        if val is not None and val != HUNT_PREDATORS:
+            HUNT_PREDATORS = bool(val)
+            API.SysMsg(f"[HuntAnimals] Predators: {'ON' if HUNT_PREDATORS else 'OFF'}")
+
+    if cb_defend:
+        val = getattr(cb_defend, "IsChecked", None)
+        if val is None and hasattr(cb_defend, "GetIsChecked"):
+            val = cb_defend.GetIsChecked()
+        if val is not None and val != AUTO_DEFEND_AGGRESSORS:
+            AUTO_DEFEND_AGGRESSORS = bool(val)
+            API.SysMsg(f"[HuntAnimals] Auto Defend Threats: {'ON' if AUTO_DEFEND_AGGRESSORS else 'OFF'}")
+
 
 def on_pause_clicked() -> None:
     """Handles Gump Pause / Resume toggle button."""
@@ -209,14 +320,14 @@ def on_gump_disposed() -> None:
 
 def create_control_gump() -> None:
     """Constructs the interactive control Gump."""
-    global gump, lbl_status, lbl_stats, lbl_modes, btn_pause, btn_stop
+    global gump, lbl_status, lbl_stats, cb_birds, cb_passives, cb_predators, cb_defend, btn_pause, btn_stop
 
     gump = API.Gumps.CreateGump(True, True, False)
     gump.SetPos(50, 480)
 
     # Background panel (dark aesthetic)
     bg = API.Gumps.CreateGumpColorBox(0.85, "#1A1A1A")
-    bg.SetRect(0, 0, 280, 135)
+    bg.SetRect(0, 0, 290, 162)
     gump.Add(bg)
 
     # Title
@@ -225,35 +336,48 @@ def create_control_gump() -> None:
     gump.Add(lbl_title)
 
     lbl_author = API.Gumps.CreateGumpLabel("by FesterHead", 996)
-    lbl_author.SetPos(195, 8)
+    lbl_author.SetPos(200, 8)
     gump.Add(lbl_author)
 
     # Status label
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 53)
-    lbl_status.SetPos(10, 30)
+    lbl_status.SetPos(10, 28)
     gump.Add(lbl_status)
 
     # Stats label
     lbl_stats = API.Gumps.CreateGumpLabel("Defeated: 0", 996)
-    lbl_stats.SetPos(10, 50)
+    lbl_stats.SetPos(10, 48)
     gump.Add(lbl_stats)
 
-    # Active categories mode label
-    modes_text = f"Birds: {'ON' if HUNT_BIRDS else 'OFF'} | Passives: {'ON' if HUNT_PASSIVE_ANIMALS else 'OFF'}"
-    if HUNT_PREDATORS:
-        modes_text += " | Pred: ON"
-    lbl_modes = API.Gumps.CreateGumpLabel(modes_text, 88)
-    lbl_modes.SetPos(10, 70)
-    gump.Add(lbl_modes)
+    # Interactive Category Toggles (Checkboxes)
+    cb_birds = API.Gumps.CreateGumpCheckbox("Birds", 996, HUNT_BIRDS)
+    cb_birds.SetPos(10, 70)
+    API.Gumps.AddControlOnClick(cb_birds, on_toggle_birds)
+    gump.Add(cb_birds)
+
+    cb_passives = API.Gumps.CreateGumpCheckbox("Passives", 996, HUNT_PASSIVE_ANIMALS)
+    cb_passives.SetPos(150, 70)
+    API.Gumps.AddControlOnClick(cb_passives, on_toggle_passives)
+    gump.Add(cb_passives)
+
+    cb_predators = API.Gumps.CreateGumpCheckbox("Predators", 996, HUNT_PREDATORS)
+    cb_predators.SetPos(10, 94)
+    API.Gumps.AddControlOnClick(cb_predators, on_toggle_predators)
+    gump.Add(cb_predators)
+
+    cb_defend = API.Gumps.CreateGumpCheckbox("Defend Threats", 996, AUTO_DEFEND_AGGRESSORS)
+    cb_defend.SetPos(150, 94)
+    API.Gumps.AddControlOnClick(cb_defend, on_toggle_defend)
+    gump.Add(cb_defend)
 
     # Control buttons
-    btn_pause = API.Gumps.CreateSimpleButton("Pause", 120, 26)
-    btn_pause.SetPos(10, 98)
+    btn_pause = API.Gumps.CreateSimpleButton("Pause", 125, 26)
+    btn_pause.SetPos(10, 124)
     API.Gumps.AddControlOnClick(btn_pause, on_pause_clicked)
     gump.Add(btn_pause)
 
-    btn_stop = API.Gumps.CreateSimpleButton("Stop", 120, 26)
-    btn_stop.SetPos(145, 98)
+    btn_stop = API.Gumps.CreateSimpleButton("Stop", 125, 26)
+    btn_stop.SetPos(150, 124)
     API.Gumps.AddControlOnClick(btn_stop, on_stop_clicked)
     gump.Add(btn_stop)
 
@@ -286,6 +410,7 @@ def check_ui_events() -> bool:
     """Processes UI events and checks pause state."""
     global is_paused, is_stopped
     API.ProcessCallbacks()
+    sync_checkboxes()
     update_stats()
 
     if is_stopped or API.StopRequested:
@@ -301,6 +426,7 @@ def check_ui_events() -> bool:
     while is_paused and not API.StopRequested and not is_stopped:
         API.Pause(0.2)
         API.ProcessCallbacks()
+        sync_checkboxes()
         update_stats()
         if btn_stop and getattr(btn_stop, "HasBeenClicked", lambda: False)():
             on_stop_clicked()
