@@ -70,9 +70,10 @@ OPEN_CORPSE_FOR_AUTOLOOT: bool = True    # Opens corpse container for client aut
 TRIGGER_TAZUO_AUTOLOOT: bool = True      # Calls API.AutoLootContainer on the corpse
 CORPSE_PROCESSING_DELAY: float = 0.35
 
-# Safety exclusions
-IGNORE_TAMED_PETS: bool = True           # Ignore renamable mobiles (player pets/mounts)
-IGNORE_FRIENDS: bool = True              # Ignore friends and guildmates
+# Safety exclusions & Karma protection
+PROTECT_KARMA: bool = True           # Never attack horses, llamas, ostards, or other karma-losing creatures
+IGNORE_TAMED_PETS: bool = True       # Ignore renamable mobiles (player pets/mounts)
+IGNORE_FRIENDS: bool = True          # Ignore friends and guildmates
 
 # Enable verbose debug logging to client console
 DEBUG: bool = False
@@ -93,27 +94,38 @@ BIRD_NAME_KEYWORDS: List[str] = [
     "bird", "eagle", "chicken", "turkey", "crane", "crow", "raven", "magpie"
 ]
 
-# Passive animal graphics (Deer, Cattle, Swine, Sheep, Goats, Camelids, Equines, Leporids)
+# Passive animal graphics (Deer, Cattle, Swine, Sheep, Goats, Leporids)
 PASSIVE_ANIMAL_GRAPHICS: Set[int] = {
-    0x00ED,  # Hind (female deer)
-    0x00EA,  # Great Hart (male deer / stag)
+    0x00ED,          # Hind (female deer)
+    0x00EA,          # Great Hart (male deer / stag)
     0x00D8, 0x00E7,  # Cow (black/white & brown)
     0x00E8, 0x00E9,  # Bull
-    0x00CB,  # Pig
-    0x0014,  # Boar
+    0x00CB,          # Pig
+    0x0014,          # Boar
     0x00CF, 0x00DF,  # Sheep (wooly & shorn)
     0x00D1, 0x0058,  # Goat & Mountain Goat
-    0x00DC,  # Llama
-    0x00C8, 0x00E2, 0x00E4, 0x00CC,  # Wild Horses
-    0x00CD,  # Rabbit / Jackrabbit
-    0x00D2, 0x00DB, 0x00DA,  # Desert Ostard, Forest Ostard, Frenzied Ostard
-    0x00DD,  # Walrus
+    0x00CD,          # Rabbit / Jackrabbit
+    0x00DD,          # Walrus
 }
 
 PASSIVE_ANIMAL_KEYWORDS: List[str] = [
     "hind", "great hart", "hart", "deer", "stag",
     "cow", "bull", "pig", "boar", "sheep", "goat",
-    "llama", "horse", "rabbit", "hare", "ostard", "walrus"
+    "rabbit", "hare", "walrus"
+]
+
+# Karma loss creatures (Wild Horses, Llamas, Ostards, Dolphins, Dogs, Cats)
+KARMA_LOSS_GRAPHICS: Set[int] = {
+    0x00C8, 0x00E2, 0x00E4, 0x00CC,  # Wild Horses
+    0x00DC,                          # Llama
+    0x00D2, 0x00DB, 0x00DA,          # Desert Ostard, Forest Ostard, Frenzied Ostard
+    0x0097,                          # Dolphin
+    0x0062,                          # Cat
+    0x00E1,                          # Dog
+}
+
+KARMA_LOSS_KEYWORDS: List[str] = [
+    "horse", "llama", "ostard", "dolphin", "cat", "dog"
 ]
 
 # Predator animal graphics (Wolves, Bears, Big Cats)
@@ -499,10 +511,10 @@ def is_aggressive_mobile(mob) -> bool:
     graphic = mob.Graphic
     name = (mob.Name or "").lower()
 
-    # Passive wildlife and birds are NEVER aggressive threats
-    if graphic in PASSIVE_ANIMAL_GRAPHICS or graphic in BIRD_GRAPHICS:
+    # Passive wildlife, birds, and protected karma animals are NEVER aggressive threats
+    if graphic in PASSIVE_ANIMAL_GRAPHICS or graphic in BIRD_GRAPHICS or graphic in KARMA_LOSS_GRAPHICS:
         return False
-    if any(kw in name for kw in PASSIVE_ANIMAL_KEYWORDS) or any(kw in name for kw in BIRD_NAME_KEYWORDS):
+    if any(kw in name for kw in PASSIVE_ANIMAL_KEYWORDS) or any(kw in name for kw in BIRD_NAME_KEYWORDS) or any(kw in name for kw in KARMA_LOSS_KEYWORDS):
         return False
 
     dist = get_mobile_distance(mob)
@@ -539,6 +551,15 @@ def is_target_animal(mob) -> bool:
         # Ignore invulnerable / yellow hits mobiles (e.g. blessed vendors or protected creatures)
         if getattr(mob, "IsYellowHits", False):
             return False
+
+        # Ignore tamed pets / mounts if enabled
+        if IGNORE_TAMED_PETS and getattr(mob, "IsRenamable", False):
+            return False
+
+        # Karma protection: NEVER target horses, llamas, ostards, or domestic karma-loss creatures
+        if PROTECT_KARMA:
+            if mob.Graphic in KARMA_LOSS_GRAPHICS or any(kw in (mob.Name or "").lower() for kw in KARMA_LOSS_KEYWORDS):
+                return False
 
         # Aggressive threat self-defense: always a valid target
         if AUTO_DEFEND_AGGRESSORS and is_aggressive_mobile(mob):

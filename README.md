@@ -175,8 +175,9 @@ An autonomous wildlife and bird hunting script with an interactive control Gump,
 - **Multi-Category Wildlife Detection:**
   - Real-time scanning for wild animals within a configurable search radius (`SEARCH_RADIUS = 15` tiles).
   - **Birds (`HUNT_BIRDS = True`, default):** Targets birds, eagles, chickens, turkeys, and cranes to generate feathers and poultry.
-  - **Passive Animals (`HUNT_PASSIVE_ANIMALS = True`, default):** Targets hinds, great harts (deer), cows, bulls, pigs, boars, sheep, goats, llamas, horses, and rabbits to generate leather/hides, raw ribs/meat, and wool.
+  - **Passive Animals (`HUNT_PASSIVE_ANIMALS = True`, default):** Targets hinds, great harts (deer), cows, bulls, pigs, boars, sheep, goats, and rabbits to generate leather/hides, raw ribs/meat, and wool.
   - **Predators (`HUNT_PREDATORS = False`, optional):** Optional toggle to hunt wolves, bears, cougars, and panthers.
+  - **Karma Protection (`PROTECT_KARMA = True`, default):** Explicitly ignores horses, llamas, ostards, dolphins, dogs, and cats to prevent negative karma hits.
   - Explicitly ignores the player, friends, guildmates, and tamed player pets (`IGNORE_TAMED_PETS = True`).
 - **Autonomous Combat Engagement:**
   - Automatically equips the configured `"Fighting"` dress profile to arm weapons.
