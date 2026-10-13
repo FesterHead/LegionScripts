@@ -185,10 +185,13 @@ An autonomous wildlife and bird hunting script with an interactive control Gump,
 - **TazUO AutoLoot Integration & Corpse Carving:**
   - Locates the animal corpse upon kill and carves it using an equipped axe or backpack bladed tool (`AUTO_CARVE_CORPSE = True`) to produce leather/hides, feathers, meat, and wool.
   - Automatically opens the corpse (`OPEN_CORPSE_FOR_AUTOLOOT = True`) and explicitly invokes TazUO's native AutoLoot agent (`TRIGGER_TAZUO_AUTOLOOT = True` via `API.AutoLootContainer`) to handle item collection according to your client settings.
+- **Pre-Combat Sheep Shearing & Tool Autodetection:**
+  - Detects wooly sheep (`0x00CF`) and automatically approaches into melee range to shear their wool before engaging in combat (`AUTO_SHEAR_SHEEP = True`).
+  - Autodetects a **Skinning Knife** (`0x0EC4`) directly in your main backpack (with fallback to shears or any equipped/backpack bladed tool) for both pre-combat shearing and corpse carving.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
-  - Real-time status (`Scanning...`, `Hunting <Animal>...`, `Chasing...`, `Carving corpse...`, `Opening corpse...`, `AutoLooting...`, `Paused`, `Stopped`)
-  - Running counter for **Animals Defeated**
-  - Interactive toggle checkboxes: Real-time toggles for **Birds**, **Passives**, **Predators**, and **Defend Threats** directly from the UI without needing to edit or restart the script
+  - Real-time status (`Scanning...`, `Hunting <Animal>...`, `Shearing <Sheep>...`, `Chasing...`, `Carving corpse...`, `Opening corpse...`, `AutoLooting...`, `Paused`, `Stopped`)
+  - Running counters for **Animals Defeated** and **Sheep Sheared**
+  - Interactive toggle checkboxes: Real-time toggles for **Birds**, **Passives**, **Predators**, **Shear Sheep**, and **Defend Threats** directly from the UI without needing to edit or restart the script
   - Interactive **Pause/Resume** and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 

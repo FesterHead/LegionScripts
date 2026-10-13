@@ -52,6 +52,7 @@ HUNT_BIRDS: bool = True             # Birds, Eagles, Chickens, Turkeys, Cranes (
 HUNT_PASSIVE_ANIMALS: bool = True   # Deer/Harts, Cows/Bulls, Pigs/Boars, Sheep, Goats, Llamas, Horses, Rabbits (leather & ribs)
 HUNT_PREDATORS: bool = False        # Wolves, Bears, Cougars, Panthers (predator hunting)
 AUTO_DEFEND_AGGRESSORS: bool = True # Always attack hostile/aggressive creatures and predators targeting player immediately
+AUTO_SHEAR_SHEEP: bool = True       # Shear wooly sheep before combat using an autodetected skinning knife or blade
 
 # Dress profile configured in TazUO to equip before attacking (e.g. "Fighting")
 DRESS_PROFILE: str = "Fighting"
@@ -126,6 +127,14 @@ PREDATOR_KEYWORDS: List[str] = [
     "wolf", "bear", "grizzly", "panther", "cougar"
 ]
 
+# Sheep graphics
+WOOLY_SHEEP_GRAPHIC: int = 0x00CF
+SHORN_SHEEP_GRAPHIC: int = 0x00DF
+
+# Skinning knife & shearing graphics
+SKINNING_KNIFE_GRAPHIC: int = 0x0EC4
+SHEARS_GRAPHICS: Set[int] = {0x0F9E, 0x0F9F}
+
 # Corpse graphic
 CORPSE_GRAPHIC: int = 0x2006
 
@@ -156,6 +165,7 @@ current_status: str = "Ready"
 
 total_spotted: int = 0
 total_killed: int = 0
+total_sheared: int = 0
 
 # Interactive Gump controls
 gump = None
@@ -165,6 +175,7 @@ cb_birds = None
 cb_passives = None
 cb_predators = None
 cb_defend = None
+cb_shear = None
 btn_pause = None
 btn_stop = None
 
@@ -254,9 +265,27 @@ def on_toggle_defend() -> None:
         API.SysMsg(f"[HuntAnimals] Auto Defend Threats: {'ON' if AUTO_DEFEND_AGGRESSORS else 'OFF'}")
 
 
+def on_toggle_shear() -> None:
+    """Handles runtime toggle for Shear Sheep."""
+    global AUTO_SHEAR_SHEEP
+    if cb_shear:
+        val = getattr(cb_shear, "IsChecked", None)
+        if val is None and hasattr(cb_shear, "GetIsChecked"):
+            val = cb_shear.GetIsChecked()
+        if val is not None and val != AUTO_SHEAR_SHEEP:
+            AUTO_SHEAR_SHEEP = bool(val)
+        else:
+            AUTO_SHEAR_SHEEP = not AUTO_SHEAR_SHEEP
+            if hasattr(cb_shear, "SetIsChecked"):
+                cb_shear.SetIsChecked(AUTO_SHEAR_SHEEP)
+            else:
+                cb_shear.IsChecked = AUTO_SHEAR_SHEEP
+        API.SysMsg(f"[HuntAnimals] Shear Sheep: {'ON' if AUTO_SHEAR_SHEEP else 'OFF'}")
+
+
 def sync_checkboxes() -> None:
     """Synchronizes boolean variables with Gump checkbox states."""
-    global HUNT_BIRDS, HUNT_PASSIVE_ANIMALS, HUNT_PREDATORS, AUTO_DEFEND_AGGRESSORS
+    global HUNT_BIRDS, HUNT_PASSIVE_ANIMALS, HUNT_PREDATORS, AUTO_DEFEND_AGGRESSORS, AUTO_SHEAR_SHEEP
     if cb_birds:
         val = getattr(cb_birds, "IsChecked", None)
         if val is None and hasattr(cb_birds, "GetIsChecked"):
@@ -289,6 +318,14 @@ def sync_checkboxes() -> None:
             AUTO_DEFEND_AGGRESSORS = bool(val)
             API.SysMsg(f"[HuntAnimals] Auto Defend Threats: {'ON' if AUTO_DEFEND_AGGRESSORS else 'OFF'}")
 
+    if cb_shear:
+        val = getattr(cb_shear, "IsChecked", None)
+        if val is None and hasattr(cb_shear, "GetIsChecked"):
+            val = cb_shear.GetIsChecked()
+        if val is not None and val != AUTO_SHEAR_SHEEP:
+            AUTO_SHEAR_SHEEP = bool(val)
+            API.SysMsg(f"[HuntAnimals] Shear Sheep: {'ON' if AUTO_SHEAR_SHEEP else 'OFF'}")
+
 
 def on_pause_clicked() -> None:
     """Handles Gump Pause / Resume toggle button."""
@@ -320,14 +357,14 @@ def on_gump_disposed() -> None:
 
 def create_control_gump() -> None:
     """Constructs the interactive control Gump."""
-    global gump, lbl_status, lbl_stats, cb_birds, cb_passives, cb_predators, cb_defend, btn_pause, btn_stop
+    global gump, lbl_status, lbl_stats, cb_birds, cb_passives, cb_predators, cb_defend, cb_shear, btn_pause, btn_stop
 
     gump = API.Gumps.CreateGump(True, True, False)
     gump.SetPos(50, 480)
 
     # Background panel (dark aesthetic)
     bg = API.Gumps.CreateGumpColorBox(0.85, "#1A1A1A")
-    bg.SetRect(0, 0, 290, 162)
+    bg.SetRect(0, 0, 290, 186)
     gump.Add(bg)
 
     # Title
@@ -345,7 +382,7 @@ def create_control_gump() -> None:
     gump.Add(lbl_status)
 
     # Stats label
-    lbl_stats = API.Gumps.CreateGumpLabel("Defeated: 0", 996)
+    lbl_stats = API.Gumps.CreateGumpLabel("Defeated: 0 | Sheared: 0", 996)
     lbl_stats.SetPos(10, 48)
     gump.Add(lbl_stats)
 
@@ -365,19 +402,24 @@ def create_control_gump() -> None:
     API.Gumps.AddControlOnClick(cb_predators, on_toggle_predators)
     gump.Add(cb_predators)
 
+    cb_shear = API.Gumps.CreateGumpCheckbox("Shear Sheep", 996, AUTO_SHEAR_SHEEP)
+    cb_shear.SetPos(150, 94)
+    API.Gumps.AddControlOnClick(cb_shear, on_toggle_shear)
+    gump.Add(cb_shear)
+
     cb_defend = API.Gumps.CreateGumpCheckbox("Defend Threats", 996, AUTO_DEFEND_AGGRESSORS)
-    cb_defend.SetPos(150, 94)
+    cb_defend.SetPos(10, 118)
     API.Gumps.AddControlOnClick(cb_defend, on_toggle_defend)
     gump.Add(cb_defend)
 
     # Control buttons
     btn_pause = API.Gumps.CreateSimpleButton("Pause", 125, 26)
-    btn_pause.SetPos(10, 124)
+    btn_pause.SetPos(10, 148)
     API.Gumps.AddControlOnClick(btn_pause, on_pause_clicked)
     gump.Add(btn_pause)
 
     btn_stop = API.Gumps.CreateSimpleButton("Stop", 125, 26)
-    btn_stop.SetPos(150, 124)
+    btn_stop.SetPos(150, 148)
     API.Gumps.AddControlOnClick(btn_stop, on_stop_clicked)
     gump.Add(btn_stop)
 
@@ -394,9 +436,9 @@ def update_status(status_text: str) -> None:
 
 
 def update_stats() -> None:
-    """Refreshes kill counter on the Gump."""
+    """Refreshes kill counter and sheared counter on the Gump."""
     if lbl_stats:
-        lbl_stats.Text = f"Defeated: {total_killed}"
+        lbl_stats.Text = f"Defeated: {total_killed} | Sheared: {total_sheared}"
 
 
 def dispose_gump() -> None:
@@ -583,19 +625,99 @@ def find_nearby_animals() -> List:
 
 def find_bladed_tool():
     """Finds an equipped or backpack bladed tool or axe to carve corpses."""
-    # Check hands
+    # 1. Prioritize an autodetected Skinning Knife in the main backpack
+    knife = API.FindType(SKINNING_KNIFE_GRAPHIC, API.Backpack)
+    if knife:
+        return knife
+
+    # 2. Check hands
     for layer in ["OneHanded", "TwoHanded"]:
         item = API.FindLayer(layer)
         if item and item.Graphic in BLADE_GRAPHICS:
             return item
 
-    # Check backpack
+    # 3. Check backpack for any bladed tool
     for graphic in BLADE_GRAPHICS:
         found = API.FindType(graphic, API.Backpack)
         if found:
             return found
 
     return None
+
+
+def find_shearing_tool():
+    """
+    Finds a tool to shear sheep.
+    Prioritizes an autodetected Skinning Knife in the main backpack,
+    then shears/scissors or any equipped/backpack bladed tool.
+    """
+    # 1. Autodetect Skinning Knife in the main backpack by graphic
+    knife = API.FindType(SKINNING_KNIFE_GRAPHIC, API.Backpack)
+    if knife:
+        return knife
+
+    # 2. Autodetect Skinning Knife in the main backpack by name
+    items = API.ItemsInContainer(API.Backpack)
+    if items:
+        for it in items:
+            name = (getattr(it, "Name", "") or "").lower()
+            if "skinning knife" in name:
+                return it
+
+    # 3. Check for shears or scissors in backpack
+    for g in SHEARS_GRAPHICS:
+        shears = API.FindType(g, API.Backpack)
+        if shears:
+            return shears
+
+    # 4. Fallback to any equipped or backpack blade
+    return find_bladed_tool()
+
+
+def shear_sheep(sheep) -> bool:
+    """Approaches a wooly sheep and shears its wool using a skinning knife or shearing blade."""
+    global total_sheared
+    if not sheep:
+        return False
+    sheep_serial = sheep.Serial
+    sheep_name = sheep.Name or "Sheep"
+
+    tool = find_shearing_tool()
+    if not tool:
+        debug_msg("No skinning knife or bladed tool found to shear sheep.")
+        return False
+
+    # Pathfind into melee range if needed
+    dist = get_mobile_distance(sheep)
+    if dist > 2:
+        update_status(f"Approaching {sheep_name} to shear...")
+        API.PathfindEntity(sheep_serial, distance=1, wait=True, timeout=5.0)
+
+    # Re-verify mobile still exists and is still wooly
+    current_mob = API.FindMobile(sheep_serial)
+    if not current_mob:
+        return False
+    if getattr(current_mob, "Graphic", 0) != WOOLY_SHEEP_GRAPHIC:
+        debug_msg(f"{sheep_name} is already shorn.")
+        return False
+
+    if get_mobile_distance(current_mob) > 2:
+        debug_msg("Could not get in melee range to shear sheep.")
+        return False
+
+    tool_name = getattr(tool, "Name", "") or ("Skinning Knife" if tool.Graphic == SKINNING_KNIFE_GRAPHIC else f"Tool 0x{tool.Graphic:X}")
+    API.SysMsg(f"[HuntAnimals] Shearing '{sheep_name}' with {tool_name}...")
+    update_status(f"Shearing {sheep_name}...")
+    API.ClearJournal()
+    API.UseObject(tool.Serial)
+    if API.WaitForTarget(timeout=2.0):
+        API.Target(sheep_serial)
+        API.Pause(0.6)
+        total_sheared += 1
+        update_stats()
+        API.SysMsg(f"[HuntAnimals] Sheared wool from '{sheep_name}'! (Total Sheared: {total_sheared})")
+        return True
+    return False
 
 
 def process_corpse(corpse_serial: int) -> None:
@@ -687,6 +809,11 @@ def engage_animal(animal, is_defense: bool = False) -> bool:
     action_type = "DEFENDING against" if is_defense else "Engaging"
     API.SysMsg(f"[HuntAnimals] {action_type} '{target_name}' (0x{target_serial:X}) at dist {dist}...")
     update_status(f"{'Defending: ' if is_defense else 'Hunting '}{target_name}...")
+
+    # Pre-combat: Shear wooly sheep if enabled and not currently defending against a threat
+    if AUTO_SHEAR_SHEEP and not is_defense:
+        if getattr(animal, "Graphic", 0) == WOOLY_SHEEP_GRAPHIC:
+            shear_sheep(animal)
 
     # 1. Equip combat dress profile to arm weapon
     equip_dress_profile()
@@ -794,6 +921,10 @@ def main():
         cats.append("Passives")
     if HUNT_PREDATORS:
         cats.append("Predators")
+    if AUTO_SHEAR_SHEEP:
+        cats.append("Shearing")
+    if AUTO_DEFEND_AGGRESSORS:
+        cats.append("Defend")
 
     # Validate dress profile against available outfits in TazUO
     global DRESS_PROFILE
@@ -823,7 +954,7 @@ def main():
             API.Pause(SCAN_INTERVAL)
 
     update_status("Finished")
-    API.SysMsg(f"[HuntAnimals] Hunting ended. Total Defeated: {total_killed}.")
+    API.SysMsg(f"[HuntAnimals] Hunting ended. Defeated: {total_killed}, Sheared: {total_sheared}.")
 
 
 main()
