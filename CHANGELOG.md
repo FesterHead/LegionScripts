@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `AGENTS.md` and `.github/copilot-instructions.md`:
+  - Added explicit instructions for AI agents and assistants to enforce workspace markdownlint rules defined in `.markdownlint.json` when creating or modifying Markdown files.
+  - Mandated resolving all supported formatting issues (equivalent to running the VS Code command `markdownlint: Fix all supported issues in file`), maintaining clean list hierarchies, proper blank line separation between blocks, and eliminating trailing whitespace.
+
 - Updated `FesterUO/MiningAndLumberjackAuto.py`:
   - Added interactive Gump stepper tuning controls (`[-]` / `[+]`) for **Veins per Cycle** and **Trees per Cycle**, enabling real-time ratio adjustments on the fly in-game to match whatever area or resource density you are working in without modifying or restarting the script.
   - Replaced invalid `API.GetItems` calls with `API.ItemsInContainer` for backpack tool and axe discovery.
@@ -34,6 +38,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated [`.gitignore`](.gitignore) and untracked base TazUO client-generated files (`API.py`, `__builtins__.py`, `_ScriptContext.cs`, `LegionScripts.csproj`) so that client updates and local API stub regenerations do not dirty git status, while keeping user workspace settings (`LegionScripts.code-workspace`) tracked.
 
 ### Added
+
+- Added `FesterUO/TrainImbuing.py`: Automated resource-efficient Imbuing skill training script with interactive control Gump created by FesterHead:
+  - Dual Training Architecture:
+    - **Reimbue Loop Training**: Loops the high-speed "Reimbue Last" skill function at a Soulforge on working equipment (daggers, caps, jingasas, etc.), tracking attempts per item up to the optimal 20-imbue limit before diminishing returns.
+    - **Mass Unraveling / Recycler Mode**: Automates bulk item and container unraveling at a Soulforge to gain early skill (0.0 to 50.0+) and amass Magical Residues, Enchanted Essences, and Relic Fragments.
+  - Resource Recycling & Disposal:
+    - Automatically unravels finished items at the Soulforge after reaching maximum imbue attempts (or durability capacity), reclaiming valuable Magical Residues and Enchanted Essences.
+    - Alternative Trash Barrel / Discard Bag support for automated non-recyclable item disposal.
+  - Resource Satchel & Chest Restocking:
+    - Monitors backpack Magical Residues, Enchanted Essences, and Gem reserves (Citrine, Amber, Tourmaline, etc.) and restocks working buffers automatically from a designated resource satchel or chest.
+  - Item Supply Management:
+    - Automatically draws fresh items to imbue from an Item Supply Container into the backpack when an active item reaches capacity.
+  - Interactive Movable Control Gump:
+    - Displays real-time status, live Imbuing skill and cap with gain announcements, live item attempt counter (e.g. `Item: Dagger (14/20)`), Imbued / Unraveled / Failed counters, and live Resource counts.
+    - Interactive buttons: `Pause / Resume`, `Mode: Reimbue / Unravel`, `Setup Imbue`, `Supply Bag`, `Resources`, `Trash Can`, and `Stop`.
 
 - Added `FesterUO/MiningAndLumberjackAndMageryAuto.py`: Unified roaming mining, lumberjacking, and Magery skill training script with interactive ratio tuning Gump created by FesterHead:
   - Tri-skill training engine combining ore deposit mining, static tree lumberjacking, and batch Magery training without target cursor or equipment race conditions.

@@ -530,6 +530,26 @@ An automated, resource-efficient Tailoring training engine with interactive cont
   - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Trash Can**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 
+#### [TrainImbuing.py](FesterUO/TrainImbuing.py)
+
+An automated, resource-efficient Imbuing skill training script with interactive control Gump, Soulforge awareness, dual training modes, auto-unravel recycling, and resource restocking:
+
+- **Dual Training Architecture:**
+  - **Reimbue Loop Training (40.0 – 120.0):** Loops the high-speed "Reimbue Last" skill function at a Soulforge on working equipment (daggers, caps, jingasas, etc.), tracking attempts per item up to the optimal 20-imbue limit before diminishing returns.
+  - **Mass Unraveling / Recycler Mode (0.0 – 50.0+ / Material Farming):** Automates bulk item and container unraveling at a Soulforge to gain early skill and amass Magical Residues, Enchanted Essences, and Relic Fragments.
+- **Resource-Efficient Recycling via Soulforge Unraveling:** Automatically unravels finished items at the Soulforge after reaching maximum imbue attempts (default 20), reclaiming valuable Magical Residues and Enchanted Essences. Includes alternative Trash Barrel / Discard Bag support for automated non-recyclable item disposal.
+- **Milestone Guidance & Success Rate Optimization:** Tracks progression milestones and recommends optimal properties (Reflect Physical Damage, Hit Dispel, Damage Increase, Lower Reagent Cost, etc.) to maintain the ~50–60% success rate sweet spot for maximum skill gains. Features an interactive **"Setup Imbue"** button allowing manual calibration of properties and intensity at any time.
+- **Resource Satchel & Chest Restocking:** Monitors backpack Magical Residues, Enchanted Essences, and Gem reserves (Citrine, Amber, Tourmaline, etc.) and restocks working buffers automatically from a designated resource satchel or chest.
+- **Item Supply Management:** Automatically draws fresh items to imbue from an Item Supply Container into the backpack when an active item reaches capacity.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Imbuing <Item> (N/20)...`, `Unraveling Container...`, `Paused`, `Finished`)
+  - Live Imbuing skill level, skill cap, and automatic skill gain announcements
+  - Item attempt counter (e.g. `Item: Dagger | Attempts: 14/20`)
+  - Running counters for **Imbued**, **Unraveled**, and **Failed** attempts
+  - Live backpack resource counts (Residue, Essence, Gems) and container binding indicators
+  - Interactive **Pause/Resume**, **Mode Toggle**, **Setup Imbue**, **Supply Bag**, **Resources**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
 #### [MoveItemsBetweenContainers.py](FesterUO/MoveItemsBetweenContainers.py)
 
 A quick and reliable container-to-container item organizer and transfer utility script:

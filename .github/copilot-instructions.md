@@ -20,3 +20,5 @@ This repository contains automation scripts written for the TazUO Ultima Online 
    - Keep `README.md` updated with descriptions and usage guidelines for all scripts.
 6. **Script Organization:**
    - Always place contributed or generated scripts into a subfolder named after the **author** (e.g., `FesterUO/`) or target **shard name** (e.g., `Outlands/`). Never place script files in the repository root directory.
+7. **Markdown Formatting & Linting:**
+   - When creating or modifying Markdown files (`CHANGELOG.md`, `README.md`, etc.), strictly adhere to `.markdownlint.json` rules and resolve all formatting issues (equivalent to running `markdownlint: Fix all supported issues in file`).

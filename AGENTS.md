@@ -68,3 +68,10 @@ When generating, modifying, or refactoring scripts in this repository, strictly 
 
 - **No loose scripts in the root directory:** The repository root is strictly reserved for base client install files, IDE configurations, and project documentation.
 - **Organize by author name or shard name:** All new or refactored scripts must be placed in a dedicated subfolder categorized by **author name** (e.g., `FesterUO/`, `AuthorName/`) or target **shard name** (e.g., `Outlands/`, `ShardName/`).
+
+### 7. Markdown Formatting & Linting
+
+- When creating or editing Markdown files (`CHANGELOG.md`, `README.md`, etc.):
+  - Strictly adhere to the workspace configuration defined in [`.markdownlint.json`](.markdownlint.json).
+  - Ensure all formatting satisfies markdownlint standards and resolve all supported issues (equivalent to running the VS Code command `markdownlint: Fix all supported issues in file`).
+  - Maintain clean list hierarchies, proper blank line separation between blocks, and eliminate trailing whitespace.
