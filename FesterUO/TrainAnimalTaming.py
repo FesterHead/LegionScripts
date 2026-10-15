@@ -77,11 +77,11 @@ PATHFIND_TIMEOUT: int = 6
 
 # Optional Peacemaking:
 # If True, attempts to use Peacemaking on hostile or angry animals before taming.
-USE_PEACEMAKING: bool = False
+USE_PEACEMAKING: bool = True
 
 # Optional Animal Lore:
 # If True, inspects the target with Animal Lore before taming for dual training.
-USE_ANIMAL_LORE: bool = False
+USE_ANIMAL_LORE: bool = True
 
 # Integrated Veterinary:
 # If True, automatically applies bandages to damaged or poisoned creatures using
@@ -781,50 +781,108 @@ def approach_target(mob, max_distance: int = MAX_APPROACH_DISTANCE) -> bool:
 
 def release_pet(target_serial: int) -> bool:
     """
-    Releases a newly tamed pet via context menu or release command,
+    Releases a newly tamed pet via context menu or speech commands,
     confirming any release verification dialog.
     """
-    update_status("Releasing Pet...")
-    debug_msg(f"Attempting to release pet 0x{target_serial:X}...")
-
-    # Configure next gump to auto-respond/confirm if a release confirmation gump appears
-    # On OSI/RunUO/ServUO/Modern shards, confirmation button is usually button 1 or 2
-    API.ConfigNextGump(autoRespond=True, autoRespondButton=1)
-
-    # 1. Try context menu release
-    released = False
-    try:
-        if API.ContextMenu(target_serial, "Release", timeout=2.0):
-            released = True
-            debug_msg("Context menu 'Release' sent.")
-    except Exception as ex:
-        debug_msg(f"ContextMenu exception: {ex}")
-
-    # 2. Fallback: speech command
-    if not released:
-        mob = API.FindMobile(target_serial)
-        mob_name = mob.Name if mob and mob.Name else ""
-        if mob_name:
-            API.Msg(f"{mob_name} release")
-        else:
-            API.Msg("all release")
-
-    # 3. Handle confirmation gump if open
-    API.Pause(0.5)
-    if API.WaitForGump(delay=1.5):
-        debug_msg("Release confirmation gump detected. Responding...")
-        # Common release confirmation buttons are 1 or 2
-        API.ReplyGump(1)
-        API.Pause(0.4)
-
-    # Check journal or mobile renamable state
-    API.Pause(0.5)
     mob = API.FindMobile(target_serial)
-    if not mob or not getattr(mob, "IsRenamable", False):
-        API.SysMsg("[Animal Taming] Pet successfully released.")
+    if not mob:
         return True
 
-    return True
+    mob_name = mob.Name or "Pet"
+    update_status(f"Releasing {mob_name}...")
+    debug_msg(f"Attempting to release pet {mob_name} (0x{target_serial:X})...")
+
+    # Command pet to stop and come adjacent so we are well within context menu range
+    API.Msg("all stop")
+    API.Pause(0.2)
+    API.Msg("all follow me")
+    API.Pause(0.4)
+
+    # Ensure player is adjacent (1 tile) to pet
+    approach_target(mob, 1)
+
+    for attempt in range(1, 4):
+        if API.StopRequested or is_stopped:
+            return False
+
+        # Check if already released
+        mob = API.FindMobile(target_serial)
+        if not mob or not getattr(mob, "IsRenamable", False):
+            API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
+            return True
+
+        API.ClearJournal()
+
+        # Method 1: Context Menu "Release"
+        debug_msg(f"Release attempt #{attempt}: sending context menu 'Release'...")
+        context_sent = False
+        try:
+            context_sent = API.ContextMenu(target_serial, "Release", timeout=2.5)
+        except Exception as ex:
+            debug_msg(f"ContextMenu exception: {ex}")
+
+        # Method 2: If context menu failed or not available, try speech
+        if not context_sent:
+            debug_msg(f"Release attempt #{attempt}: sending speech command...")
+            if mob_name and mob_name != "Wild Animal" and mob_name != "Creature":
+                API.Msg(f"{mob_name} release")
+            else:
+                API.Msg("all release")
+
+            # In case the server responds with a target cursor for "all release"
+            if API.WaitForTarget(timeout=1.0):
+                API.Target(target_serial)
+
+        # Handle release confirmation dialog
+        if API.WaitForGump(delay=2.0):
+            debug_msg("Release confirmation gump detected.")
+            gump_content = API.GetGumpContents()
+            debug_msg(f"Gump text: {gump_content}")
+
+            # Standard RunUO / ServUO / ModernUO / OSI PetReleaseGump:
+            # Button 2 = OK / Confirm (AddButton(..., 2, GumpButtonType.Reply, 0))
+            # Button 1 = Cancel
+            debug_msg("Sending confirm response (button 2)...")
+            API.ReplyGump(2)
+            API.Pause(0.6)
+
+            # Check if gump is still open (some custom shards use button 1 for OK)
+            if API.WaitForGump(delay=0.6):
+                debug_msg("Gump still open, attempting button 1...")
+                API.ReplyGump(1)
+                API.Pause(0.6)
+
+        # Wait and verify journal or mobile state
+        API.Pause(0.5)
+
+        for msg in [
+            "you have released your pet",
+            "has been released",
+            "released",
+            "decides to take its chances",
+            "looks up at you with sadness",
+            "returns to the wild",
+            "no longer following you",
+        ]:
+            if API.InJournal(msg):
+                API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
+                return True
+
+        mob = API.FindMobile(target_serial)
+        if not mob or not getattr(mob, "IsRenamable", False):
+            API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
+            return True
+
+        debug_msg(f"Release attempt #{attempt} did not complete. Retrying...")
+        API.Pause(0.5)
+
+    mob = API.FindMobile(target_serial)
+    if not mob or not getattr(mob, "IsRenamable", False):
+        API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
+        return True
+
+    API.SysMsg(f"[Animal Taming] WARNING: Could not release {mob_name}. Check if your shard uses a custom gump or command.")
+    return False
 
 
 # ==============================================================================

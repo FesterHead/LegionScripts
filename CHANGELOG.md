@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Integrated Veterinary Healing:
     - Automatically applies bandages to injured or poisoned creatures before release or during retaming cycles, training Veterinary concurrently with Animal Taming.
   - Automated Pet Release & Gump Handling:
-    - Dispatches context menu or speech commands to release tamed creatures, automatically handling and confirming any client release verification gump.
+    - Commands pet to stop and come adjacent (1 tile) before dispatching context menu or speech commands (`[Name] release` / `all release`). Automatically confirms standard server `PetReleaseGump` dialogs (responding with button 2 for OK/Confirm, button 1 fallback) and retries up to 3 times with state verification to ensure reliable release.
   - Interactive Movable Control Gump:
     - Displays real-time status (`Scanning...`, `Approaching...`, `Taming <Creature>...`, `Releasing...`, `Paused`, `Complete`), live Animal Taming and Veterinary skills with caps and gain trackers, tamed counter, attempt counter, and vet heals counter.
     - Interactive buttons: `Mode: Wild Roam / Target Trainer`, `Auto-Release: ON / OFF`, `Pause / Resume`, and `Stop`.
