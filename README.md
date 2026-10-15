@@ -205,6 +205,34 @@ An automated Anatomy skill training script with configurable skill cooldowns, au
 - **Automatic Cap Detection:** Inspects `API.GetSkill("Anatomy").Cap` and automatically halts when the goal is reached.
 - **Skill Gain Tracking:** Announces incremental skill gains in the game client log.
 
+#### [TrainAnimalTaming.py](FesterUO/TrainAnimalTaming.py)
+
+An automated Animal Taming skill training script featuring an interactive dark control Gump, active range pursuit, integrated Veterinary healing, and dual training architectures:
+
+- **Dual Training Modes:**
+  - **Wild Roam Mode (`DEFAULT_MODE = "WILD_ROAM"`):** Autonomously scans for nearby wild animals matching the player's skill tier within `SEARCH_RADIUS` (18 tiles), pathfinds to them, actively pursues fleeing creatures during the taming timer, and auto-releases them upon success.
+  - **Target Trainer Mode (`DEFAULT_MODE = "TARGET_TRAIN"`):** Repeatedly tames, releases, and retames a designated or penned creature (such as a bull, bear, or horse) to rapidly gain skill up to the cap.
+- **Active Range Pursuit:** Continuously calculates distance during the 10-12s taming countdown and issues pathfinding steps to maintain the required 2-tile proximity without breaking the taming attempt.
+- **Integrated Veterinary Healing (`ENABLE_VETERINARY = True`):** Automatically applies bandages to injured or poisoned creatures before release (or during retaming) to train Veterinary skill concurrently.
+- **Automated Pet Release:** Dispatches context menu or speech commands to release tamed creatures, automatically handling and confirming any client release verification dialog.
+- **Interactive Control Gump:** Movable, dark on-screen interface displaying real-time status, Animal Taming and Veterinary skill progression with gain announcements, total tamed count, attempt counter, interactive mode toggle button, auto-release toggle button, and Pause/Resume/Stop controls.
+- **Safety & Peacemaking Support:** Optional Peacemaking integration to soothe agitated animals, plus automated emergency self-healing (bandages or Greater Heal) if player HP drops below threshold.
+- **Attribution:** Created by FesterHead.
+
+#### [TrainVeterinary.py](FesterUO/TrainVeterinary.py)
+
+An automated Veterinary skill training script featuring dual training architectures, intelligent Dex-based bandage timers, and a comprehensive pet health monitoring Gump:
+
+- **Dual Training Modes:**
+  - **Dual Pet Sparring Mode (`DEFAULT_MODE = "SPARRING"`):** Coordinates two pets sparring against each other, continuously monitors both health pools, and applies bandages to whichever pet has lower HP or is poisoned.
+  - **Single Pet / Patient Mode (`DEFAULT_MODE = "SINGLE"`):** Continuously monitors a single target pet, mount, or summon, applying bandages whenever damaged or poisoned.
+- **Emergency Combat Separation:** Automatically broadcasts `"all stop"` and `"all follow me"` if either sparring pet falls below `EMERGENCY_HP_PERCENT` (default 30%), holding combat until both pets are healed back above `RESUME_HP_PERCENT` (default 85%).
+- **Poison Curing & Resurrection:** Prioritizes curing poisoned pets immediately before standard healing, and automatically detects bonded pet ghosts to attempt resurrection using bandages (requires 80.0+ Veterinary and Animal Lore).
+- **Intelligent Bandage Delays:** Computes classic UO Dexterity-based bandage application delays (`AUTO_BANDAGE_DELAY = True`) with manual override support.
+- **Backpack Supply Management:** Monitors remaining bandages in real-time on the Gump and issues low-supply warnings.
+- **Interactive Control Gump:** Displays real-time action status, live Veterinary skill progress with gain tracker, individual pet health gauges with percentage and status tags (`[POISON]`, `[DEAD]`), bandage count, heal/cure/resurrection statistics, mode toggle, and Pause/Resume/Stop controls.
+- **Attribution:** Created by FesterHead.
+
 #### [Fish.py](FesterUO/Fish.py)
 
 An automated fishing script featuring an interactive on-screen control Gump, dynamic water target selector, persistent catch statistics, and automatic hostile mob defense:

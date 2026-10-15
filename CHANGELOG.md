@@ -39,6 +39,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `FesterUO/TrainAnimalTaming.py`: Automated Animal Taming skill training script with interactive control Gump created by FesterHead:
+  - Dual Training Architecture:
+    - **Wild Roam Mode (`DEFAULT_MODE = "WILD_ROAM"`):** Autonomously scans for nearby wild animals matching the player's skill level within `SEARCH_RADIUS` (18 tiles), pathfinds to them, actively follows moving/fleeing animals during the taming timer, and automatically releases them upon success.
+    - **Target Trainer Mode (`DEFAULT_MODE = "TARGET_TRAIN"`):** Continuously tames, releases, and retames a designated or trapped creature (such as a bull, bear, or horse) to rapidly gain skill up to the cap.
+  - Active Range Pursuit:
+    - Actively tracks target distance during the 10-12s taming countdown, issuing micro-pathfinding steps to keep the player within the strict 2-tile UO proximity requirement without breaking the taming attempt.
+  - Integrated Veterinary Healing:
+    - Automatically applies bandages to injured or poisoned creatures before release or during retaming cycles, training Veterinary concurrently with Animal Taming.
+  - Automated Pet Release & Gump Handling:
+    - Dispatches context menu or speech commands to release tamed creatures, automatically handling and confirming any client release verification gump.
+  - Interactive Movable Control Gump:
+    - Displays real-time status (`Scanning...`, `Approaching...`, `Taming <Creature>...`, `Releasing...`, `Paused`, `Complete`), live Animal Taming and Veterinary skills with caps and gain trackers, tamed counter, attempt counter, and vet heals counter.
+    - Interactive buttons: `Mode: Wild Roam / Target Trainer`, `Auto-Release: ON / OFF`, `Pause / Resume`, and `Stop`.
+  - Safety & Peacemaking Support:
+    - Optional Peacemaking integration to pacify hostile or angry wildlife before and after taming attempts.
+    - Automated emergency self-healing (bandages or Greater Heal) if player HP drops below threshold.
+
+- Added `FesterUO/TrainVeterinary.py`: Automated Veterinary skill training script with interactive control Gump created by FesterHead:
+  - Dual Training Architecture:
+    - **Dual Pet Sparring Mode (`DEFAULT_MODE = "SPARRING"`):** Coordinates two pets sparring against each other, continuously monitors both health pools, and applies bandages to whichever pet has lower HP or is poisoned.
+    - **Single Pet / Patient Mode (`DEFAULT_MODE = "SINGLE"`):** Continuously monitors a single target pet, mount, or summon, applying bandages whenever damaged or poisoned.
+  - Emergency Combat Separation:
+    - Automatically broadcasts `"all stop"` and `"all follow me"` if either sparring pet falls below `EMERGENCY_HP_PERCENT` (default 30%), holding combat until both pets are healed back above `RESUME_HP_PERCENT` (default 85%).
+  - Poison Curing & Ghost Pet Resurrection:
+    - Prioritizes curing poisoned pets immediately before standard healing, and automatically detects bonded pet ghosts to attempt resurrection using bandages (requires 80.0+ Veterinary and Animal Lore).
+  - Intelligent Bandage Delays:
+    - Computes classic UO Dexterity-based bandage application delays (`AUTO_BANDAGE_DELAY = True`) with manual override support.
+  - Backpack Supply Management:
+    - Monitors remaining bandages in real-time on the Gump and issues low-supply warnings.
+  - Interactive Movable Control Gump:
+    - Displays real-time status, live Veterinary skill progress with gain tracker, individual pet health gauges with percentage and status tags (`[POISON]`, `[DEAD]`), bandage counter, heal/cure/resurrection statistics, mode toggle, and Pause/Resume/Stop controls.
+
 - Added `FesterUO/TrainImbuing.py`: Automated resource-efficient Imbuing skill training script with interactive control Gump created by FesterHead:
   - Dual Training Architecture:
     - **Reimbue Loop Training**: Loops the high-speed "Reimbue Last" skill function at a Soulforge on working equipment (daggers, caps, jingasas, etc.), tracking attempts per item up to the optimal 20-imbue limit before diminishing returns.
