@@ -17,21 +17,28 @@ Description:
 
 Features:
     - Interactive Modern Dark Gump UI:
-      * Live status updates (Scanning, Approaching, Taming, Releasing, Paused, Complete)
+      * Live status updates (Scanning, Approaching, Taming, Releasing, Culling, Paused, Complete)
       * Real-time skill monitoring (Current skill, Cap, and total Skill Gains)
-      * Statistics counters (Successful Tames, Total Attempts)
+      * Statistics counters (Successful Tames, Total Attempts, and Culled count)
+      * Interactive feature checkboxes: Peacemaking, Animal Lore, Veterinary, Safety Heal, and Cull (E-Bolt)
       * Runtime Mode toggle button (Wild Roam <-> Target Trainer)
       * Runtime Auto-Release toggle button (ON <-> OFF)
-      * Interactive Pause / Resume and Stop buttons
+      * Interactive Pause / Resume and Stop controls
     - Active Range Pursuit:
       * Intelligently tracks moving/fleeing animals during the 10-12s taming countdown
         and issues micro-pathfinding steps to keep the player within the 2-tile limit.
     - Comprehensive Tamable Creature Database:
       * Built-in graphic and name mappings covering low, mid, and high tier tamables
         with baseline minimum skill thresholds.
-    - Automatic Pet Release & Gump Handling:
-      * Dispatches context menu release or command release, automatically confirming
-        any client release verification gump.
+    - Robust Pet Release & Follower Management:
+      * Indexed renaming (Tame1, Tame2, etc.) for precise speech release commands and
+        permanent re-taming prevention across script restarts.
+      * Multi-tier verification via normalized journal inspection, mobile ownership state,
+        and follower reduction checks.
+      * Automated stuck follower cleanup and pre-taming follower limit safeguards.
+    - Safe Magery Culling:
+      * Optional automated Energy Bolt dispatch on released hostile/gray creatures to
+        clear spawns and train Magery with zero-karma-loss and zero-criminal protections.
     - Safety & Peacemaking Support:
       * Optional Peacemaking integration to pacify hostile or agitated wildlife.
       * Emergency self-healing checks (Bandages / Greater Heal) if damaged.
@@ -96,6 +103,13 @@ HEAL_HP_PERCENT: int = 50
 
 # Bandage graphic for self-healing and veterinary
 BANDAGE_GRAPHIC: int = 0x0E21
+
+# Optional Magery Culling:
+# If True, automatically casts Energy Bolt on released hostile/gray creatures to
+# clear wildlife spawns and train Magery concurrently with strict zero-karma-loss protection.
+ENABLE_MAGERY_CULL: bool = False
+CULL_SPELL: str = "Energy Bolt"
+CULL_MIN_MANA: int = 20
 
 # Enable verbose debug output to client console
 DEBUG: bool = False
@@ -226,15 +240,67 @@ JOURNAL_TOO_FAR = [
 JOURNAL_CANNOT_TAME = [
     "that is not something you can tame",
     "already tame",
+    "looks tame already",
+    "already been tamed",
+    "previous master",
     "someone else is already taming",
     "have no chance of taming",
     "cannot be tamed",
+    "too many followers",
+    "you have too many followers",
+]
+
+# Positive karma / innocent creatures that must NEVER be harmed (strict karma & notoriety protection)
+POSITIVE_KARMA_GRAPHICS: Set[int] = {
+    0x00C8, 0x00E2, 0x00E4, 0x00CC,  # Horses
+    0x00DC,                          # Llama
+    0x00D2, 0x00DB, 0x00DA,          # Ostards
+    0x0097,                          # Dolphin
+    0x0062,                          # Cat
+    0x00E1,                          # Dog
+    0x00D0,                          # Chicken
+    0x0006,                          # Bird
+    0x00CD,                          # Rabbit
+    0x00CF, 0x00DF,                  # Sheep
+    0x00ED, 0x00EA,                  # Hind, Great Hart
+    0x00D8, 0x00E7,                  # Cow, Bull (dairy)
+    0x00D1, 0x0058,                  # Goat, Mountain Goat
+}
+
+POSITIVE_KARMA_KEYWORDS: List[str] = [
+    "horse", "llama", "ostard", "dolphin", "cat", "dog",
+    "chicken", "bird", "eagle", "rabbit", "sheep", "hind", "hart", "deer", "doe", "cow",
 ]
 
 JOURNAL_BUSY = [
     "must wait to perform another action",
     "wait a few moments",
     "you must wait",
+    "commands were tried too fast",
+    "wait to give another order",
+    "speaking too quickly",
+]
+
+# Comprehensive journal patterns indicating a pet was released
+RELEASE_JOURNAL_PHRASES = [
+    "released your pet",
+    "you have released",
+    "you release",
+    "has been released",
+    "released to the wild",
+    "released back into the wild",
+    "returns to the wild",
+    "decides to take its chances",
+    "looks up at you with sadness",
+    "no longer following you",
+    "no longer following",
+    "no longer under your control",
+    "free to roam",
+    "is now free",
+    "has been set free",
+    "take its chances without you",
+    "let it go",
+    "unbonded",
 ]
 
 
@@ -251,10 +317,12 @@ current_status: str = "Initializing..."
 total_tamed: int = 0
 total_attempts: int = 0
 total_vet_heals: int = 0
+total_culled: int = 0
 start_skill_value: float = 0.0
 last_skill_value: float = 0.0
 start_vet_value: float = 0.0
 last_vet_value: float = 0.0
+base_followers: int = 0
 
 # Set of mobile serials to ignore (already tamed & released this session)
 ignored_mobiles: Set[int] = set()
@@ -268,6 +336,11 @@ lbl_status = None
 lbl_skill = None
 lbl_vet = None
 lbl_stats = None
+cb_peace = None
+cb_lore = None
+cb_vet = None
+cb_heal = None
+cb_cull = None
 btn_mode = None
 btn_release = None
 btn_pause = None
@@ -335,7 +408,7 @@ def update_stats() -> None:
         lbl_vet.Text = f"Vet: {cur_vet:.1f} / {cap_vet:.1f} (+{vet_gained:.1f}) | Heals: {total_vet_heals}"
 
     if lbl_stats:
-        lbl_stats.Text = f"Tamed: {total_tamed} | Attempts: {total_attempts}"
+        lbl_stats.Text = f"Tamed: {total_tamed} | Attempts: {total_attempts} | Culled: {total_culled}"
 
 
 def on_mode_clicked() -> None:
@@ -363,6 +436,41 @@ def on_release_clicked() -> None:
     API.SysMsg(f"[Animal Taming] Auto-Release: {'Enabled' if auto_release_enabled else 'Disabled'}")
 
 
+def on_toggle_peace() -> None:
+    """Toggles optional Peacemaking."""
+    global USE_PEACEMAKING
+    USE_PEACEMAKING = not USE_PEACEMAKING
+    API.SysMsg(f"[Animal Taming] Peacemaking: {'Enabled' if USE_PEACEMAKING else 'Disabled'}")
+
+
+def on_toggle_lore() -> None:
+    """Toggles optional Animal Lore dual-training."""
+    global USE_ANIMAL_LORE
+    USE_ANIMAL_LORE = not USE_ANIMAL_LORE
+    API.SysMsg(f"[Animal Taming] Animal Lore: {'Enabled' if USE_ANIMAL_LORE else 'Disabled'}")
+
+
+def on_toggle_vet() -> None:
+    """Toggles optional Veterinary healing."""
+    global ENABLE_VETERINARY
+    ENABLE_VETERINARY = not ENABLE_VETERINARY
+    API.SysMsg(f"[Animal Taming] Veterinary Healing: {'Enabled' if ENABLE_VETERINARY else 'Disabled'}")
+
+
+def on_toggle_safety_heal() -> None:
+    """Toggles emergency self-healing."""
+    global ENABLE_SAFETY_HEAL
+    ENABLE_SAFETY_HEAL = not ENABLE_SAFETY_HEAL
+    API.SysMsg(f"[Animal Taming] Safety Heal: {'Enabled' if ENABLE_SAFETY_HEAL else 'Disabled'}")
+
+
+def on_toggle_cull() -> None:
+    """Toggles Magery culling on released creatures."""
+    global ENABLE_MAGERY_CULL
+    ENABLE_MAGERY_CULL = not ENABLE_MAGERY_CULL
+    API.SysMsg(f"[Animal Taming] Safe Magery Cull: {'Enabled' if ENABLE_MAGERY_CULL else 'Disabled'}")
+
+
 def on_pause_clicked() -> None:
     """Pauses or resumes the script."""
     global is_paused
@@ -383,15 +491,17 @@ def on_stop_clicked() -> None:
 
 
 def create_control_gump() -> None:
-    """Builds the interactive modern dark Gump UI."""
-    global gump, lbl_status, lbl_skill, lbl_vet, lbl_stats, btn_mode, btn_release, btn_pause, btn_stop
+    """Builds the interactive modern dark Gump UI with option toggles."""
+    global gump, lbl_status, lbl_skill, lbl_vet, lbl_stats
+    global cb_peace, cb_lore, cb_vet, cb_heal, cb_cull
+    global btn_mode, btn_release, btn_pause, btn_stop
 
     gump = API.Gumps.CreateGump(True, True, False)
     gump.SetPos(60, 420)
 
-    # Background panel (dark aesthetic with rounded look)
+    # Background panel (expanded for option toggles)
     bg = API.Gumps.CreateGumpColorBox(0.85, "#151515")
-    bg.SetRect(0, 0, 310, 215)
+    bg.SetRect(0, 0, 310, 275)
     gump.Add(bg)
 
     # Title & Author
@@ -418,37 +528,63 @@ def create_control_gump() -> None:
     gump.Add(lbl_vet)
 
     # Statistics Label
-    lbl_stats = API.Gumps.CreateGumpLabel("Tamed: 0 | Attempts: 0", 996)
+    lbl_stats = API.Gumps.CreateGumpLabel(f"Tamed: 0 | Attempts: 0 | Culled: 0", 996)
     lbl_stats.SetPos(12, 86)
     gump.Add(lbl_stats)
 
+    # Interactive Optional Feature Toggles (Checkboxes)
+    cb_peace = API.Gumps.CreateGumpCheckbox("Peacemaking", 996, USE_PEACEMAKING)
+    cb_peace.SetPos(12, 108)
+    API.Gumps.AddControlOnClick(cb_peace, on_toggle_peace)
+    gump.Add(cb_peace)
+
+    cb_lore = API.Gumps.CreateGumpCheckbox("Animal Lore", 996, USE_ANIMAL_LORE)
+    cb_lore.SetPos(160, 108)
+    API.Gumps.AddControlOnClick(cb_lore, on_toggle_lore)
+    gump.Add(cb_lore)
+
+    cb_vet = API.Gumps.CreateGumpCheckbox("Veterinary", 996, ENABLE_VETERINARY)
+    cb_vet.SetPos(12, 130)
+    API.Gumps.AddControlOnClick(cb_vet, on_toggle_vet)
+    gump.Add(cb_vet)
+
+    cb_heal = API.Gumps.CreateGumpCheckbox("Safety Heal", 996, ENABLE_SAFETY_HEAL)
+    cb_heal.SetPos(160, 130)
+    API.Gumps.AddControlOnClick(cb_heal, on_toggle_heal)
+    gump.Add(cb_heal)
+
+    cb_cull = API.Gumps.CreateGumpCheckbox("Cull (E-Bolt)", 996, ENABLE_MAGERY_CULL)
+    cb_cull.SetPos(12, 152)
+    API.Gumps.AddControlOnClick(cb_cull, on_toggle_cull)
+    gump.Add(cb_cull)
+
     # Mode Selector Button
     btn_mode = API.Gumps.CreateSimpleButton("Mode: Wild Roam" if current_mode == "WILD_ROAM" else "Mode: Target Trainer", 140, 26)
-    btn_mode.SetPos(10, 114)
+    btn_mode.SetPos(10, 180)
     API.Gumps.AddControlOnClick(btn_mode, on_mode_clicked)
     gump.Add(btn_mode)
 
     # Auto-Release Toggle Button
     btn_release = API.Gumps.CreateSimpleButton(f"Auto-Release: {'ON' if auto_release_enabled else 'OFF'}", 140, 26)
-    btn_release.SetPos(160, 114)
+    btn_release.SetPos(160, 180)
     API.Gumps.AddControlOnClick(btn_release, on_release_clicked)
     gump.Add(btn_release)
 
     # Pause / Resume Button
     btn_pause = API.Gumps.CreateSimpleButton("Pause", 140, 26)
-    btn_pause.SetPos(10, 146)
+    btn_pause.SetPos(10, 212)
     API.Gumps.AddControlOnClick(btn_pause, on_pause_clicked)
     gump.Add(btn_pause)
 
     # Stop Button
     btn_stop = API.Gumps.CreateSimpleButton("Stop", 140, 26)
-    btn_stop.SetPos(160, 146)
+    btn_stop.SetPos(160, 212)
     API.Gumps.AddControlOnClick(btn_stop, on_stop_clicked)
     gump.Add(btn_stop)
 
     # Help text
-    lbl_hint = API.Gumps.CreateGumpLabel("Maintains 2-tile range, vet heals & releases", 900)
-    lbl_hint.SetPos(14, 182)
+    lbl_hint = API.Gumps.CreateGumpLabel("Maintains 2-tile range, vet heals & safe cull", 900)
+    lbl_hint.SetPos(14, 248)
     gump.Add(lbl_hint)
 
     API.Gumps.AddControlOnDisposed(gump, on_gump_disposed)
@@ -637,6 +773,78 @@ def attempt_veterinary(target_serial: int) -> bool:
     return False
 
 
+def cull_released_animal(target_serial: int) -> bool:
+    """
+    Safely culls a released animal using Magery (Energy Bolt).
+    STRICT SAFETY GUARDS:
+      - Only casts on Gray/hostile creatures with no positive-karma alignment.
+      - NEVER casts on Innocent (Blue) creatures or positive-karma species, completely
+        preventing any criminal flagging or negative karma loss.
+    """
+    global total_culled
+    if not ENABLE_MAGERY_CULL:
+        return False
+
+    mob = API.FindMobile(target_serial)
+    if not mob or getattr(mob, "IsDead", False):
+        return False
+
+    # Check 1: Must be completely freed (not owned by player)
+    if getattr(mob, "IsRenamable", False):
+        debug_msg(f"Cull aborted for 0x{target_serial:X}: Mobile is still marked Renamable (owned).")
+        return False
+
+    # Check 2: Strict Notoriety Protection - NEVER attack Innocent (Blue)
+    notoriety = getattr(mob, "Notoriety", None)
+    if notoriety == API.Notoriety.Innocent:
+        API.SysMsg(f"[Animal Taming] Cull skipped for {mob.Name or 'Creature'}: Innocent (Blue) mobile - protecting Karma & Notoriety.", 68)
+        return False
+
+    if notoriety not in (API.Notoriety.Gray, API.Notoriety.Criminal, API.Notoriety.Murderer, API.Notoriety.Enemy):
+        debug_msg(f"Cull skipped: Notoriety {notoriety} is not attackable.")
+        return False
+
+    # Check 3: Species / Karma Protection (even if notoriety is strange)
+    graphic = getattr(mob, "Graphic", 0)
+    if graphic in POSITIVE_KARMA_GRAPHICS:
+        API.SysMsg(f"[Animal Taming] Cull skipped for {mob.Name or 'Creature'}: Positive-karma species - protecting Karma.", 68)
+        return False
+
+    raw_name = (getattr(mob, "Name", "") or "").lower()
+    if any(kw in raw_name for kw in POSITIVE_KARMA_KEYWORDS):
+        API.SysMsg(f"[Animal Taming] Cull skipped for {mob.Name or 'Creature'}: Positive-karma keyword match.", 68)
+        return False
+
+    # Check 4: Mana check (Energy Bolt requires 20 mana)
+    cur_mana = getattr(API.Player, "Mana", 0)
+    if cur_mana < CULL_MIN_MANA:
+        debug_msg(f"Insufficient mana for {CULL_SPELL} ({cur_mana} < {CULL_MIN_MANA}). Skipping cull.")
+        return False
+
+    # Check 5: Distance check
+    dist = get_mobile_distance(mob)
+    if dist > 10:
+        debug_msg(f"Target out of spell range ({dist} > 10). Skipping cull.")
+        return False
+
+    # Execute spellcast
+    cull_name = mob.Name or f"0x{target_serial:X}"
+    update_status(f"Culling {cull_name}...")
+    API.SysMsg(f"[Animal Taming] Safely culling hostile {cull_name} via {CULL_SPELL}...", 33)
+
+    API.ClearJournal()
+    API.CastSpell(CULL_SPELL)
+
+    if API.WaitForTarget(timeout=3.0):
+        API.Target(target_serial)
+        API.Pause(1.2)
+        total_culled += 1
+        update_stats()
+        return True
+
+    return False
+
+
 # ==============================================================================
 # Wildlife Discovery & Validation
 # ==============================================================================
@@ -678,6 +886,21 @@ def is_valid_tame_target(mob, player_taming_val: float) -> bool:
 
     # Ignore mobiles tamed/released earlier this session
     if mob.Serial in ignored_mobiles:
+        return False
+
+    # Fast property inspection: ignore creatures already marked tame/bonded in tooltips
+    try:
+        props = (mob.NameAndProps(wait=False, timeout=1) or "").lower()
+        if any(tag in props for tag in ["[tame]", "(tame)", "[bonded]", "(bonded)", "[commandable]"]):
+            ignored_mobiles.add(mob.Serial)
+            return False
+    except Exception:
+        pass
+
+    # Ignore creatures already tamed and indexed (e.g. Tame1, Tame2)
+    raw_name = getattr(mob, "Name", "") or ""
+    if raw_name.lower().startswith("tame"):
+        ignored_mobiles.add(mob.Serial)
         return False
 
     graphic = getattr(mob, "Graphic", 0)
@@ -778,28 +1001,56 @@ def approach_target(mob, max_distance: int = MAX_APPROACH_DISTANCE) -> bool:
 # ==============================================================================
 # Pet Release Automation
 # ==============================================================================
+# Pet Release & Follower Management
+# ==============================================================================
 
-def release_pet(target_serial: int) -> bool:
+def cleanup_stuck_followers() -> int:
     """
-    Releases a newly tamed pet via context menu or speech commands,
-    confirming any release verification dialog.
+    Scans for and releases any lingering pets following the player (excluding mounted pets).
+    Returns the number of pets successfully released.
+    """
+    released_count = 0
+    all_mobs = API.GetAllMobiles(distance=18) or []
+    mount_serial = getattr(API.Player.Mount, "Serial", 0) if API.Player and API.Player.Mount else 0
+
+    for m in all_mobs:
+        if not m or m.Serial == API.Player.Serial:
+            continue
+        # Player-owned pets are marked IsRenamable and are not mounted
+        if getattr(m, "IsRenamable", False) and not getattr(m, "IsMounted", False):
+            if mount_serial and m.Serial == mount_serial:
+                continue
+            name = getattr(m, "Name", None) or f"Pet 0x{m.Serial:X}"
+            API.SysMsg(f"[Animal Taming] Lingering follower detected: {name} (0x{m.Serial:X}). Releasing...", 33)
+            if release_pet(m.Serial, pet_name=name):
+                released_count += 1
+                ignored_mobiles.add(m.Serial)
+            API.Pause(0.8)
+
+    return released_count
+
+
+def release_pet(target_serial: int, pet_name: Optional[str] = None) -> bool:
+    """
+    Releases a newly tamed pet via indexed speech commands or context menu,
+    confirming any release verification dialog and verifying release
+    via journal, mobile ownership status, and follower count.
+    Enforces safe delays to prevent server 'commands tried too fast' throttling.
     """
     mob = API.FindMobile(target_serial)
     if not mob:
         return True
 
-    mob_name = mob.Name or "Pet"
+    mob_name = pet_name or getattr(mob, "Name", None) or "Pet"
     update_status(f"Releasing {mob_name}...")
     debug_msg(f"Initiating pet release for {mob_name} (0x{target_serial:X})...")
 
-    # Command pet to stop and come adjacent so we are well within context menu range
-    API.Msg("all stop")
-    API.Pause(0.2)
-    API.Msg("all follow me")
-    API.Pause(0.4)
-
     # Ensure player is adjacent (within 1 tile) to pet
     approach_target(mob, 1)
+
+    # Command pet to stop with safe anti-spam cooldown
+    API.Msg("all stop")
+    API.Pause(0.8)
 
     followers_before = getattr(API.Player, "Followers", 0)
 
@@ -807,88 +1058,103 @@ def release_pet(target_serial: int) -> bool:
         if API.StopRequested or is_stopped:
             return False
 
-        API.ClearJournal()
-        debug_msg(f"Release attempt #{attempt} on {mob_name}...")
-
-        # 1. Try Context Menu "Release"
-        context_sent = False
-        try:
-            context_sent = API.ContextMenu(target_serial, "Release", timeout=2.0)
-            if context_sent:
-                debug_msg("Context menu 'Release' selected.")
-        except Exception as ex:
-            debug_msg(f"ContextMenu exception: {ex}")
-
-        # 2. Try speech command (both specific name and "all release")
-        if not context_sent:
-            debug_msg("Trying speech command for release...")
-            if mob.Name and " " not in mob.Name and mob.Name != "Wild Animal":
-                API.Msg(f"{mob.Name} release")
-            else:
-                API.Msg("all release")
-
-            # In case the server responds with a target cursor for release
-            if API.WaitForTarget(timeout=1.0):
-                API.Target(target_serial)
-
-        # 3. Handle confirmation gump (PetReleaseGump)
-        if API.WaitForGump(delay=2.0):
-            debug_msg("Release confirmation dialog detected.")
-            # Button 2 is OK/Confirm on standard RunUO/ServUO/ModernUO/OSI
-            API.ReplyGump(2)
-            API.Pause(0.5)
-
-            # If gump is still open, try Button 1 (some custom shards use 1 for OK)
-            if API.WaitForGump(delay=0.5):
-                debug_msg("Gump still open, trying Button 1...")
-                API.ReplyGump(1)
-                API.Pause(0.5)
-
-        # 4. Check if release succeeded
-        API.Pause(0.5)
-
-        # Journal verification
-        for msg in [
-            "released your pet",
-            "has been released",
-            "released",
-            "decides to take its chances",
-            "looks up at you with sadness",
-            "returns to the wild",
-            "no longer following you",
-            "is no longer following you",
-            "is no longer under your control",
-            "free to roam",
-            "you release",
-        ]:
-            if API.InJournal(msg):
-                API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
-                return True
-
-        # Followers verification
-        followers_now = getattr(API.Player, "Followers", 0)
-        if followers_before > 0 and followers_now < followers_before:
-            API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released (followers {followers_before} -> {followers_now}).")
-            return True
-
-        debug_msg(f"Release attempt #{attempt} not yet confirmed. Retrying...")
-        API.Pause(0.5)
-
-    # Final check
-    for msg in [
-        "released your pet",
-        "has been released",
-        "released",
-        "decides to take its chances",
-        "returns to the wild",
-        "no longer following you",
-    ]:
-        if API.InJournal(msg):
+        # Re-check mobile: if it is no longer Renamable, it was already released!
+        mob = API.FindMobile(target_serial)
+        if not mob or not getattr(mob, "IsRenamable", False):
+            debug_msg(f"Pet {mob_name} is no longer owned (IsRenamable=False). Release confirmed.")
             API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
             return True
 
-    API.SysMsg(f"[Animal Taming] Pet {mob_name} release dispatched.")
-    return True
+        # Keep adjacent
+        dist = get_mobile_distance(mob)
+        if dist > 1:
+            approach_target(mob, 1)
+
+        debug_msg(f"Release attempt #{attempt} on {mob_name}...")
+
+        # 1. Primary Release Method: Direct Speech Command
+        # Indexed names (e.g. 'Tame1') have no spaces or articles, ensuring 100% targeting precision
+        API.Msg(f"{mob_name} release")
+        API.Pause(0.8)
+
+        # In case the server responds with a target cursor for release
+        if API.WaitForTarget(timeout=0.8):
+            API.Target(target_serial)
+
+        # 2. Context Menu Fallback if confirmation dialog hasn't appeared yet
+        if not API.HasGump():
+            try:
+                context_sent = API.ContextMenu(target_serial, "Release", timeout=1.5)
+                if context_sent:
+                    debug_msg("Context menu 'Release' selected.")
+                    API.Pause(0.8)
+            except Exception as ex:
+                debug_msg(f"ContextMenu exception: {ex}")
+
+        # 3. Handle confirmation gump (PetReleaseGump)
+        if API.WaitForGump(delay=2.0) or API.HasGump():
+            gump_id = API.HasGump()
+            debug_msg(f"Release confirmation dialog detected (Gump ID: 0x{gump_id:X}).")
+            # Button 2 is OK/Confirm on standard RunUO/ServUO/ModernUO/OSI
+            API.ReplyGump(2, gump_id)
+
+            # Wait for gump to close cleanly (up to 1.5s)
+            start_gump_wait = time.time()
+            while API.HasGump(gump_id) and (time.time() - start_gump_wait) < 1.5:
+                API.Pause(0.1)
+
+            # Only if gump is STILL open after 1.5s, shard might use Button 1 for OK
+            if API.HasGump(gump_id):
+                debug_msg("Gump still open after Button 2; trying Button 1...")
+                API.ReplyGump(1, gump_id)
+                API.Pause(0.8)
+
+        API.Pause(0.5)
+
+        # 4. Verification Check 1: Journal check (case-insensitive via GetJournalEntries & InJournal)
+        entries = API.GetJournalEntries(4.0)
+        recent_text = [str(e.Text).lower() for e in entries] if entries else []
+        journal_matched = any(
+            any(phrase in line for phrase in RELEASE_JOURNAL_PHRASES)
+            for line in recent_text
+        ) or any(API.InJournal(p) for p in RELEASE_JOURNAL_PHRASES)
+
+        if journal_matched:
+            API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
+            return True
+
+        # 4. Verification Check 2: Mobile ownership status (IsRenamable becomes False when released)
+        mob = API.FindMobile(target_serial)
+        if not mob or not getattr(mob, "IsRenamable", False):
+            API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released (creature freed).")
+            return True
+
+        # 4. Verification Check 3: Followers count reduction
+        followers_now = getattr(API.Player, "Followers", 0)
+        if followers_before > 0 and followers_now < followers_before:
+            if followers_now <= base_followers:
+                API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released (followers {followers_before} -> {followers_now}).")
+            else:
+                extra = followers_now - base_followers
+                API.SysMsg(f"[Animal Taming] Pet {mob_name} released (followers {followers_before} -> {followers_now}), but {extra} older follower(s) remain!", 33)
+                cleanup_stuck_followers()
+            return True
+
+        # Check for command rate limiter messages in journal
+        if any(any(busy in line for busy in ["too fast", "wait to give", "speaking too quickly"]) for line in recent_text):
+            debug_msg("Pet command rate limiter detected. Waiting 1.5s before retry...")
+            API.Pause(1.5)
+        else:
+            API.Pause(0.8)
+
+    # Final check on mobile status
+    mob = API.FindMobile(target_serial)
+    if not mob or not getattr(mob, "IsRenamable", False):
+        API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
+        return True
+
+    API.SysMsg(f"[Animal Taming] WARNING: Failed to confirm release of {mob_name}!", 33)
+    return False
 
 
 # ==============================================================================
@@ -1021,6 +1287,19 @@ def execute_tame_attempt(target_serial: int) -> str:
 
 def run_wild_roam_cycle(player_taming_val: float) -> None:
     """Executes one cycle of wild animal scanning and taming."""
+    # Follower limit safeguard: Check if player has max followers or lingering followers
+    cur_followers = getattr(API.Player, "Followers", 0)
+    max_followers = getattr(API.Player, "FollowersMax", 5) or 5
+    if cur_followers >= max_followers:
+        API.SysMsg(f"[Animal Taming] Followers at limit ({cur_followers}/{max_followers})! Releasing stuck pets...", 33)
+        cleanup_stuck_followers()
+        cur_followers = getattr(API.Player, "Followers", 0)
+        if cur_followers >= max_followers:
+            update_status("Followers Full!")
+            API.SysMsg(f"[Animal Taming] Followers still at cap ({cur_followers}/{max_followers}). Pausing for safety.", 33)
+            API.Pause(3.0)
+            return
+
     update_status("Searching for Wildlife...")
     target_mob = find_wild_taming_target(player_taming_val)
 
@@ -1050,13 +1329,29 @@ def run_wild_roam_cycle(player_taming_val: float) -> None:
         update_stats()
         API.SysMsg(f"[Animal Taming] Successfully tamed {mob_name}!")
 
+        # Indexed renaming for clean release & permanent re-tame prevention
+        indexed_name = f"Tame{total_tamed}"
+        try:
+            API.Rename(mob_serial, indexed_name)
+            debug_msg(f"Renamed creature 0x{mob_serial:X} to {indexed_name}.")
+            API.Pause(0.8)
+        except Exception as ex:
+            debug_msg(f"Rename exception: {ex}")
+            indexed_name = mob_name
+
         # Apply Veterinary healing if creature was damaged before releasing
         if ENABLE_VETERINARY:
             attempt_veterinary(mob_serial)
 
         if auto_release_enabled:
             API.Pause(0.5)
-            release_pet(mob_serial)
+            released = release_pet(mob_serial, pet_name=indexed_name)
+            if not released:
+                API.SysMsg(f"[Animal Taming] WARNING: Release of {indexed_name} failed. Attempting follower cleanup...", 33)
+                cleanup_stuck_followers()
+            elif ENABLE_MAGERY_CULL:
+                API.Pause(0.8)
+                cull_released_animal(mob_serial)
 
         # Mark as handled so we don't immediately re-target it
         ignored_mobiles.add(mob_serial)
@@ -1157,7 +1452,7 @@ def run_target_trainer_cycle() -> None:
 # ==============================================================================
 
 def main():
-    global start_skill_value, last_skill_value, start_vet_value, last_vet_value, is_stopped
+    global start_skill_value, last_skill_value, start_vet_value, last_vet_value, base_followers, is_stopped
 
     skill_obj = API.GetSkill("Animal Taming")
     if not skill_obj:
@@ -1167,6 +1462,9 @@ def main():
     cap = TARGET_CAP if TARGET_CAP is not None else skill_obj.Cap
     start_skill_value = skill_obj.Value
     last_skill_value = start_skill_value
+
+    # Record baseline followers (e.g. 1 if riding an active mount, 0 if unmounted or ethereal)
+    base_followers = getattr(API.Player, "Followers", 0) or 0
 
     vet_obj = API.GetSkill("Veterinary")
     if vet_obj:
@@ -1232,7 +1530,7 @@ def main():
 
     update_status("Finished")
     dispose_gump()
-    API.SysMsg(f"[Animal Taming] Script ended. Total Tamed: {total_tamed}, Total Attempts: {total_attempts}, Total Vet Heals: {total_vet_heals}.")
+    API.SysMsg(f"[Animal Taming] Script ended. Total Tamed: {total_tamed}, Total Attempts: {total_attempts}, Total Vet Heals: {total_vet_heals}, Total Culled: {total_culled}.")
 
 
 main()

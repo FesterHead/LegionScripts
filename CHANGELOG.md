@@ -35,6 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatically halts fishing, unquips the fishing pole to backpack, undresses the "Fishing" profile, and switches to the "Archery" dress profile (with backpack bow equip fallback).
   - Enters War Mode and attacks the hostile mobile.
   - Halts automated fishing with a "Combat - Click Start when ready" Gump status, leaving the player in full manual control without automatically resuming fishing until the player clicks "Start".
+- Updated `FesterUO/TrainAnimalTaming.py`:
+  - Resolved shaky pet release and follower creep issues: fixed a race condition where confirmation gump handling inadvertently sent Button 1 (Cancel) after Button 2 (OK), actively cancelling pet releases on standard RunUO/ServUO servers.
+  - Implemented multi-tiered pet release verification: expanded release journal keyword detection to check normalized text case-insensitively across 18+ server variants (`GetJournalEntries` and `InJournal`), directly verified pet ownership status via `mob.IsRenamable` (flipping to `False` upon release), and checked follower reductions.
+  - Added automated stuck follower recovery (`cleanup_stuck_followers`): scans for and releases lingering pets if follower count exceeds baseline, preventing followers from creeping up to the 5-follower limit and stalling taming.
+  - Added follower cap pre-taming safeguard: checks `API.Player.Followers` against `FollowersMax` before attempting to tame and cleans up stuck followers or halts safely.
+  - Added indexed pet renaming (`Tame1`, `Tame2`, etc.) upon taming: eliminates pet name ambiguity, spaces, and leading articles during speech release, and permanently flags the creature in the game world.
+  - Enforced server pet command anti-spam throttling: spaced pet commands (`all stop`, `<name> release`) by 0.8s and added detection for server rate-limit messages (`"commands were tried too fast"`, `"wait to give another order"`) with automatic backoff delays.
+  - Improved wild mobile target filtering and tamed history: added property/tooltip inspection (`mob.NameAndProps`) to ignore creatures already flagged `[tame]`, `[bonded]`, or `[commandable]`, and automatically skips any wildlife starting with `Tame` to prevent re-taming across script restarts.
+  - Added Safe Magery Culling (`ENABLE_MAGERY_CULL`, default `False`): safely casts Energy Bolt on released hostile/gray creatures to clear spawns and train Magery concurrently. Includes strict multi-tier protections against criminal flagging and karma loss (verifies mobile is not owned, strictly forbids casting on `Innocent` (Blue) creatures, checks `POSITIVE_KARMA_GRAPHICS` and keywords, and verifies mana reserves).
+  - Added interactive Gump feature toggle checkboxes (`CreateGumpCheckbox`): provides in-game runtime toggles for **Peacemaking**, **Animal Lore**, **Veterinary**, **Safety Heal**, and **Cull (E-Bolt)**, and added real-time tracking for culled creatures on the statistics label.
 - Updated [`.gitignore`](.gitignore) and untracked base TazUO client-generated files (`API.py`, `__builtins__.py`, `_ScriptContext.cs`, `LegionScripts.csproj`) so that client updates and local API stub regenerations do not dirty git status, while keeping user workspace settings (`LegionScripts.code-workspace`) tracked.
 
 ### Added
