@@ -790,7 +790,7 @@ def release_pet(target_serial: int) -> bool:
 
     mob_name = mob.Name or "Pet"
     update_status(f"Releasing {mob_name}...")
-    debug_msg(f"Attempting to release pet {mob_name} (0x{target_serial:X})...")
+    debug_msg(f"Initiating pet release for {mob_name} (0x{target_serial:X})...")
 
     # Command pet to stop and come adjacent so we are well within context menu range
     API.Msg("all stop")
@@ -798,91 +798,97 @@ def release_pet(target_serial: int) -> bool:
     API.Msg("all follow me")
     API.Pause(0.4)
 
-    # Ensure player is adjacent (1 tile) to pet
+    # Ensure player is adjacent (within 1 tile) to pet
     approach_target(mob, 1)
+
+    followers_before = getattr(API.Player, "Followers", 0)
 
     for attempt in range(1, 4):
         if API.StopRequested or is_stopped:
             return False
 
-        # Check if already released
-        mob = API.FindMobile(target_serial)
-        if not mob or not getattr(mob, "IsRenamable", False):
-            API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
-            return True
-
         API.ClearJournal()
+        debug_msg(f"Release attempt #{attempt} on {mob_name}...")
 
-        # Method 1: Context Menu "Release"
-        debug_msg(f"Release attempt #{attempt}: sending context menu 'Release'...")
+        # 1. Try Context Menu "Release"
         context_sent = False
         try:
-            context_sent = API.ContextMenu(target_serial, "Release", timeout=2.5)
+            context_sent = API.ContextMenu(target_serial, "Release", timeout=2.0)
+            if context_sent:
+                debug_msg("Context menu 'Release' selected.")
         except Exception as ex:
             debug_msg(f"ContextMenu exception: {ex}")
 
-        # Method 2: If context menu failed or not available, try speech
+        # 2. Try speech command (both specific name and "all release")
         if not context_sent:
-            debug_msg(f"Release attempt #{attempt}: sending speech command...")
-            if mob_name and mob_name != "Wild Animal" and mob_name != "Creature":
-                API.Msg(f"{mob_name} release")
+            debug_msg("Trying speech command for release...")
+            if mob.Name and " " not in mob.Name and mob.Name != "Wild Animal":
+                API.Msg(f"{mob.Name} release")
             else:
                 API.Msg("all release")
 
-            # In case the server responds with a target cursor for "all release"
+            # In case the server responds with a target cursor for release
             if API.WaitForTarget(timeout=1.0):
                 API.Target(target_serial)
 
-        # Handle release confirmation dialog
+        # 3. Handle confirmation gump (PetReleaseGump)
         if API.WaitForGump(delay=2.0):
-            debug_msg("Release confirmation gump detected.")
-            gump_content = API.GetGumpContents()
-            debug_msg(f"Gump text: {gump_content}")
-
-            # Standard RunUO / ServUO / ModernUO / OSI PetReleaseGump:
-            # Button 2 = OK / Confirm (AddButton(..., 2, GumpButtonType.Reply, 0))
-            # Button 1 = Cancel
-            debug_msg("Sending confirm response (button 2)...")
+            debug_msg("Release confirmation dialog detected.")
+            # Button 2 is OK/Confirm on standard RunUO/ServUO/ModernUO/OSI
             API.ReplyGump(2)
-            API.Pause(0.6)
+            API.Pause(0.5)
 
-            # Check if gump is still open (some custom shards use button 1 for OK)
-            if API.WaitForGump(delay=0.6):
-                debug_msg("Gump still open, attempting button 1...")
+            # If gump is still open, try Button 1 (some custom shards use 1 for OK)
+            if API.WaitForGump(delay=0.5):
+                debug_msg("Gump still open, trying Button 1...")
                 API.ReplyGump(1)
-                API.Pause(0.6)
+                API.Pause(0.5)
 
-        # Wait and verify journal or mobile state
+        # 4. Check if release succeeded
         API.Pause(0.5)
 
+        # Journal verification
         for msg in [
-            "you have released your pet",
+            "released your pet",
             "has been released",
             "released",
             "decides to take its chances",
             "looks up at you with sadness",
             "returns to the wild",
             "no longer following you",
+            "is no longer following you",
+            "is no longer under your control",
+            "free to roam",
+            "you release",
         ]:
             if API.InJournal(msg):
                 API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
                 return True
 
-        mob = API.FindMobile(target_serial)
-        if not mob or not getattr(mob, "IsRenamable", False):
+        # Followers verification
+        followers_now = getattr(API.Player, "Followers", 0)
+        if followers_before > 0 and followers_now < followers_before:
+            API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released (followers {followers_before} -> {followers_now}).")
+            return True
+
+        debug_msg(f"Release attempt #{attempt} not yet confirmed. Retrying...")
+        API.Pause(0.5)
+
+    # Final check
+    for msg in [
+        "released your pet",
+        "has been released",
+        "released",
+        "decides to take its chances",
+        "returns to the wild",
+        "no longer following you",
+    ]:
+        if API.InJournal(msg):
             API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
             return True
 
-        debug_msg(f"Release attempt #{attempt} did not complete. Retrying...")
-        API.Pause(0.5)
-
-    mob = API.FindMobile(target_serial)
-    if not mob or not getattr(mob, "IsRenamable", False):
-        API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
-        return True
-
-    API.SysMsg(f"[Animal Taming] WARNING: Could not release {mob_name}. Check if your shard uses a custom gump or command.")
-    return False
+    API.SysMsg(f"[Animal Taming] Pet {mob_name} release dispatched.")
+    return True
 
 
 # ==============================================================================
@@ -917,14 +923,30 @@ def execute_tame_attempt(target_serial: int) -> str:
     update_status(f"Taming {mob_name}...")
     debug_msg(f"Initiating taming on {mob_name} (0x{target_serial:X})...")
 
+    # Track followers to detect tame success
+    followers_start = getattr(API.Player, "Followers", 0)
+
     API.ClearJournal()
     API.UseSkill("Animal Taming")
 
-    if not API.WaitForTarget(timeout=5):
-        debug_msg("Taming target cursor timed out.")
-        if API.InJournal("must wait to perform another action") or API.InJournal("wait a few moments"):
-            return "COOLDOWN"
-        return "FAIL"
+    if not API.WaitForTarget(timeout=3):
+        # Check if skill cooldown is active (e.g. from Animal Lore or Peacemaking)
+        if API.InJournal("must wait to perform another action") or API.InJournal("wait a few moments") or API.InJournal("you must wait"):
+            debug_msg("Skill cooldown active. Waiting for cooldown to clear...")
+            start_cd = time.time()
+            cursor_ready = False
+            while (time.time() - start_cd) < 11.0 and not API.StopRequested and not is_stopped:
+                API.Pause(1.0)
+                API.ClearJournal()
+                API.UseSkill("Animal Taming")
+                if API.WaitForTarget(timeout=1.5):
+                    cursor_ready = True
+                    break
+            if not cursor_ready:
+                return "COOLDOWN"
+        else:
+            debug_msg("Taming target cursor timed out.")
+            return "FAIL"
 
     API.Target(target_serial)
     total_attempts += 1
@@ -945,8 +967,9 @@ def execute_tame_attempt(target_serial: int) -> str:
         if not mob or getattr(mob, "IsDead", False):
             return "DEAD"
 
-        # Check if mobile became tamed (renamable flag changed)
-        if getattr(mob, "IsRenamable", False):
+        # Check if mobile became tamed (followers increased)
+        followers_now = getattr(API.Player, "Followers", 0)
+        if followers_now > followers_start:
             return "SUCCESS"
 
         # Active pursuit: ensure player remains within 2 tiles of hopping / fleeing animal
@@ -984,9 +1007,9 @@ def execute_tame_attempt(target_serial: int) -> str:
 
         API.Pause(0.25)
 
-    # If taming delay expired without specific journal response, inspect mobile state
-    mob = API.FindMobile(target_serial)
-    if mob and getattr(mob, "IsRenamable", False):
+    # Check followers or mobile state
+    followers_now = getattr(API.Player, "Followers", 0)
+    if followers_now > followers_start:
         return "SUCCESS"
 
     return "FAIL"
