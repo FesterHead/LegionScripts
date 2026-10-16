@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FesterUO/TrainAnimalTaming.py` to v1.0.3:
+  - Prioritized direct full-name speech release (`<actual_name> release`, e.g. `a hind release`): directly commands newly tamed wildlife using their exact in-game names to open the release confirmation dialog immediately.
+  - Set `confirm_release_gump` primary response to `Button 2` (standard CONTINUE button in ServUO/RunUO `PetReleaseGump.cs`) with fallback to `Button 1`, preventing release dialog cancellations.
+  - Fixed `cleanup_stuck_followers` targeting: targets tracked follower serials directly to prevent accidentally clicking ambient untamed wildlife (such as innocent deer or great harts).
+
 - Updated `FesterUO/TrainAnimalTaming.py` to v1.0.2:
   - Removed creature renaming (`API.Rename`): completely eliminated the indexed renaming attempt (`Tame1`, `Tame2`, etc.) which caused server-side validation rejections (`System: That name is unacceptable.`) on wild creatures, eliminating unnecessary delays and journal spam.
   - Added in-game `SysMsg` notification when pet release confirmation dialogs are confirmed.

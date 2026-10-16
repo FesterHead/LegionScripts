@@ -56,7 +56,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.2"
+SCRIPT_VERSION: str = "1.0.3"
 
 # Primary training mode:
 # "WILD_ROAM"     - Scans for and hunts wild animals in the area to tame and release.
@@ -1020,8 +1020,8 @@ def approach_target(mob, max_distance: int = MAX_APPROACH_DISTANCE) -> bool:
 def confirm_release_gump(timeout: float = 2.5) -> bool:
     """
     Waits for and confirms the server pet release confirmation dialog.
-    In standard ServUO/RunUO, Button 1 is Confirm (Release) and Button 0/2 is Cancel.
-    Tries Button 1 first, then falls back to Button 2 if the dialog remains open.
+    In standard ServUO/RunUO, Button 2 is Confirm (OK/Release) and Button 1 is Cancel.
+    Tries Button 2 first, then falls back to Button 1 if the dialog remains open.
     """
     if not API.WaitForGump(delay=timeout) and not API.HasGump():
         return False
@@ -1034,15 +1034,15 @@ def confirm_release_gump(timeout: float = 2.5) -> bool:
     except Exception:
         pass
 
-    debug_msg("Release confirmation dialog detected. Replying Button 1 (Confirm)...")
-    API.SysMsg("[Animal Taming] Confirming release dialog...", 68)
-    API.ReplyGump(1)
+    debug_msg("Release confirmation dialog detected. Replying Button 2 (Confirm)...")
+    API.SysMsg("[Animal Taming] Confirming release dialog (Button 2)...", 68)
+    API.ReplyGump(2)
     API.Pause(GUMP_DELAY)
 
-    # If gump is still open, try Button 2 (some custom shards use Button 2 for Confirm)
+    # If gump is still open, try Button 1 (some custom shards use Button 1 for Confirm)
     if API.WaitForGump(delay=0.8) or API.HasGump():
-        debug_msg("Release dialog still open; replying Button 2...")
-        API.ReplyGump(2)
+        debug_msg("Release dialog still open; replying Button 1...")
+        API.ReplyGump(1)
         API.Pause(GUMP_DELAY)
 
     # Wait for dialog to dismiss
@@ -1143,9 +1143,10 @@ def cleanup_stuck_followers() -> int:
         API.Pause(COMMAND_DELAY)
         API.Msg("all release")
         if API.WaitForTarget(timeout=2.0):
-            target = API.NearestMobile([API.Notoriety.Innocent, API.Notoriety.Ally], 10)
-            if target and target.Serial != API.Player.Serial and target.Serial != mount_serial:
-                API.Target(target.Serial)
+            # Target known tracked serials first to avoid accidental untamed wildlife clicks
+            target_to_click = list(known_serials)[0] if known_serials else 0
+            if target_to_click:
+                API.Target(target_to_click)
                 API.Pause(GUMP_DELAY)
         confirm_release_gump(timeout=2.5)
 
@@ -1161,7 +1162,7 @@ def cleanup_stuck_followers() -> int:
 
 def release_pet(target_serial: int, pet_name: Optional[str] = None) -> bool:
     """
-    Releases a newly tamed pet via context menu or speech commands,
+    Releases a newly tamed pet via speech commands or context menu,
     confirming any release verification dialog and verifying release
     via journal messages and follower count reduction.
     """
@@ -1203,9 +1204,26 @@ def release_pet(target_serial: int, pet_name: Optional[str] = None) -> bool:
             API.Pause(0.5)
 
         API.ClearJournal()
-        debug_msg(f"Release attempt #{attempt} on {clean_name} (0x{target_serial:X})...")
+        debug_msg(f"Release attempt #{attempt} on {actual_name} (0x{target_serial:X})...")
 
-        # 1. Primary Method: Context Menu "Release" (packet-based)
+        # 1. Primary Method: Direct Full Name Speech (e.g. "a hind release", "a timber wolf release")
+        # In UO, wild tamed creatures respond directly to their exact full name '<name> release'
+        # which opens the PetReleaseGump confirmation dialog immediately without needing a target cursor!
+        API.Pause(COMMAND_DELAY)
+        debug_msg(f"Trying direct full name speech: '{actual_name} release'...")
+        API.Msg(f"{actual_name} release")
+        if API.WaitForTarget(timeout=1.5):
+            API.Target(target_serial)
+            API.Pause(GUMP_DELAY)
+        confirm_release_gump(timeout=2.5)
+
+        # Verification check after direct full name speech
+        if is_pet_released_state(target_serial, followers_before):
+            API.SysMsg(f"[Animal Taming] Pet {actual_name} successfully released.")
+            tamed_pets_pending_release.discard(target_serial)
+            return True
+
+        # 2. Context Menu "Release" (packet-based)
         try:
             context_sent = API.ContextMenu(target_serial, "Release", timeout=2.0)
             if context_sent:
@@ -1220,7 +1238,7 @@ def release_pet(target_serial: int, pet_name: Optional[str] = None) -> bool:
             tamed_pets_pending_release.discard(target_serial)
             return True
 
-        # 2. Universal Speech Method: "all release"
+        # 3. Universal Speech Method: "all release"
         API.Pause(COMMAND_DELAY)
         debug_msg(f"Trying universal speech: 'all release' for 0x{target_serial:X}...")
         API.Msg("all release")
@@ -1235,10 +1253,10 @@ def release_pet(target_serial: int, pet_name: Optional[str] = None) -> bool:
             tamed_pets_pending_release.discard(target_serial)
             return True
 
-        # 3. Direct Named Speech Method (if single word name)
-        if " " not in clean_name and clean_name not in ("pet", "creature"):
+        # 4. Clean Named Speech Method (e.g. "hind release" if clean_name differs from actual_name)
+        if clean_name != actual_name.lower() and " " not in clean_name and clean_name not in ("pet", "creature"):
             API.Pause(COMMAND_DELAY)
-            debug_msg(f"Trying named speech: '{clean_name} release'...")
+            debug_msg(f"Trying clean named speech: '{clean_name} release'...")
             API.Msg(f"{clean_name} release")
             if API.WaitForTarget(timeout=1.5):
                 API.Target(target_serial)
