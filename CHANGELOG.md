@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Standardized script versioning and author branding across all 28 scripts in `FesterUO/`:
+  - Added internal version constants (`SCRIPT_VERSION: str = "1.0.0"`) to every script.
+  - Standardized Gump author and version labels across all 25 interactive interfaces: `lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)` positioned uniformly in the top header row, alongside simplified, readable title labels.
+  - Included version numbers and author attribution in startup console/SysMsg notifications.
+
 - Updated `AGENTS.md` and `.github/copilot-instructions.md`:
   - Added explicit instructions for AI agents and assistants to enforce workspace markdownlint rules defined in `.markdownlint.json` when creating or modifying Markdown files.
   - Mandated resolving all supported formatting issues (equivalent to running the VS Code command `markdownlint: Fix all supported issues in file`), maintaining clean list hierarchies, proper blank line separation between blocks, and eliminating trailing whitespace.

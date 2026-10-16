@@ -44,6 +44,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Search radius in tiles around the player to locate wildlife
 SEARCH_RADIUS: int = 15
 
@@ -384,8 +387,8 @@ def create_control_gump() -> None:
     lbl_title.SetPos(10, 8)
     gump.Add(lbl_title)
 
-    lbl_author = API.Gumps.CreateGumpLabel("by FesterHead", 996)
-    lbl_author.SetPos(200, 8)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(150, 8)
     gump.Add(lbl_author)
 
     # Status label
@@ -957,7 +960,7 @@ def main():
         else:
             API.SysMsg(f"[HuntAnimals] WARNING: Dress profile '{DRESS_PROFILE}' not found in TazUO! Available: {', '.join(available_outfits)}")
 
-    API.SysMsg(f"[HuntAnimals] Animal Hunter initialized (Radius: {SEARCH_RADIUS}t, Categories: {', '.join(cats)}, Dress: '{DRESS_PROFILE}').")
+    API.SysMsg(f"[HuntAnimals] Animal Hunter v{SCRIPT_VERSION} by FesterHead initialized (Radius: {SEARCH_RADIUS}t, Categories: {', '.join(cats)}, Dress: '{DRESS_PROFILE}').")
 
     # Main detection loop
     while not API.StopRequested and not is_stopped:

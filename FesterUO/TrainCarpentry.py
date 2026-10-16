@@ -42,6 +42,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Direct Satchel Crafting (crafts directly from resource satchel without pulling to backpack)
 DIRECT_SATCHEL_CRAFTING = True
 
@@ -291,9 +294,12 @@ def create_control_gump() -> None:
     gump.Add(bg)
 
     # Title label (gold hue 53)
-    title = API.Gumps.CreateGumpLabel("FesterUO Train Carpentry", 53)
+    title = API.Gumps.CreateGumpLabel("Carpentry Trainer", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(175, 8)
+    gump.Add(lbl_author)
 
     # Status
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)

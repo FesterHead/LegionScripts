@@ -39,6 +39,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 DEBUG: bool = False
 
 # Delay in seconds between casts. FesterUO allows fast harvesting (1.0s–2.0s).
@@ -195,17 +198,20 @@ def create_control_gump() -> None:
     global gump, lbl_status, lbl_casts, lbl_fish, lbl_small_fish, lbl_junk, lbl_skill, btn_action
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
-    gump.SetRect(100, 100, 240, 200)
+    gump.SetRect(100, 100, 285, 200)
 
     # Semi-transparent dark background
     bg = API.Gumps.CreateGumpColorBox(0.8, "#1A1A1A")
-    bg.SetRect(0, 0, 240, 200)
+    bg.SetRect(0, 0, 285, 200)
     gump.Add(bg)
 
     # Title label (gold hue 53)
-    title = API.Gumps.CreateGumpLabel("FesterUO Fisher", 53)
+    title = API.Gumps.CreateGumpLabel("Fisher", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(150, 8)
+    gump.Add(lbl_author)
 
     # Status label
     lbl_status = API.Gumps.CreateGumpLabel("Status: Ready", 996)

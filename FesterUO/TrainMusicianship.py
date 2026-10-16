@@ -43,6 +43,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Target skill level to stop training (e.g. 100.0 for GM, 120.0 for Legendary).
 # Set to None to automatically train until your character's skill cap.
 TARGET_SKILL: Optional[float] = None
@@ -240,17 +243,20 @@ def create_control_gump() -> None:
     global btn_pause, btn_restock, btn_stop
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
-    gump.SetRect(120, 120, 270, 175)
+    gump.SetRect(120, 120, 285, 175)
 
     # Semi-transparent dark background
     bg = API.Gumps.CreateGumpColorBox(0.85, "#1A1A1A")
-    bg.SetRect(0, 0, 270, 175)
+    bg.SetRect(0, 0, 285, 175)
     gump.Add(bg)
 
     # Title label (gold hue 53)
     title = API.Gumps.CreateGumpLabel("Musicianship Trainer", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(150, 8)
+    gump.Add(lbl_author)
 
     # Status label
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)

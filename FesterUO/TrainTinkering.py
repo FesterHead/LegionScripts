@@ -44,6 +44,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Target Tinkering skill to stop training (e.g. 50.0 for Blacksmith tools, 100.0 for GM)
 TARGET_SKILL = 100.0
 
@@ -292,9 +295,12 @@ def create_control_gump() -> None:
     gump.Add(bg)
 
     # Title label (gold hue 53)
-    title = API.Gumps.CreateGumpLabel("FesterUO Train Tinkering", 53)
+    title = API.Gumps.CreateGumpLabel("Tinkering Trainer", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(175, 8)
+    gump.Add(lbl_author)
 
     # Status
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)

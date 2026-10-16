@@ -44,6 +44,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Target Tailoring skill to stop training (e.g. 100.0 for GM, 120.0 for Legendary)
 TARGET_SKILL: float = 120.0
 
@@ -295,9 +298,12 @@ def create_control_gump() -> None:
     gump.Add(bg)
 
     # Title label (gold hue 53)
-    title = API.Gumps.CreateGumpLabel("FesterUO Train Tailoring", 53)
+    title = API.Gumps.CreateGumpLabel("Tailoring Trainer", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(175, 8)
+    gump.Add(lbl_author)
 
     # Status
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)

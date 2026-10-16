@@ -45,6 +45,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Primary training mode:
 # "SPARRING"   - Coordinates two pets fighting each other, healing both continuously.
 # "SINGLE"     - Monitors and heals a single pet or patient whenever damaged.
@@ -371,8 +374,8 @@ def create_control_gump() -> None:
     lbl_title.SetPos(12, 8)
     gump.Add(lbl_title)
 
-    lbl_author = API.Gumps.CreateGumpLabel("by FesterHead", 996)
-    lbl_author.SetPos(215, 8)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(170, 8)
     gump.Add(lbl_author)
 
     # Status Label
@@ -756,7 +759,7 @@ def main():
     update_status("Ready")
 
     API.SysMsg(
-        f"[Veterinary] Starting Veterinary training (Current: {start_skill_value:.1f}, Goal: {cap:.1f}, Mode: {current_mode})..."
+        f"[Veterinary] Starting Veterinary training v{SCRIPT_VERSION} by FesterHead (Current: {start_skill_value:.1f}, Goal: {cap:.1f}, Mode: {current_mode})..."
     )
 
     while not API.StopRequested and not is_stopped:

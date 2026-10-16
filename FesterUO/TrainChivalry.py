@@ -35,6 +35,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 DRESS_PROFILE = "Archery" # Dress profile to equip weapon/gear automatically
 USE_MEDITATION = True     # Automatically use Meditation when mana is low during training
 CAST_DELAY = 3.0          # Delay in seconds after casting a spell
@@ -128,17 +131,20 @@ def create_control_gump():
     global gump, lbl_status, lbl_skill, lbl_mana, lbl_tithe, btn_pause, btn_stop
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
-    gump.SetRect(100, 100, 240, 150)
+    gump.SetRect(100, 100, 285, 150)
 
     # Semi-transparent dark background
     bg = API.Gumps.CreateGumpColorBox(0.8, "#1A1A1A")
-    bg.SetRect(0, 0, 240, 150)
+    bg.SetRect(0, 0, 285, 150)
     gump.Add(bg)
 
     # Title label (gold hue 53)
     title = API.Gumps.CreateGumpLabel("Chivalry Trainer", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(150, 8)
+    gump.Add(lbl_author)
 
     # Status label
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)

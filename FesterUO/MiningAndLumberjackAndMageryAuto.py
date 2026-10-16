@@ -45,6 +45,9 @@ import API
 # Configuration - Harvesting
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Delay in seconds between harvesting swings (1.0s on fast shards, 4.5s on OSI)
 SWING_DELAY: float = 1.0
 
@@ -539,9 +542,12 @@ def create_control_gump() -> None:
     gump.Add(bg)
 
     # Title label (gold hue 53)
-    title = API.Gumps.CreateGumpLabel("FesterUO Miner, Lumberjack & Mage", 53)
+    title = API.Gumps.CreateGumpLabel("Miner, Lumberjack & Mage", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(205, 8)
+    gump.Add(lbl_author)
 
     # Harvest Status
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)

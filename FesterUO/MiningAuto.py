@@ -39,6 +39,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Enable verbose logging in the client console/journal
 DEBUG: bool = False
 
@@ -295,17 +298,20 @@ def create_control_gump() -> None:
     global gump, lbl_status, lbl_deposits, lbl_ores, lbl_skill, lbl_stats, btn_pause, btn_stop
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
-    gump.SetRect(100, 100, 240, 170)
+    gump.SetRect(100, 100, 285, 170)
 
     # Semi-transparent dark background
     bg = API.Gumps.CreateGumpColorBox(0.8, "#1A1A1A")
-    bg.SetRect(0, 0, 240, 170)
+    bg.SetRect(0, 0, 285, 170)
     gump.Add(bg)
 
     # Title label (gold hue 53)
-    title = API.Gumps.CreateGumpLabel("FesterUO Auto Miner", 53)
+    title = API.Gumps.CreateGumpLabel("Auto Miner", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(150, 8)
+    gump.Add(lbl_author)
 
     # Status label
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)

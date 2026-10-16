@@ -50,6 +50,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Delay in seconds between moving items (prevents server packet drops or floods)
 MOVE_DELAY: float = 0.65
 
@@ -248,17 +251,20 @@ def create_control_gump() -> None:
     global gump, lbl_status, lbl_weapons, lbl_armor, lbl_jewelry, lbl_total, lbl_skipped, btn_pause, btn_stop
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
-    gump.SetRect(100, 100, 260, 205)
+    gump.SetRect(100, 100, 285, 205)
 
     # Semi-transparent dark background
     bg = API.Gumps.CreateGumpColorBox(0.85, "#1A1A1A")
-    bg.SetRect(0, 0, 260, 205)
+    bg.SetRect(0, 0, 285, 205)
     gump.Add(bg)
 
     # Title label (gold hue 53)
-    title = API.Gumps.CreateGumpLabel("FesterUO Artifact Mover", 53)
+    title = API.Gumps.CreateGumpLabel("Artifact Mover", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(150, 8)
+    gump.Add(lbl_author)
 
     # Status label
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)

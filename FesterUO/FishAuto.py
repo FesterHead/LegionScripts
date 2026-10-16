@@ -41,6 +41,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Enable verbose debug messages in the client console/journal
 DEBUG: bool = False
 
@@ -304,17 +307,20 @@ def create_control_gump() -> None:
     global gump, lbl_status, lbl_skill, lbl_fish, lbl_junk, lbl_enemies, btn_pause, btn_stop
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
-    gump.SetRect(100, 100, 240, 185)
+    gump.SetRect(100, 100, 285, 185)
 
     # Semi-transparent dark background
     bg = API.Gumps.CreateGumpColorBox(0.8, "#1A1A1A")
-    bg.SetRect(0, 0, 240, 185)
+    bg.SetRect(0, 0, 285, 185)
     gump.Add(bg)
 
     # Title label (gold hue 53)
-    title = API.Gumps.CreateGumpLabel("FesterUO Auto Fisher", 53)
+    title = API.Gumps.CreateGumpLabel("Auto Fisher", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(150, 8)
+    gump.Add(lbl_author)
 
     # Status label
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)

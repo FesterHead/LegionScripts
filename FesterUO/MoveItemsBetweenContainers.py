@@ -22,6 +22,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Delay in seconds between moving items (prevents out-of-sequence drops or server flood)
 MOVE_DELAY: float = 0.65
 
