@@ -230,8 +230,9 @@ An automated Veterinary skill training script featuring dual training architectu
 - **Emergency Combat Separation:** Automatically broadcasts `"all stop"` and `"all follow me"` if either sparring pet falls below `EMERGENCY_HP_PERCENT` (default 30%), holding combat until both pets are healed back above `RESUME_HP_PERCENT` (default 85%).
 - **Poison Curing & Resurrection:** Prioritizes curing poisoned pets immediately before standard healing, and automatically detects bonded pet ghosts to attempt resurrection using bandages (requires 80.0+ Veterinary and Animal Lore).
 - **Intelligent Bandage Delays:** Computes classic UO Dexterity-based bandage application delays (`AUTO_BANDAGE_DELAY = True`) with manual override support.
-- **Backpack Supply Management:** Monitors remaining bandages in real-time on the Gump and issues low-supply warnings.
-- **Interactive Control Gump:** Displays real-time action status, live Veterinary skill progress with gain tracker, individual pet health gauges with percentage and status tags (`[POISON]`, `[DEAD]`), bandage count, heal/cure/resurrection statistics, mode toggle, and Pause/Resume/Stop controls.
+- **Resource Satchel & Subcontainer Support:** Automatically discovers and draws bandages from specialized resource satchels or subcontainers in the player's backpack, preventing "Out of Bandages" stops when holding unlimited bandages in a satchel.
+- **Automated Bandage Restocking:** Monitors backpack bandages and automatically pulls working batches (`RESTOCK_BATCH_SIZE = 100`) from the satchel whenever backpack reserves fall below threshold (`MIN_BACKPACK_BANDAGES = 20`).
+- **Interactive Control Gump:** Displays real-time action status, live Veterinary skill progress with gain tracker, individual pet health gauges with percentage and status tags (`[POISON]`, `[DEAD]`), bandage count breakdown (total and root backpack), heal/cure/resurrection statistics, interactive **"Satchel"** targeting button, mode toggle, and Pause/Resume/Stop controls.
 - **Attribution:** Created by FesterHead.
 
 #### [Fish.py](FesterUO/Fish.py)

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FesterUO/TrainVeterinary.py` to v1.1.0:
+  - Added Resource Satchel & Subcontainer Bandage Support: Automatically recognizes and utilizes bandages held inside specialized resource satchels or subcontainers within the player's backpack.
+  - Added Automatic Bandage Restocking (`AUTO_RESTOCK_SATCHEL = True`): Automatically monitors backpack bandages and pulls working batches (`RESTOCK_BATCH_SIZE = 100`) from the satchel into the main backpack whenever supply drops below `MIN_BACKPACK_BANDAGES = 20`.
+  - Added interactive Gump "Satchel" button (`btn_satchel`): Allows players to manually target and designate their resource satchel or container at runtime, with fallback auto-detection.
+  - Updated Gump bandage display: Displays total available bandages across satchels and subcontainers alongside current backpack count (e.g. `Bandages: 10,000 (BP: 100)`).
+  - Enhanced bandage resolution in `apply_bandage_to_pet`: Pulls from root backpack, designated satchel, or subcontainers seamlessly to prevent false "Out of Bandages" stops when bandages reside in satchels.
+
 - Updated `FesterUO/TrainAnimalTaming.py` to v1.0.3:
   - Prioritized direct full-name speech release (`<actual_name> release`, e.g. `a hind release`): directly commands newly tamed wildlife using their exact in-game names to open the release confirmation dialog immediately.
   - Set `confirm_release_gump` primary response to `Button 2` (standard CONTINUE button in ServUO/RunUO `PetReleaseGump.cs`) with fallback to `Button 1`, preventing release dialog cancellations.

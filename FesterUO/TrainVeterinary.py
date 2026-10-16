@@ -38,7 +38,7 @@ Features:
 
 import math
 import time
-from typing import Optional
+from typing import Optional, Tuple
 import API
 
 # ==============================================================================
@@ -46,7 +46,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.0"
+SCRIPT_VERSION: str = "1.1.0"
 
 # Primary training mode:
 # "SPARRING"   - Coordinates two pets fighting each other, healing both continuously.
@@ -65,6 +65,19 @@ FIXED_BANDAGE_DELAY: float = 2.0
 
 # Minimum pause (seconds) between consecutive bandage applications
 BANDAGE_COOLDOWN: float = 0.5
+
+# Resource Satchel and Bandage Restock Configuration:
+# SATCHEL_SERIAL: Target serial of a resource satchel, or None to auto-detect/prompt via Gump
+SATCHEL_SERIAL: Optional[int] = None
+
+# Automatically restock bandages from satchel into the main backpack
+AUTO_RESTOCK_SATCHEL: bool = True
+
+# Minimum bandages to keep in root backpack before restocking from satchel
+MIN_BACKPACK_BANDAGES: int = 20
+
+# Batch size of bandages to pull from satchel into main backpack
+RESTOCK_BATCH_SIZE: int = 100
 
 # Sparring Safety Thresholds (Percentage of Max HP):
 # EMERGENCY_HP_PERCENT: If either pet drops below this, combat is stopped immediately.
@@ -101,6 +114,9 @@ current_status: str = "Initializing..."
 pet1_serial: Optional[int] = None
 pet2_serial: Optional[int] = None
 
+# Resource satchel serial (auto-detected or manually targeted via Gump)
+satchel_serial: Optional[int] = SATCHEL_SERIAL
+
 # Sparring state
 sparring_active: bool = False
 emergency_holding: bool = False
@@ -120,6 +136,7 @@ lbl_pet1 = None
 lbl_pet2 = None
 lbl_bandages = None
 lbl_stats = None
+btn_satchel = None
 btn_mode = None
 btn_pause = None
 btn_stop = None
@@ -164,21 +181,143 @@ def on_gump_disposed() -> None:
 # Helper Utilities
 # ==============================================================================
 
+def count_backpack_bandages() -> int:
+    """Counts bandages directly residing in the player's root backpack (outside satchels)."""
+    if not API.Player:
+        return 0
+    items = API.ItemsInContainer(API.Backpack, recursive=False) or []
+    total = 0
+    for item in items:
+        if getattr(item, "Graphic", 0) == BANDAGE_GRAPHIC:
+            if not satchel_serial or item.Serial != satchel_serial:
+                total += getattr(item, "Amount", 1) or 1
+    return total
+
+
+def find_bandage_satchel():
+    """Finds or auto-detects a resource satchel or subcontainer in the player's backpack."""
+    global satchel_serial
+    if satchel_serial:
+        item = API.FindItem(satchel_serial)
+        if item:
+            return item
+
+    # Autodetect: look for any subcontainer in backpack containing bandages
+    bp_items = API.ItemsInContainer(API.Backpack, recursive=False) or []
+    for item in bp_items:
+        if getattr(item, "IsContainer", False):
+            # Check if this container holds bandages
+            sub = API.ItemsInContainer(item.Serial, recursive=True) or API.ItemsInContainer(item.Serial) or []
+            for s in sub:
+                if getattr(s, "Graphic", 0) == BANDAGE_GRAPHIC:
+                    satchel_serial = item.Serial
+                    debug_msg(f"Auto-detected bandage satchel: 0x{satchel_serial:X}")
+                    return item
+
+    return None
+
+
+def get_satchel_bandages():
+    """Finds the stack of bandages in the designated or auto-detected resource satchel."""
+    satchel = find_bandage_satchel()
+    if not satchel:
+        return None
+    items = API.ItemsInContainer(satchel.Serial, recursive=True) or API.ItemsInContainer(satchel.Serial) or []
+    for item in items:
+        if getattr(item, "Graphic", 0) == BANDAGE_GRAPHIC:
+            return item
+    return None
+
+
+def restock_bandages_from_satchel() -> bool:
+    """Pulls a batch of bandages from the resource satchel into the main backpack."""
+    global satchel_serial
+    if not AUTO_RESTOCK_SATCHEL:
+        return True
+
+    current_bp = count_backpack_bandages()
+    if current_bp >= MIN_BACKPACK_BANDAGES:
+        return True
+
+    satchel = find_bandage_satchel()
+    if not satchel:
+        return False
+
+    satchel_bandage = get_satchel_bandages()
+    if not satchel_bandage:
+        return False
+
+    amt_avail = getattr(satchel_bandage, "Amount", 1) or 1
+    amt_needed = max(RESTOCK_BATCH_SIZE, RESTOCK_BATCH_SIZE - current_bp)
+    amt_to_move = min(amt_avail, amt_needed)
+
+    if amt_to_move <= 0:
+        return False
+
+    update_status(f"Restocking {amt_to_move} bandages...")
+    debug_msg(f"Moving {amt_to_move} bandages from satchel 0x{satchel.Serial:X} to backpack...")
+    API.MoveItem(satchel_bandage.Serial, API.Backpack, amt=amt_to_move)
+    API.Pause(0.6)
+    update_stats()
+    return count_backpack_bandages() > 0
+
+
+def get_usable_bandage():
+    """
+    Finds a usable bandage item in the main backpack or satchel/subcontainers.
+    Automatically restocks from the resource satchel if backpack supply is low.
+    """
+    # 1. Check if backpack needs restocking from satchel
+    if AUTO_RESTOCK_SATCHEL:
+        bp_count = count_backpack_bandages()
+        if bp_count < MIN_BACKPACK_BANDAGES:
+            restock_bandages_from_satchel()
+
+    # 2. Check main backpack directly
+    bandage = API.FindType(BANDAGE_GRAPHIC, API.Backpack)
+    if bandage:
+        return bandage
+
+    # 3. If not in root backpack, try satchel directly if designated
+    satchel_bandage = get_satchel_bandages()
+    if satchel_bandage:
+        return satchel_bandage
+
+    # 4. Fallback search through all subcontainers in backpack
+    sub_items = API.ItemsInContainer(API.Backpack, recursive=True) or []
+    for item in sub_items:
+        if getattr(item, "Graphic", 0) == BANDAGE_GRAPHIC:
+            return item
+
+    return None
+
+
+def get_total_bandage_count() -> Tuple[int, int]:
+    """Returns (total_bandages, backpack_bandages)."""
+    bp_count = count_backpack_bandages()
+    total = bp_count
+
+    satchel = find_bandage_satchel()
+    if satchel:
+        items = API.ItemsInContainer(satchel.Serial, recursive=True) or API.ItemsInContainer(satchel.Serial) or []
+        for s in items:
+            if getattr(s, "Graphic", 0) == BANDAGE_GRAPHIC:
+                total += getattr(s, "Amount", 1) or 1
+    else:
+        all_sub = API.ItemsInContainer(API.Backpack, recursive=True) or []
+        sub_total = 0
+        for s in all_sub:
+            if getattr(s, "Graphic", 0) == BANDAGE_GRAPHIC:
+                sub_total += getattr(s, "Amount", 1) or 1
+        total = max(bp_count, sub_total)
+
+    return (total, bp_count)
+
+
 def get_bandage_count() -> int:
-    """Counts total bandages in the player's main backpack and subcontainers."""
-    try:
-        bandages = API.FindType(BANDAGE_GRAPHIC, API.Backpack)
-        if not bandages:
-            return 0
-        total = 0
-        all_items = API.ItemsInContainer(API.Backpack) or []
-        for item in all_items:
-            if getattr(item, "Graphic", 0) == BANDAGE_GRAPHIC:
-                total += getattr(item, "Amount", 1)
-        return total if total > 0 else getattr(bandages, "Amount", 1)
-    except Exception:
-        bandage = API.FindType(BANDAGE_GRAPHIC, API.Backpack)
-        return getattr(bandage, "Amount", 0) if bandage else 0
+    """Counts total bandages available across backpack, satchels, and subcontainers."""
+    total, _ = get_total_bandage_count()
+    return total
 
 
 def calculate_bandage_delay() -> float:
@@ -310,12 +449,33 @@ def update_stats() -> None:
 
     # Bandage supply
     if lbl_bandages:
-        b_count = get_bandage_count()
-        lbl_bandages.Text = f"Bandages: {b_count}"
+        total_b, bp_b = get_total_bandage_count()
+        if satchel_serial:
+            lbl_bandages.Text = f"Bandages: {total_b} (BP: {bp_b})"
+        else:
+            lbl_bandages.Text = f"Bandages: {total_b}"
 
     # General statistics
     if lbl_stats:
         lbl_stats.Text = f"Heals: {total_heals} | Cures: {total_cures} | Rez: {total_resurrections}"
+
+
+def on_satchel_clicked() -> None:
+    """Allows player to target their resource satchel or container."""
+    global satchel_serial
+    API.SysMsg("[Veterinary] Target your Resource Satchel / Bandages Container (or press ESC to clear)...")
+    new_serial = API.RequestTarget(timeout=10.0)
+    if new_serial:
+        satchel_serial = new_serial
+        API.SysMsg(f"[Veterinary] Satchel updated: 0x{satchel_serial:X}")
+        API.UseObject(satchel_serial)
+        API.Pause(0.5)
+        restock_bandages_from_satchel()
+        update_stats()
+    else:
+        API.SysMsg("[Veterinary] Satchel targeting cleared.")
+        satchel_serial = None
+        update_stats()
 
 
 def on_mode_clicked() -> None:
@@ -359,7 +519,7 @@ def on_stop_clicked() -> None:
 
 def create_control_gump() -> None:
     """Constructs the interactive dark Gump UI."""
-    global gump, lbl_status, lbl_skill, lbl_pet1, lbl_pet2, lbl_bandages, lbl_stats, btn_mode, btn_pause, btn_stop
+    global gump, lbl_status, lbl_skill, lbl_pet1, lbl_pet2, lbl_bandages, lbl_stats, btn_satchel, btn_mode, btn_pause, btn_stop
 
     gump = API.Gumps.CreateGump(True, True, False)
     gump.SetPos(60, 420)
@@ -397,10 +557,15 @@ def create_control_gump() -> None:
     lbl_pet2.SetPos(12, 88)
     gump.Add(lbl_pet2)
 
-    # Bandages and Stats
+    # Bandages and Satchel
     lbl_bandages = API.Gumps.CreateGumpLabel("Bandages: 0", 996)
     lbl_bandages.SetPos(12, 108)
     gump.Add(lbl_bandages)
+
+    btn_satchel = API.Gumps.CreateSimpleButton("Satchel", 80, 22)
+    btn_satchel.SetPos(218, 104)
+    API.Gumps.AddControlOnClick(btn_satchel, on_satchel_clicked)
+    gump.Add(btn_satchel)
 
     lbl_stats = API.Gumps.CreateGumpLabel("Heals: 0 | Cures: 0 | Rez: 0", 996)
     lbl_stats.SetPos(12, 128)
@@ -493,10 +658,10 @@ def apply_bandage_to_pet(target_serial: int) -> bool:
         debug_msg(f"Could not reach pet 0x{target_serial:X} to bandage.")
         return False
 
-    bandage = API.FindType(BANDAGE_GRAPHIC, API.Backpack)
+    bandage = get_usable_bandage()
     if not bandage:
         update_status("OUT OF BANDAGES!")
-        API.SysMsg("[Veterinary] ERROR: Out of bandages in backpack!")
+        API.SysMsg("[Veterinary] ERROR: Out of bandages in backpack and satchel!")
         API.Pause(2.0)
         return False
 
@@ -748,10 +913,16 @@ def main():
     if skill_obj.Lock != 0:
         API.SysMsg("[Veterinary] WARNING: Veterinary skill lock is not set to UP (▲)!")
 
-    # Check bandages
+    # Check bandages and satchel
+    satchel = find_bandage_satchel()
+    if satchel:
+        API.UseObject(satchel.Serial)
+        API.Pause(0.5)
+        restock_bandages_from_satchel()
+
     initial_bandages = get_bandage_count()
     if initial_bandages == 0:
-        API.SysMsg("[Veterinary] WARNING: No bandages detected in backpack! Restock before starting.")
+        API.SysMsg("[Veterinary] WARNING: No bandages detected in backpack or satchel! Restock before starting.")
 
     # Initialize Gump UI
     create_control_gump()
@@ -779,7 +950,12 @@ def main():
             API.SysMsg(f"[Veterinary] Congratulations! Reached goal of {cur_val:.1f} / {cap:.1f}.")
             break
 
-        # Check bandage supply warning
+        # Check bandage supply and restock from satchel if needed
+        if AUTO_RESTOCK_SATCHEL:
+            bp_count = count_backpack_bandages()
+            if bp_count < MIN_BACKPACK_BANDAGES:
+                restock_bandages_from_satchel()
+
         b_count = get_bandage_count()
         if b_count == 0:
             update_status("NO BANDAGES!")
