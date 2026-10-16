@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Included version numbers and author attribution in startup console/SysMsg notifications.
 
 - Updated `AGENTS.md` and `.github/copilot-instructions.md`:
+  - Added mandatory script versioning and incrementing rules (`SCRIPT_VERSION: str = "X.Y.Z"`): agents must increment the script version on every modification (PATCH for bug fixes/pacing, MINOR for features/controls, MAJOR for architectural overhauls) and reflect it on Gump author labels and startup messages.
   - Added explicit instructions for AI agents and assistants to enforce workspace markdownlint rules defined in `.markdownlint.json` when creating or modifying Markdown files.
   - Mandated resolving all supported formatting issues (equivalent to running the VS Code command `markdownlint: Fix all supported issues in file`), maintaining clean list hierarchies, proper blank line separation between blocks, and eliminating trailing whitespace.
 

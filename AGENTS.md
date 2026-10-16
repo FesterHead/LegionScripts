@@ -75,3 +75,12 @@ When generating, modifying, or refactoring scripts in this repository, strictly 
   - Strictly adhere to the workspace configuration defined in [`.markdownlint.json`](.markdownlint.json).
   - Ensure all formatting satisfies markdownlint standards and resolve all supported issues (equivalent to running the VS Code command `markdownlint: Fix all supported issues in file`).
   - Maintain clean list hierarchies, proper blank line separation between blocks, and eliminate trailing whitespace.
+
+### 8. Script Versioning & Increments
+
+- **Internal Version Constant:** Every script must define an internal version constant: `SCRIPT_VERSION: str = "X.Y.Z"` near the top of the file under the `# Configuration` section.
+- **Mandatory Version Increments:** Whenever a script is modified, bugfixed, tuned, or extended with new features, you **MUST** increment its `SCRIPT_VERSION` (following [Semantic Versioning](https://semver.org/)):
+  - Increment **PATCH** (e.g., `1.0.0` -> `1.0.1`) for bug fixes, timing/pacing adjustments, reliability improvements, and small maintenance updates.
+  - Increment **MINOR** (e.g., `1.0.0` -> `1.1.0`) for new features, new UI controls, new modes, or added configuration options.
+  - Increment **MAJOR** (e.g., `1.0.0` -> `2.0.0`) for breaking architectural rewrites or major overhauls.
+- **Gump & Startup Reflection:** Ensure the updated version is reflected on the Gump author label (`lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)`) and in the script's startup console/SysMsg notification.
