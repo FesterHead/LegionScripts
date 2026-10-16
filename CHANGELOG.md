@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FesterUO/TrainAnimalTaming.py` to v1.0.1:
+  - Extended `TAME_DELAY` from 12.0s to 18.0s: prevents premature taming timeouts that aborted successful tames (which take 12-14 seconds in standard UO) right before the server sent completion packets, fixing an issue where tamed animals were abandoned without releasing.
+  - Added post-loop journal inspection in `execute_tame_attempt` to catch success messages arriving on the final tick.
+  - Fixed pet release dialog confirmation (`confirm_release_gump`): prioritized Button 1 (standard Confirm/OK in ServUO/RunUO BaseCreature release gump) with fallback to Button 2, preventing dialog cancellations caused by sending Button 2 first.
+  - Refactored `release_pet` to guarantee both packet Context Menu and universal speech (`all release`) attempts without skipping speech if context menu dispatches, properly targeting pets upon cursor prompt.
+  - Enhanced lingering follower detection: automatically triggers `cleanup_stuck_followers` whenever follower counts exceed baseline followers, ensuring abandoned pets from interrupted cycles are promptly released.
+  - Expanded `RELEASE_JOURNAL_PHRASES` with additional server release match patterns.
+
 - Standardized script versioning and author branding across all 28 scripts in `FesterUO/`:
   - Added internal version constants (`SCRIPT_VERSION: str = "1.0.0"`) to every script.
   - Standardized Gump author and version labels across all 25 interactive interfaces: `lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)` positioned uniformly in the top header row, alongside simplified, readable title labels.
