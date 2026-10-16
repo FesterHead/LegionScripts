@@ -250,27 +250,23 @@ JOURNAL_CANNOT_TAME = [
     "you have too many followers",
 ]
 
-# Positive karma / innocent creatures that must NEVER be harmed (strict karma & notoriety protection)
-POSITIVE_KARMA_GRAPHICS: Set[int] = {
-    0x00C8, 0x00E2, 0x00E4, 0x00CC,  # Horses
+# True positive-karma creatures that cause karma loss when killed (Karma > 0)
+KARMA_LOSS_GRAPHICS: Set[int] = {
+    0x00C8, 0x00E2, 0x00E4, 0x00CC,  # Wild Horses
     0x00DC,                          # Llama
-    0x00D2, 0x00DB, 0x00DA,          # Ostards
+    0x00D2, 0x00DB, 0x00DA,          # Desert Ostard, Forest Ostard, Frenzied Ostard
     0x0097,                          # Dolphin
     0x0062,                          # Cat
     0x00E1,                          # Dog
-    0x00D0,                          # Chicken
-    0x0006,                          # Bird
-    0x00CD,                          # Rabbit
-    0x00CF, 0x00DF,                  # Sheep
-    0x00ED, 0x00EA,                  # Hind, Great Hart
-    0x00D8, 0x00E7,                  # Cow, Bull (dairy)
-    0x00D1, 0x0058,                  # Goat, Mountain Goat
 }
 
-POSITIVE_KARMA_KEYWORDS: List[str] = [
-    "horse", "llama", "ostard", "dolphin", "cat", "dog",
-    "chicken", "bird", "eagle", "rabbit", "sheep", "hind", "hart", "deer", "doe", "cow",
+KARMA_LOSS_KEYWORDS: List[str] = [
+    "horse", "llama", "ostard", "dolphin", "cat", "dog"
 ]
+
+# Compatibility aliases
+POSITIVE_KARMA_GRAPHICS = KARMA_LOSS_GRAPHICS
+POSITIVE_KARMA_KEYWORDS = KARMA_LOSS_KEYWORDS
 
 JOURNAL_BUSY = [
     "must wait to perform another action",
@@ -463,6 +459,8 @@ def on_toggle_safety_heal() -> None:
     ENABLE_SAFETY_HEAL = not ENABLE_SAFETY_HEAL
     API.SysMsg(f"[Animal Taming] Safety Heal: {'Enabled' if ENABLE_SAFETY_HEAL else 'Disabled'}")
 
+on_toggle_heal = on_toggle_safety_heal
+
 
 def on_toggle_cull() -> None:
     """Toggles Magery culling on released creatures."""
@@ -550,7 +548,7 @@ def create_control_gump() -> None:
 
     cb_heal = API.Gumps.CreateGumpCheckbox("Safety Heal", 996, ENABLE_SAFETY_HEAL)
     cb_heal.SetPos(160, 130)
-    API.Gumps.AddControlOnClick(cb_heal, on_toggle_heal)
+    API.Gumps.AddControlOnClick(cb_heal, on_toggle_safety_heal)
     gump.Add(cb_heal)
 
     cb_cull = API.Gumps.CreateGumpCheckbox("Cull (E-Bolt)", 996, ENABLE_MAGERY_CULL)
