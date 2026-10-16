@@ -31,8 +31,8 @@ Features:
       * Built-in graphic and name mappings covering low, mid, and high tier tamables
         with baseline minimum skill thresholds.
     - Robust Pet Release & Follower Management:
-      * Indexed renaming (Tame1, Tame2, etc.) for precise speech release commands and
-        permanent re-taming prevention across script restarts.
+      * Native release handling supporting packet Context Menu and universal speech ('all release')
+        with automated server dialog confirmation.
       * Multi-tier verification via normalized journal inspection, mobile ownership state,
         and follower reduction checks.
       * Automated stuck follower cleanup and pre-taming follower limit safeguards.
@@ -56,7 +56,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.1"
+SCRIPT_VERSION: str = "1.0.2"
 
 # Primary training mode:
 # "WILD_ROAM"     - Scans for and hunts wild animals in the area to tame and release.
@@ -1035,6 +1035,7 @@ def confirm_release_gump(timeout: float = 2.5) -> bool:
         pass
 
     debug_msg("Release confirmation dialog detected. Replying Button 1 (Confirm)...")
+    API.SysMsg("[Animal Taming] Confirming release dialog...", 68)
     API.ReplyGump(1)
     API.Pause(GUMP_DELAY)
 
@@ -1444,18 +1445,6 @@ def run_wild_roam_cycle(player_taming_val: float) -> None:
         update_stats()
         API.SysMsg(f"[Animal Taming] Successfully tamed {mob_name}!")
         tamed_pets_pending_release.add(mob_serial)
-        API.Pause(1.2)
-
-        # Indexed renaming for clean release & permanent re-tame prevention
-        indexed_name = f"Tame{total_tamed}"
-        try:
-            API.Rename(mob_serial, indexed_name)
-            debug_msg(f"Renamed creature 0x{mob_serial:X} to {indexed_name}.")
-            API.Pause(1.2)
-        except Exception as ex:
-            debug_msg(f"Rename exception: {ex}")
-            indexed_name = mob_name
-
         # Apply Veterinary healing if creature was damaged before releasing
         if ENABLE_VETERINARY:
             attempt_veterinary(mob_serial)

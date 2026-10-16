@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FesterUO/TrainAnimalTaming.py` to v1.0.2:
+  - Removed creature renaming (`API.Rename`): completely eliminated the indexed renaming attempt (`Tame1`, `Tame2`, etc.) which caused server-side validation rejections (`System: That name is unacceptable.`) on wild creatures, eliminating unnecessary delays and journal spam.
+  - Added in-game `SysMsg` notification when pet release confirmation dialogs are confirmed.
+
 - Updated `FesterUO/TrainAnimalTaming.py` to v1.0.1:
   - Extended `TAME_DELAY` from 12.0s to 18.0s: prevents premature taming timeouts that aborted successful tames (which take 12-14 seconds in standard UO) right before the server sent completion packets, fixing an issue where tamed animals were abandoned without releasing.
   - Added post-loop journal inspection in `execute_tame_attempt` to catch success messages arriving on the final tick.
