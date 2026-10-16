@@ -74,7 +74,13 @@ SEARCH_RADIUS: int = 18
 TAME_DELAY: float = 12.0
 
 # General delay (seconds) between actions / retries
-ACTION_DELAY: float = 0.8
+ACTION_DELAY: float = 1.5
+
+# Pacing delay between server pet commands and speech to avoid anti-spam rate limiting
+COMMAND_DELAY: float = 1.5
+
+# Delay to allow server confirmation dialogs to process and dismiss
+GUMP_DELAY: float = 1.0
 
 # Proximity threshold: UO requires being within 2 tiles to start and maintain taming
 MAX_APPROACH_DISTANCE: int = 2
@@ -322,6 +328,9 @@ base_followers: int = 0
 
 # Set of mobile serials to ignore (already tamed & released this session)
 ignored_mobiles: Set[int] = set()
+
+# Set of active tamed creature serials currently pending release
+tamed_pets_pending_release: Set[int] = set()
 
 # Targeted creature serial for TARGET_TRAIN mode
 target_trainer_serial: Optional[int] = None
@@ -1002,156 +1011,254 @@ def approach_target(mob, max_distance: int = MAX_APPROACH_DISTANCE) -> bool:
 # Pet Release & Follower Management
 # ==============================================================================
 
+def confirm_release_gump(timeout: float = 2.5) -> bool:
+    """
+    Waits for and confirms a server pet release confirmation gump.
+    Tries standard Button 2 (OK), then falls back to Button 1 if still open.
+    Does NOT pass invalid gump ID, allowing TazUO to target the active server gump (1337).
+    """
+    if not API.WaitForGump(delay=timeout) and not API.HasGump():
+        return False
+
+    debug_msg("Release confirmation dialog detected. Replying Button 2 (OK)...")
+    # Standard UO PetReleaseGump uses Button 2 for OK
+    API.ReplyGump(2)
+    API.Pause(GUMP_DELAY)
+
+    # If gump is still open, try Button 1 (some custom shards use Button 1 for OK)
+    if API.WaitForGump(delay=0.8) or API.HasGump():
+        debug_msg("Release dialog still open; replying Button 1...")
+        API.ReplyGump(1)
+        API.Pause(GUMP_DELAY)
+
+    # Wait for dialog to dismiss
+    start_wait = time.time()
+    while API.HasGump() and (time.time() - start_wait) < 1.5:
+        API.Pause(0.2)
+
+    return True
+
+
+def is_pet_released_state(target_serial: int, followers_before: int) -> bool:
+    """Verifies whether a pet has been released via journal, followers, or mobile properties."""
+    # Check 1: Journal entries
+    entries = API.GetJournalEntries(4.0)
+    recent_text = [str(e.Text).lower() for e in entries] if entries else []
+    if any(any(phrase in line for phrase in RELEASE_JOURNAL_PHRASES) for line in recent_text) or any(API.InJournal(p) for p in RELEASE_JOURNAL_PHRASES):
+        return True
+
+    # Check 2: Follower count dropped
+    followers_now = getattr(API.Player, "Followers", 0)
+    if followers_before > 0 and followers_now < followers_before:
+        return True
+
+    # Check 3: Mobile state (if mobile reverted to Gray / no longer tame)
+    mob = API.FindMobile(target_serial)
+    if not mob or getattr(mob, "IsDead", False):
+        return True
+
+    # If mobile notoriety is Gray (neutral) and was previously our pet
+    if getattr(mob, "Notoriety", None) == API.Notoriety.Gray:
+        return True
+
+    return False
+
+
 def cleanup_stuck_followers() -> int:
     """
-    Scans for and releases any lingering pets following the player (excluding mounted pets).
-    Returns the number of pets successfully released.
+    Scans for and releases any lingering pets following the player.
+    Iterates through known tamed creatures, nearby pets, and uses broadcast release.
     """
     released_count = 0
-    all_mobs = API.GetAllMobiles(distance=18) or []
     mount_serial = getattr(API.Player.Mount, "Serial", 0) if API.Player and API.Player.Mount else 0
 
+    # 1. Release known tamed pets from tracking set and recent ignores
+    known_serials = set(tamed_pets_pending_release)
+    for s in list(known_serials):
+        if mount_serial and s == mount_serial:
+            continue
+        mob = API.FindMobile(s)
+        if mob and not getattr(mob, "IsDead", False):
+            name = getattr(mob, "Name", None) or f"0x{s:X}"
+            API.SysMsg(f"[Animal Taming] Releasing tracked pet: {name} (0x{s:X})...", 33)
+            if release_pet(s, pet_name=name):
+                released_count += 1
+                tamed_pets_pending_release.discard(s)
+                ignored_mobiles.add(s)
+            API.Pause(COMMAND_DELAY)
+
+    # 2. Scan nearby mobiles within 14 tiles for any tamed or follower animals
+    all_mobs = API.GetAllMobiles(distance=14) or []
     for m in all_mobs:
         if not m or m.Serial == API.Player.Serial:
             continue
-        # Player-owned pets are marked IsRenamable and are not mounted
-        if getattr(m, "IsRenamable", False) and not getattr(m, "IsMounted", False):
-            if mount_serial and m.Serial == mount_serial:
-                continue
-            name = getattr(m, "Name", None) or f"Pet 0x{m.Serial:X}"
-            API.SysMsg(f"[Animal Taming] Lingering follower detected: {name} (0x{m.Serial:X}). Releasing...", 33)
-            if release_pet(m.Serial, pet_name=name):
+        if mount_serial and m.Serial == mount_serial:
+            continue
+
+        raw_name = getattr(m, "Name", "") or ""
+        name_lower = raw_name.lower()
+        graphic = getattr(m, "Graphic", 0)
+        notoriety = getattr(m, "Notoriety", None)
+
+        is_indexed = name_lower.startswith("tame")
+        is_ally = (notoriety == API.Notoriety.Ally)
+        # In UO, wild animals are Gray; if a tamable species is Innocent (Blue), it's a player pet
+        is_tamable_species = (graphic in TAMABLE_DATABASE or any(kw in name_lower for kw, _ in TAMABLE_KEYWORDS))
+        is_innocent_animal = (notoriety == API.Notoriety.Innocent and is_tamable_species)
+
+        # Tooltip inspection
+        props = ""
+        try:
+            props = (m.NameAndProps(wait=False, timeout=1) or "").lower()
+        except Exception:
+            pass
+        is_tame_prop = any(tag in props for tag in ["[tame]", "(tame)", "[bonded]", "(bonded)"])
+
+        if is_indexed or is_ally or is_innocent_animal or is_tame_prop or m.Serial in ignored_mobiles:
+            API.SysMsg(f"[Animal Taming] Found lingering follower: {raw_name or 'Pet'} (0x{m.Serial:X}). Releasing...", 33)
+            if release_pet(m.Serial, pet_name=raw_name):
                 released_count += 1
+                tamed_pets_pending_release.discard(m.Serial)
                 ignored_mobiles.add(m.Serial)
-            API.Pause(0.8)
+            API.Pause(COMMAND_DELAY)
+
+    # 3. Emergency speech broadcast if followers still at max
+    cur_f = getattr(API.Player, "Followers", 0)
+    max_f = getattr(API.Player, "FollowersMax", 5) or 5
+    if cur_f >= max_f:
+        debug_msg("Followers still capped; trying broadcast 'all release'...")
+        API.Pause(COMMAND_DELAY)
+        API.Msg("all release")
+        API.Pause(COMMAND_DELAY)
+        confirm_release_gump(timeout=2.5)
+        if API.WaitForTarget(timeout=1.0):
+            target = API.NearestMobile([API.Notoriety.Innocent, API.Notoriety.Ally], 10)
+            if target and target.Serial != API.Player.Serial and target.Serial != mount_serial:
+                API.Target(target.Serial)
+                API.Pause(1.0)
+                confirm_release_gump(timeout=2.0)
+
+        # Refresh player status by double clicking player
+        try:
+            API.UseObject(API.Player.Serial)
+            API.Pause(1.0)
+        except Exception:
+            pass
 
     return released_count
 
 
 def release_pet(target_serial: int, pet_name: Optional[str] = None) -> bool:
     """
-    Releases a newly tamed pet via indexed speech commands or context menu,
+    Releases a newly tamed pet via context menu or speech commands,
     confirming any release verification dialog and verifying release
-    via journal, mobile ownership status, and follower count.
-    Enforces safe delays to prevent server 'commands tried too fast' throttling.
+    via journal messages and follower count reduction.
     """
     mob = API.FindMobile(target_serial)
     if not mob:
         return True
 
-    mob_name = pet_name or getattr(mob, "Name", None) or "Pet"
-    update_status(f"Releasing {mob_name}...")
-    debug_msg(f"Initiating pet release for {mob_name} (0x{target_serial:X})...")
+    # Determine display name and clean speech name
+    raw_name = pet_name or getattr(mob, "Name", None) or "Pet"
+    clean_name = raw_name.lower().strip()
+    for prefix in ("a ", "an ", "the "):
+        if clean_name.startswith(prefix):
+            clean_name = clean_name[len(prefix):].strip()
 
-    # Ensure player is adjacent (within 1 tile) to pet
-    approach_target(mob, 1)
-
-    # Command pet to stop with safe anti-spam cooldown
-    API.Msg("all stop")
-    API.Pause(0.8)
+    update_status(f"Releasing {clean_name}...")
+    debug_msg(f"Initiating pet release for {raw_name} (0x{target_serial:X})...")
 
     followers_before = getattr(API.Player, "Followers", 0)
+
+    # Approach pet to within 1 tile and pause to let mobile settle
+    approach_target(mob, 1)
+    API.Pause(1.0)
 
     for attempt in range(1, 4):
         if API.StopRequested or is_stopped:
             return False
 
-        # Re-check mobile: if it is no longer Renamable, it was already released!
+        # Approach if pet moved away
         mob = API.FindMobile(target_serial)
-        if not mob or not getattr(mob, "IsRenamable", False):
-            debug_msg(f"Pet {mob_name} is no longer owned (IsRenamable=False). Release confirmed.")
-            API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
-            return True
-
-        # Keep adjacent
-        dist = get_mobile_distance(mob)
-        if dist > 1:
+        if mob and get_mobile_distance(mob) > 1:
             approach_target(mob, 1)
+            API.Pause(0.5)
 
-        debug_msg(f"Release attempt #{attempt} on {mob_name}...")
+        API.ClearJournal()
+        debug_msg(f"Release attempt #{attempt} on {clean_name} (0x{target_serial:X})...")
 
-        # 1. Primary Release Method: Direct Speech Command
-        # Indexed names (e.g. 'Tame1') have no spaces or articles, ensuring 100% targeting precision
-        API.Msg(f"{mob_name} release")
-        API.Pause(0.8)
+        # 1. Primary Method: Context Menu "Release" (standard UO release, packet-based, immune to speech rate limiter)
+        context_sent = False
+        try:
+            context_sent = API.ContextMenu(target_serial, "Release", timeout=2.0)
+            if context_sent:
+                debug_msg("Context menu 'Release' dispatched.")
+                confirm_release_gump(timeout=2.5)
+        except Exception as ex:
+            debug_msg(f"ContextMenu exception: {ex}")
 
-        # In case the server responds with a target cursor for release
-        if API.WaitForTarget(timeout=0.8):
-            API.Target(target_serial)
+        # 2. Speech fallback if ContextMenu did not release
+        if not context_sent and not is_pet_released_state(target_serial, followers_before):
+            # Spaced out command pacing (COMMAND_DELAY) to guarantee no rate-limit triggers
+            API.Pause(COMMAND_DELAY)
 
-        # 2. Context Menu Fallback if confirmation dialog hasn't appeared yet
-        if not API.HasGump():
-            try:
-                context_sent = API.ContextMenu(target_serial, "Release", timeout=1.5)
-                if context_sent:
-                    debug_msg("Context menu 'Release' selected.")
-                    API.Pause(0.8)
-            except Exception as ex:
-                debug_msg(f"ContextMenu exception: {ex}")
+            # Attempt clean name release (e.g. "magpie release", "rabbit release")
+            if attempt == 1 and clean_name:
+                debug_msg(f"Trying speech: '{clean_name} release'...")
+                API.Msg(f"{clean_name} release")
+                API.Pause(COMMAND_DELAY)
+                confirm_release_gump(timeout=2.0)
+                if API.WaitForTarget(timeout=1.0):
+                    API.Target(target_serial)
+                    API.Pause(1.0)
+                    confirm_release_gump(timeout=2.0)
 
-        # 3. Handle confirmation gump (PetReleaseGump)
-        if API.WaitForGump(delay=2.0) or API.HasGump():
-            gump_id = API.HasGump()
-            debug_msg(f"Release confirmation dialog detected (Gump ID: 0x{gump_id:X}).")
-            # Button 2 is OK/Confirm on standard RunUO/ServUO/ModernUO/OSI
-            API.ReplyGump(2, gump_id)
+            # Attempt raw name release if different (e.g. "a magpie release")
+            elif attempt == 2 and raw_name and raw_name.lower() != clean_name:
+                debug_msg(f"Trying speech: '{raw_name} release'...")
+                API.Msg(f"{raw_name} release")
+                API.Pause(COMMAND_DELAY)
+                confirm_release_gump(timeout=2.0)
+                if API.WaitForTarget(timeout=1.0):
+                    API.Target(target_serial)
+                    API.Pause(1.0)
+                    confirm_release_gump(timeout=2.0)
 
-            # Wait for gump to close cleanly (up to 1.5s)
-            start_gump_wait = time.time()
-            while API.HasGump(gump_id) and (time.time() - start_gump_wait) < 1.5:
-                API.Pause(0.1)
-
-            # Only if gump is STILL open after 1.5s, shard might use Button 1 for OK
-            if API.HasGump(gump_id):
-                debug_msg("Gump still open after Button 2; trying Button 1...")
-                API.ReplyGump(1, gump_id)
-                API.Pause(0.8)
-
-        API.Pause(0.5)
-
-        # 4. Verification Check 1: Journal check (case-insensitive via GetJournalEntries & InJournal)
-        entries = API.GetJournalEntries(4.0)
-        recent_text = [str(e.Text).lower() for e in entries] if entries else []
-        journal_matched = any(
-            any(phrase in line for phrase in RELEASE_JOURNAL_PHRASES)
-            for line in recent_text
-        ) or any(API.InJournal(p) for p in RELEASE_JOURNAL_PHRASES)
-
-        if journal_matched:
-            API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
-            return True
-
-        # 4. Verification Check 2: Mobile ownership status (IsRenamable becomes False when released)
-        mob = API.FindMobile(target_serial)
-        if not mob or not getattr(mob, "IsRenamable", False):
-            API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released (creature freed).")
-            return True
-
-        # 4. Verification Check 3: Followers count reduction
-        followers_now = getattr(API.Player, "Followers", 0)
-        if followers_before > 0 and followers_now < followers_before:
-            if followers_now <= base_followers:
-                API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released (followers {followers_before} -> {followers_now}).")
+            # Attempt broadcast "all release"
             else:
-                extra = followers_now - base_followers
-                API.SysMsg(f"[Animal Taming] Pet {mob_name} released (followers {followers_before} -> {followers_now}), but {extra} older follower(s) remain!", 33)
-                cleanup_stuck_followers()
+                debug_msg("Trying speech: 'all release'...")
+                API.Msg("all release")
+                API.Pause(COMMAND_DELAY)
+                confirm_release_gump(timeout=2.0)
+                if API.WaitForTarget(timeout=1.0):
+                    API.Target(target_serial)
+                    API.Pause(1.0)
+                    confirm_release_gump(timeout=2.0)
+
+        API.Pause(COMMAND_DELAY)
+
+        # 3. Verification Check
+        if is_pet_released_state(target_serial, followers_before):
+            API.SysMsg(f"[Animal Taming] Pet {raw_name} successfully released.")
+            tamed_pets_pending_release.discard(target_serial)
             return True
 
         # Check for command rate limiter messages in journal
+        entries = API.GetJournalEntries(4.0)
+        recent_text = [str(e.Text).lower() for e in entries] if entries else []
         if any(any(busy in line for busy in ["too fast", "wait to give", "speaking too quickly"]) for line in recent_text):
-            debug_msg("Pet command rate limiter detected. Waiting 1.5s before retry...")
-            API.Pause(1.5)
+            debug_msg("Pet command rate limiter detected. Waiting 2.0s before retry...")
+            API.Pause(2.0)
         else:
-            API.Pause(0.8)
+            API.Pause(COMMAND_DELAY)
 
-    # Final check on mobile status
-    mob = API.FindMobile(target_serial)
-    if not mob or not getattr(mob, "IsRenamable", False):
-        API.SysMsg(f"[Animal Taming] Pet {mob_name} successfully released.")
+    # Final check on follower reduction or mobile state
+    if is_pet_released_state(target_serial, followers_before):
+        API.SysMsg(f"[Animal Taming] Pet {raw_name} successfully released.")
+        tamed_pets_pending_release.discard(target_serial)
         return True
 
-    API.SysMsg(f"[Animal Taming] WARNING: Failed to confirm release of {mob_name}!", 33)
+    API.SysMsg(f"[Animal Taming] WARNING: Failed to confirm release of {raw_name}!", 33)
     return False
 
 
@@ -1326,13 +1433,15 @@ def run_wild_roam_cycle(player_taming_val: float) -> None:
         total_tamed += 1
         update_stats()
         API.SysMsg(f"[Animal Taming] Successfully tamed {mob_name}!")
+        tamed_pets_pending_release.add(mob_serial)
+        API.Pause(1.2)
 
         # Indexed renaming for clean release & permanent re-tame prevention
         indexed_name = f"Tame{total_tamed}"
         try:
             API.Rename(mob_serial, indexed_name)
             debug_msg(f"Renamed creature 0x{mob_serial:X} to {indexed_name}.")
-            API.Pause(0.8)
+            API.Pause(1.2)
         except Exception as ex:
             debug_msg(f"Rename exception: {ex}")
             indexed_name = mob_name
@@ -1340,16 +1449,20 @@ def run_wild_roam_cycle(player_taming_val: float) -> None:
         # Apply Veterinary healing if creature was damaged before releasing
         if ENABLE_VETERINARY:
             attempt_veterinary(mob_serial)
+            API.Pause(1.2)
 
         if auto_release_enabled:
-            API.Pause(0.5)
+            API.Pause(COMMAND_DELAY)
             released = release_pet(mob_serial, pet_name=indexed_name)
             if not released:
                 API.SysMsg(f"[Animal Taming] WARNING: Release of {indexed_name} failed. Attempting follower cleanup...", 33)
+                API.Pause(COMMAND_DELAY)
                 cleanup_stuck_followers()
-            elif ENABLE_MAGERY_CULL:
-                API.Pause(0.8)
-                cull_released_animal(mob_serial)
+            else:
+                tamed_pets_pending_release.discard(mob_serial)
+                if ENABLE_MAGERY_CULL:
+                    API.Pause(COMMAND_DELAY)
+                    cull_released_animal(mob_serial)
 
         # Mark as handled so we don't immediately re-target it
         ignored_mobiles.add(mob_serial)
@@ -1428,10 +1541,10 @@ def run_target_trainer_cycle() -> None:
             attempt_veterinary(target_trainer_serial)
 
         if auto_release_enabled:
-            API.Pause(0.5)
+            API.Pause(COMMAND_DELAY)
             release_pet(target_trainer_serial)
-            # Brief delay for server state synchronization
-            API.Pause(1.5)
+            # Safe delay for server state synchronization
+            API.Pause(ACTION_DELAY)
 
     elif outcome == "ANGRY":
         API.SysMsg("[Animal Taming] Creature is angry! Waiting for anger to subside...")
