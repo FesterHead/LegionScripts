@@ -47,7 +47,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.0"
+SCRIPT_VERSION: str = "1.0.1"
 
 # Target Imbuing skill to stop training (e.g. 100.0 for GM, 120.0 for Legendary)
 TARGET_SKILL: float = 120.0
@@ -925,7 +925,7 @@ def main() -> None:
     global supply_container_serial, resource_chest_serial, trash_barrel_serial
     global recommended_prop_name
 
-    API.SysMsg("=== FesterUO Imbuing Trainer ===", HUE_INFO)
+    API.SysMsg(f"=== FesterUO Imbuing Trainer v{SCRIPT_VERSION} ===", HUE_INFO)
 
     # 1. Initial skill evaluation
     skill_obj = API.GetSkill("Imbuing")
@@ -933,13 +933,17 @@ def main() -> None:
     rec_prop, rec_mats, rec_notes = get_recommended_tier(curr_skill)
     recommended_prop_name = rec_prop
 
-    # 2. Check for nearby Trash Barrel
+    # 2. Render Gump UI immediately so user sees the interface upon double-clicking
+    create_control_gump()
+    update_stats()
+
+    # 3. Check for nearby Trash Barrel
     auto_barrel = find_nearby_trash_barrel()
     if auto_barrel:
         trash_barrel_serial = auto_barrel.Serial
         API.SysMsg(f"[Imbuing] Auto-detected nearby Trash Barrel: 0x{trash_barrel_serial:X}", HUE_INFO)
 
-    # 3. Prompt for Item Supply Container
+    # 4. Prompt for Item Supply Container
     API.SysMsg("[Imbuing] Target your Item Supply Container (or press ESC / self for backpack only)...", HUE_INFO)
     s_serial = API.RequestTarget(timeout=6.0)
     if s_serial and s_serial != API.Player.Serial:
@@ -951,7 +955,7 @@ def main() -> None:
         supply_container_serial = None
         API.SysMsg("[Imbuing] Using items in backpack.", HUE_INFO)
 
-    # 4. Prompt for Resource Chest / Satchel
+    # 5. Prompt for Resource Chest / Satchel
     API.SysMsg("[Imbuing] Target your Resource Chest / Satchel with Residue/Essence/Gems (or press ESC / self for backpack only)...", HUE_INFO)
     r_serial = API.RequestTarget(timeout=6.0)
     if r_serial and r_serial != API.Player.Serial:
@@ -963,8 +967,6 @@ def main() -> None:
         resource_chest_serial = None
         API.SysMsg("[Imbuing] Using resources in backpack.", HUE_INFO)
 
-    # 5. Render Gump & initial stats
-    create_control_gump()
     update_stats()
 
     # Initial restock check
@@ -1005,5 +1007,4 @@ def main() -> None:
     dispose_gump()
 
 
-if __name__ == "__main__":
-    main()
+main()

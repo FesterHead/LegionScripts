@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FesterUO/TrainImbuing.py` to v1.0.1:
+  - Fixed script execution when double-clicked in the TazUO client by invoking `main()` unconditionally instead of relying on an `if __name__ == "__main__":` guard, which evaluates to False in TazUO's embedded Python runtime.
+  - Rendered interactive control Gump immediately upon launch so that the trainer interface displays without delay before container targeting prompts.
+  - Included script version in startup `SysMsg` notification.
+
+- Updated `FesterUO/LobsterTrapAuto.py` to v1.0.1:
+  - Fixed script execution when double-clicked in the TazUO client by calling `run_lobster_auto()` unconditionally instead of relying on an `if __name__ == "__main__":` guard.
+  - Included script version in startup `SysMsg` notification.
+
 - Updated `FesterUO/TrainVeterinary.py` to v1.1.0:
   - Added Resource Satchel & Subcontainer Bandage Support: Automatically recognizes and utilizes bandages held inside specialized resource satchels or subcontainers within the player's backpack.
   - Added Automatic Bandage Restocking (`AUTO_RESTOCK_SATCHEL = True`): Automatically monitors backpack bandages and pulls working batches (`RESTOCK_BATCH_SIZE = 100`) from the satchel into the main backpack whenever supply drops below `MIN_BACKPACK_BANDAGES = 20`.

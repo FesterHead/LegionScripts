@@ -44,7 +44,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.0"
+SCRIPT_VERSION: str = "1.0.1"
 
 # Enable verbose debug output in the client console/journal
 DEBUG: bool = False
@@ -652,7 +652,7 @@ def run_lobster_auto() -> None:
     update_skill_display()
     update_satchel_label()
 
-    API.SysMsg("Lobster Trap Auto initialized. Click 'Start' on the Gump to begin.", 68)
+    API.SysMsg(f"Lobster Trap Auto v{SCRIPT_VERSION} initialized. Click 'Start' on the Gump to begin.", 68)
     is_waiting_start = True
     update_status("Click Start to begin")
 
@@ -713,5 +713,4 @@ def run_lobster_auto() -> None:
         API.Pause(0.5)
 
 
-if __name__ == "__main__":
-    run_lobster_auto()
+run_lobster_auto()
