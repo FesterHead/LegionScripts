@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FesterUO/TrainImbuing.py` to v1.0.2:
+  - Replaced invalid `API.ItemsOnGround` calls with TazUO's native `API.GetItemsOnGround` in `find_nearby_trash_barrel` and `is_near_soulforge`, resolving the `'LegionAPI' object has no attribute 'ItemsOnGround'` runtime exception.
+  - Added safe attribute extraction (`getattr`, `hasattr`) for ground items and tooltips to prevent property access exceptions.
+
 - Updated `FesterUO/TrainImbuing.py` to v1.0.1:
   - Fixed script execution when double-clicked in the TazUO client by invoking `main()` unconditionally instead of relying on an `if __name__ == "__main__":` guard, which evaluates to False in TazUO's embedded Python runtime.
   - Rendered interactive control Gump immediately upon launch so that the trainer interface displays without delay before container targeting prompts.

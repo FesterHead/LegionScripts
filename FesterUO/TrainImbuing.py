@@ -47,7 +47,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.1"
+SCRIPT_VERSION: str = "1.0.2"
 
 # Target Imbuing skill to stop training (e.g. 100.0 for GM, 120.0 for Legendary)
 TARGET_SKILL: float = 120.0
@@ -347,20 +347,30 @@ def is_near_soulforge() -> bool:
             return True
 
     # 2. Dynamic ground items
-    ground_items = API.ItemsOnGround(distance=4) or []
-    for it in ground_items:
-        if it.Graphic in SOULFORGE_GRAPHICS or "soulforge" in (it.Name or "").lower():
-            return True
+    ground_items = API.GetItemsOnGround(4)
+    if ground_items:
+        for it in ground_items:
+            g = getattr(it, "Graphic", 0)
+            name = str(getattr(it, "Name", "") or "").lower()
+            if g in SOULFORGE_GRAPHICS or "soulforge" in name:
+                return True
 
     return True  # Fallback gracefully to allow player to proceed
 
 
 def find_nearby_trash_barrel() -> Optional[Any]:
     """Scans ground within 3 tiles for an existing Trash Barrel."""
-    ground_items = API.ItemsOnGround(distance=3) or []
-    for item in ground_items:
-        if item.Graphic in TRASH_BARREL_GRAPHICS or "trash" in (item.Name or "").lower():
-            return item
+    ground_items = API.GetItemsOnGround(3)
+    if ground_items:
+        for item in ground_items:
+            g = getattr(item, "Graphic", 0)
+            name = str(getattr(item, "Name", "") or "").lower()
+            if "trash" in name:
+                return item
+            if g in TRASH_BARREL_GRAPHICS:
+                props = str(item.NameAndProps() if hasattr(item, "NameAndProps") else "").lower()
+                if "trash" in props or "barrel" in props:
+                    return item
     return None
 
 
