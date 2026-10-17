@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FesterUO/TrainImbuing.py` to v1.0.3:
+  - Corrected native Soulforge Imbuing Menu button ID mappings: updated `GUMP_BTN_UNRAVEL_CONTAINER` to `6` (was `4`) and `GUMP_BTN_UNRAVEL_ITEM` to `5` (was `3`), and mapped `GUMP_BTN_IMBUE_LAST_ITEM` (`3`) and `GUMP_BTN_IMBUE_LAST_PROP` (`4`).
+  - Fixed client disconnect (`Invalid gump response`) caused by sending button 4 (which triggered `Imbue Last Property` instead of `Unravel Container`) and unconditionally firing `API.ReplyGump(GUMP_BTN_CONFIRM)` when no confirmation dialog was open.
+  - Added strict `API.GumpContains` text validation before dispatching confirmation responses for items made of special materials.
+  - Added automatic journal empty-container detection to pause the trainer gracefully when all container items have been unraveled.
+
 - Updated `FesterUO/TrainImbuing.py` to v1.0.2:
   - Replaced invalid `API.ItemsOnGround` calls with TazUO's native `API.GetItemsOnGround` in `find_nearby_trash_barrel` and `is_near_soulforge`, resolving the `'LegionAPI' object has no attribute 'ItemsOnGround'` runtime exception.
   - Added safe attribute extraction (`getattr`, `hasattr`) for ground items and tooltips to prevent property access exceptions.

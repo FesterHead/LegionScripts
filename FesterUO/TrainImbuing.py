@@ -47,13 +47,13 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.2"
+SCRIPT_VERSION: str = "1.0.3"
 
 # Target Imbuing skill to stop training (e.g. 100.0 for GM, 120.0 for Legendary)
 TARGET_SKILL: float = 120.0
 
 # Initial Training Mode: "REIMBUE" (Active Imbuing) or "UNRAVEL" (Mass Unraveling)
-TRAINING_MODE: str = "REIMBUE"
+TRAINING_MODE: str = "UNRAVEL"
 
 # Maximum imbue attempts allowed on a single item before retiring/recycling it.
 # In standard UO mechanics, 20 imbues is the maximum threshold before severe diminishing returns.
@@ -79,12 +79,15 @@ RESTOCK_BATCH_GEMS: int = 30
 # Proximity check for Soulforge (set False to skip proximity scan if using custom multi/static)
 REQUIRE_SOULFORGE_CHECK: bool = False
 
-# Server Imbuing Gump button IDs (standard ServUO / RunUO / ModernUO)
+# Server Imbuing Gump button IDs (matched to native client Imbuing Menu)
+GUMP_BTN_CANCEL: int = 0             # "CANCEL"
 GUMP_BTN_IMBUE_ITEM: int = 1         # "Imbue Item"
-GUMP_BTN_REIMBUE_LAST: int = 2       # "Reimbue Last" / "Imbue Last Property"
-GUMP_BTN_UNRAVEL_ITEM: int = 3       # "Unravel Item"
-GUMP_BTN_UNRAVEL_CONTAINER: int = 4  # "Unravel Container"
-GUMP_BTN_CONFIRM: int = 1            # Confirmation sub-gump ("OK" / "Yes")
+GUMP_BTN_REIMBUE_LAST: int = 2       # "Reimbue Last"
+GUMP_BTN_IMBUE_LAST_ITEM: int = 3    # "Imbue Last Item"
+GUMP_BTN_IMBUE_LAST_PROP: int = 4    # "Imbue Last Property"
+GUMP_BTN_UNRAVEL_ITEM: int = 5       # "Unravel Item"
+GUMP_BTN_UNRAVEL_CONTAINER: int = 6  # "Unravel Container"
+GUMP_BTN_CONFIRM: int = 1            # Confirmation sub-gump ("Unravel Item" / "OK" / "Yes")
 
 # Enable verbose debug messages in client console
 DEBUG: bool = False
@@ -643,6 +646,7 @@ def execute_unravel_item(item_serial: int) -> bool:
     if not API.WaitForGump(delay=2.5):
         return False
 
+    # Send "Unravel Item" (Button 5)
     API.ReplyGump(GUMP_BTN_UNRAVEL_ITEM)
     if API.WaitForTarget(timeout=2.0):
         API.Target(item_serial)
@@ -651,11 +655,12 @@ def execute_unravel_item(item_serial: int) -> bool:
 
     API.Pause(UNRAVEL_DELAY)
 
-    # Check for confirmation sub-gump
-    active_gump = API.HasGump()
-    if active_gump:
-        API.ReplyGump(GUMP_BTN_CONFIRM)
-        API.Pause(0.4)
+    # Check for confirmation sub-gump (only reply if confirmation dialog actually appears)
+    if API.WaitForGump(delay=0.6) or API.HasGump():
+        if (API.GumpContains("special material") or API.GumpContains("destroyed") or
+                API.GumpContains("unravel") or API.GumpContains("warning")):
+            API.ReplyGump(GUMP_BTN_CONFIRM)
+            API.Pause(0.4)
 
     total_unraveled += 1
     update_stats()
@@ -682,7 +687,7 @@ def execute_unravel_container_cycle() -> bool:
         debug_msg("Timed out waiting for Imbuing menu.")
         return True
 
-    # Send "Unravel Container" button response
+    # Send "Unravel Container" (Button 6)
     API.ReplyGump(GUMP_BTN_UNRAVEL_CONTAINER)
 
     if API.WaitForTarget(timeout=2.5):
@@ -692,11 +697,20 @@ def execute_unravel_container_cycle() -> bool:
 
     API.Pause(UNRAVEL_DELAY)
 
-    # Handle confirmation dialog
-    active_gump = API.HasGump()
-    if active_gump:
-        API.ReplyGump(GUMP_BTN_CONFIRM)
-        API.Pause(0.5)
+    # Check for confirmation dialog (only reply if confirmation sub-gump is present!)
+    if API.WaitForGump(delay=0.6) or API.HasGump():
+        if (API.GumpContains("special material") or API.GumpContains("destroyed") or
+                API.GumpContains("unravel") or API.GumpContains("warning")):
+            API.ReplyGump(GUMP_BTN_CONFIRM)
+            API.Pause(0.5)
+
+    # Inspect journal results
+    entries = API.GetJournalEntries(UNRAVEL_DELAY + 1.0)
+    j_text = [str(e.Text).lower() for e in entries] if entries else []
+    if any("no magical" in t or "nothing" in t or "cannot be unraveled" in t for t in j_text):
+        API.SysMsg("[Imbuing] Container has no more unraveled items.", HUE_WARN)
+        pause_trainer("Container Empty")
+        return True
 
     total_unraveled += 1
     update_stats()
