@@ -38,7 +38,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.1"
+SCRIPT_VERSION: str = "1.0.2"
 
 # Delay in seconds between harvesting swings (1.0s on fast shards, 4.5s on OSI)
 SWING_DELAY: float = 1.0
@@ -178,7 +178,24 @@ CHOP_DEPLETED_KEYWORDS = [
     "it appears immune to your blow",
     "cannot be chopped",
     "use an axe on that",
+    "cannot chop",
+    "can't chop",
+    "chop that",
+    "not a tree",
+    "cannot use",
+    "can't use",
+    "invalid",
+    "immune",
 ]
+
+# Headstones, gravestones, tombs, and cemetery monuments in UO artwork
+GRAVESTONE_GRAPHICS: set = (
+    set(range(0x1165, 0x1185)) |
+    set(range(0x1B01, 0x1B11)) |
+    set(range(0x1ED0, 0x1EE3)) |
+    set(range(0x1224, 0x122A)) |
+    set(range(0x1240, 0x1251))
+)
 
 TOOL_BROKEN_KEYWORDS = [
     "worn out",
@@ -1021,6 +1038,27 @@ def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
 # Lumberjacking Engine
 # ==============================================================================
 
+def is_valid_tree_static(s) -> bool:
+    """Verifies that a static object is a genuine harvestable tree, not a headstone or monument."""
+    if not getattr(s, "IsTree", False):
+        return False
+
+    g = int(getattr(s, "Graphic", 0))
+    if g in GRAVESTONE_GRAPHICS:
+        return False
+
+    name = str(getattr(s, "Name", "") or "").lower()
+    if name:
+        if any(bad in name for bad in [
+            "grave", "tomb", "headstone", "cross", "marker", "crypt",
+            "coffin", "sarcophagus", "statue", "monument", "memorial",
+            "stone", "rock", "boulder", "wall", "fence", "post", "sign"
+        ]):
+            return False
+
+    return True
+
+
 def find_nearby_trees():
     """Scans for nearby static trees within SEARCH_RADIUS."""
     px = API.Player.X
@@ -1031,7 +1069,7 @@ def find_nearby_trees():
 
     candidates = {}
     for s in statics:
-        if not getattr(s, "IsTree", False):
+        if not is_valid_tree_static(s):
             continue
         coord = (int(s.X), int(s.Y))
         if coord in depleted_trees:

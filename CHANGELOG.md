@@ -22,7 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Updated `FesterUO/MiningAndLumberjackAuto.py` to v1.0.1:
+- Updated `FesterUO/MiningAndLumberjackAuto.py` to v1.0.2:
+  - Resolved issue where the script attempted to lumberjack headstones, crosses, and cemetery monuments.
+  - Added `GRAVESTONE_GRAPHICS` filter covering all headstone, tomb, cross, and cemetery monument artwork (`0x1165–0x1184`, `0x1B01–0x1B10`, `0x1ED0–0x1EE2`, `0x1224–0x1229`, `0x1240–0x1250`).
+  - Added `is_valid_tree_static(s)` to `find_nearby_trees()`: checks both graphic exclusions and filters object names against non-tree terms (`"grave"`, `"tomb"`, `"headstone"`, `"cross"`, `"marker"`, `"crypt"`, `"monument"`, `"statue"`).
+  - Expanded `CHOP_DEPLETED_KEYWORDS` with additional server refusal phrases (`"cannot chop"`, `"can't chop"`, `"chop that"`, `"not a tree"`, `"cannot use"`, `"invalid"`).
   - Resolved issue in Felucca where the script became stuck repeatedly digging at dead trees with the message `Where do you wish to dig?`.
   - Disentangled Land Tile IDs (`MINEABLE_LAND_TILES`) from Static Graphic IDs (`MINEABLE_STATIC_GRAPHICS`): previously, Land Tile IDs (220–601, representing mountain terrain) were tested against statics, causing Felucca static dead trees and swamp foliage (which share static IDs 220–300) to be falsely classified as ore deposits.
   - Added strict tree exclusion (`if getattr(s, "IsTree", False): continue`) in `find_nearby_deposits()` to guarantee vegetation is never targeted as a mineable vein.
