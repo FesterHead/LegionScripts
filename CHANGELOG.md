@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated `FesterUO/MiningAndLumberjackAuto.py` to v1.0.1:
+  - Resolved issue in Felucca where the script became stuck repeatedly digging at dead trees with the message `Where do you wish to dig?`.
+  - Disentangled Land Tile IDs (`MINEABLE_LAND_TILES`) from Static Graphic IDs (`MINEABLE_STATIC_GRAPHICS`): previously, Land Tile IDs (220–601, representing mountain terrain) were tested against statics, causing Felucca static dead trees and swamp foliage (which share static IDs 220–300) to be falsely classified as ore deposits.
+  - Added strict tree exclusion (`if getattr(s, "IsTree", False): continue`) in `find_nearby_deposits()` to guarantee vegetation is never targeted as a mineable vein.
+  - Filtered static object names to exclude non-mineable objects (e.g. gravestones, tombstones, cobblestones, milestones, dead stumps).
+  - Added infinite loop protection to both `mine_deposit` and `chop_tree`: if a spot yields no resources after 5 consecutive swings, or reaches 35 swings, the node is marked depleted and the script advances to the next node.
+  - Automatically marks nodes as depleted if targeting fails or is unaccepted, preventing repetitive re-targeting.
+
 - Updated `FesterUO/TrainImbuing.py` to v1.0.14:
   - Added `API.ProcessCallbacks()` to `wait_with_ui()` and the main training loop, resolving the issue where Gump buttons (Pause, Resume, Stop, Mode) were unresponsive.
   - Added interactive target item selection in backpack mode when multiple imbuable items are present, preventing the script from inadvertently grabbing unintended items (such as a Scepter instead of a Dagger).

@@ -38,7 +38,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.0"
+SCRIPT_VERSION: str = "1.0.1"
 
 # Delay in seconds between harvesting swings (1.0s on fast shards, 4.5s on OSI)
 SWING_DELAY: float = 1.0
@@ -132,7 +132,16 @@ BOULDER_GRAPHICS: List[int] = [
     0x136B, 0x136C, 0x136D, 0x134F, 0x1350, 0x1351, 0x1352,
 ]
 
-MINEABLE_GRAPHICS: set = set(SERVUO_MINEABLE_TILES) | set(BOULDER_GRAPHICS)
+CAVE_STATIC_GRAPHICS: List[int] = [
+    0x053B, 0x053C, 0x053D, 0x053E, 0x053F, 0x0540, 0x0541, 0x0542,
+    0x0543, 0x0544, 0x0545, 0x0546, 0x0547, 0x0548, 0x0549, 0x054A,
+    0x054B, 0x054C, 0x054D, 0x054E, 0x054F, 0x0550, 0x0551, 0x0552,
+    0x0553,
+]
+
+MINEABLE_LAND_TILES: set = set(SERVUO_MINEABLE_TILES)
+MINEABLE_STATIC_GRAPHICS: set = set(BOULDER_GRAPHICS) | set(CAVE_STATIC_GRAPHICS)
+MINEABLE_GRAPHICS: set = MINEABLE_LAND_TILES | MINEABLE_STATIC_GRAPHICS
 
 # Journal keywords for depletion
 MINING_DEPLETED_KEYWORDS = [
@@ -770,16 +779,23 @@ def find_nearby_deposits():
             if coord in unreachable_coords or is_vein_depleted(coord[0], coord[1]):
                 continue
 
-            is_mineable = getattr(s, "IsCave", False) or (s.Graphic in MINEABLE_GRAPHICS)
+            # Strict exclusion: NEVER treat a tree, foliage, or stump as a mining deposit
+            if getattr(s, "IsTree", False):
+                continue
+
+            is_mineable = getattr(s, "IsCave", False) or (s.Graphic in MINEABLE_STATIC_GRAPHICS)
             if not is_mineable and s.Name:
                 name = str(s.Name).lower()
-                if any(k in name for k in ["ore", "deposit", "cave", "mountain", "stone", "boulder"]):
+                # Exclude gravestones, headstones, dead trees, ruins, markers
+                if any(bad in name for bad in ["grave", "tomb", "headstone", "cobble", "mile", "stepping", "tree", "branch", "stump", "wood"]):
+                    is_mineable = False
+                elif any(k in name for k in ["ore", "deposit", "cave", "mountain", "boulder", "rock outcropping"]):
                     is_mineable = True
 
             if is_mineable and coord not in candidates:
                 candidates[coord] = s
 
-    # Scan terrain land tiles
+    # Scan terrain land tiles (mountains, rock slopes, cave floors)
     for dy in range(-SEARCH_RADIUS, SEARCH_RADIUS + 1):
         for dx in range(-SEARCH_RADIUS, SEARCH_RADIUS + 1):
             tx = px + dx
@@ -788,7 +804,7 @@ def find_nearby_deposits():
             if coord in unreachable_coords or coord in candidates or is_vein_depleted(tx, ty):
                 continue
             tile = API.GetTile(tx, ty)
-            if tile and tile.Graphic in MINEABLE_GRAPHICS:
+            if tile and tile.Graphic in MINEABLE_LAND_TILES:
                 candidates[coord] = tile
 
     dep_list = list(candidates.values())
@@ -847,6 +863,7 @@ def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
 
     veins_mined += 1
     swing = 0
+    no_harvest_swings = 0
 
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():
@@ -945,6 +962,7 @@ def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
         if not target_accepted and API.HasTarget():
             debug_msg(f"Target at ({tx}, {ty}) rel=({dx}, {dy}) not accepted, skipping deposit.")
             API.CancelTarget()
+            mark_vein_depleted(tx, ty)
             break
 
         API.Pause(SWING_DELAY)
@@ -958,8 +976,12 @@ def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
         delta = max(0, after_ore - before_ore)
         if delta > 0:
             total_ores += delta
+            no_harvest_swings = 0
         elif any("dig some" in t for t in recent_text) or API.InJournal("dig some"):
             total_ores += 1
+            no_harvest_swings = 0
+        else:
+            no_harvest_swings += 1
 
         # Check tool broken
         if any(any(kw in t for kw in TOOL_BROKEN_KEYWORDS) for t in recent_text):
@@ -979,6 +1001,18 @@ def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
                 break
 
         if depleted:
+            mark_vein_depleted(tx, ty)
+            break
+
+        # Safety: skip deposit if no ore yielded after 5 consecutive attempts
+        if no_harvest_swings >= 5:
+            debug_msg(f"Deposit at ({tx}, {ty}) yielded no ore after {no_harvest_swings} swings, skipping.")
+            mark_vein_depleted(tx, ty)
+            break
+
+        # Safety: max swings per deposit
+        if swing >= 35:
+            debug_msg(f"Deposit at ({tx}, {ty}) reached max swing limit, skipping.")
             mark_vein_depleted(tx, ty)
             break
 
@@ -1052,6 +1086,7 @@ def chop_tree(tree, tree_index: int = 1, total_trees: int = 1) -> None:
 
     trees_chopped += 1
     swing = 0
+    no_harvest_swings = 0
 
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():
@@ -1123,6 +1158,7 @@ def chop_tree(tree, tree_index: int = 1, total_trees: int = 1) -> None:
                 if API.HasTarget():
                     debug_msg(f"Target at tree ({tx}, {ty}) not accepted, skipping tree.")
                     API.CancelTarget()
+                    depleted_trees.append((tx, ty))
                     break
 
         API.Pause(SWING_DELAY)
@@ -1136,8 +1172,12 @@ def chop_tree(tree, tree_index: int = 1, total_trees: int = 1) -> None:
         delta = max(0, after_wood - before_wood)
         if delta > 0:
             total_wood += delta
+            no_harvest_swings = 0
         elif any("chop some" in t or "put some wood" in t for t in recent_text) or API.InJournal("chop some"):
             total_wood += 1
+            no_harvest_swings = 0
+        else:
+            no_harvest_swings += 1
 
         # Check depletion
         depleted = False
@@ -1148,6 +1188,18 @@ def chop_tree(tree, tree_index: int = 1, total_trees: int = 1) -> None:
                 break
 
         if depleted:
+            depleted_trees.append((tx, ty))
+            break
+
+        # Safety: abort if tree yields no wood after 5 consecutive attempts
+        if no_harvest_swings >= 5:
+            debug_msg(f"Tree at ({tx}, {ty}) yielded no wood after {no_harvest_swings} swings, skipping.")
+            depleted_trees.append((tx, ty))
+            break
+
+        # Safety: max swings per tree
+        if swing >= 35:
+            debug_msg(f"Tree at ({tx}, {ty}) reached max swing limit, skipping.")
             depleted_trees.append((tx, ty))
             break
 
