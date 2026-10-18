@@ -532,6 +532,25 @@ An automated Musicianship skill training script with interactive control Gump, m
   - Interactive **Pause/Resume**, **Restock**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 
+#### [TrainProvokeAndPeace.py](FesterUO/TrainProvokeAndPeace.py)
+
+An automated dual-barding trainer that targets two creatures, provokes them against each other, peaces them to calm combat and allow regeneration, and repeats to advance Provocation, Peacemaking, and Musicianship:
+
+- **Targeted Barding Loop:** Prompts the player to select two creatures (e.g. penned bulls or bears) and alternates between provoking Target 1 onto Target 2, waiting for the barding recovery timer, peacing them, and repeating.
+- **Dynamic Barding Cooldown Stepper:** Features an interactive `[-] 6.0s [+]` stepper right on the Gump (3.0s to 15.0s range), allowing players to tune the pause delay live to match their server's exact barding timer without restarting or editing script files.
+- **Alternating Peacemaking:** Alternates peace attempts between Target 1 and Target 2 to keep both combatants pacified and prevent either creature from taking lethal damage.
+- **Multi-Instrument Auto-Detection & Breakage Recovery:**
+  - Scans the backpack for any valid instrument (Lap Harp, Standing Harp, Lute, Drum, Tambourine, Bamboo Flute, Fire Horn, Aud-Char).
+  - Automatically handles the `"What instrument shall you play?"` server prompt by targeting an available backpack instrument.
+  - Detects broken instruments via journal monitoring and instantly transitions to spare instruments in the backpack.
+- **Interactive Control Gump:** Movable 350x275 interface displaying:
+  - Real-time training status (`Provoking...`, `Peacing...`, `Waiting cooldown...`, `Paused`, `Completed!`)
+  - Live triple-skill tracking for **Provocation**, **Peacemaking**, and **Musicianship** with skill caps and gain announcements
+  - Target 1 & Target 2 HP% and distance monitoring (`T1: 100% (2t) | T2: 100% (2t)`)
+  - Interactive retargeting buttons (`[Set Target 1]` and `[Set Target 2]`) to swap creatures on the fly
+  - Interactive **Pause/Resume** and **Stop** controls
+- **Attribution:** Created by FesterHead.
+
 #### [TrainTailoring.py](FesterUO/TrainTailoring.py)
 
 An automated, resource-efficient Tailoring training engine with interactive control Gump, resource satchel support, automated cutting/recycling with Scissors, trash barrel disposal, and Tinkering sewing kit upkeep:
