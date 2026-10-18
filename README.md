@@ -609,9 +609,11 @@ An intermediate Imbuing training script designed to bridge the skill gain gap wh
   - **Make Last Crafting Loop:** Uses saws in the player's backpack to craft Oak Quarterstaves via "Make Last" from the Carpentry crafting menu.
   - **Soulforge Unraveling:** Immediately unravels each crafted oak staff at a nearby Soulforge, extracting valuable Magical Residue and Enchanted Essence while actively advancing Imbuing skill.
 - **Multi-Saw Management:** Automatically scans and selects saws from the backpack, cycling to the next available saw whenever a tool breaks without interrupting the loop.
+- **Periodic 10-Imbue Reset Routine:** Every 10 crafts/cycles (`SWEEP_INTERVAL = 10`), the script automatically re-synchronizes the satchel container window, verifies active saw health, and unravels ALL quarterstaves accumulated in the backpack.
+- **Lingering Staves Auto-Sweep:** Constantly monitors root backpack inventory and automatically triggers an unravel sweep whenever 2 or more staves accumulate, guaranteeing staves never pile up due to occasional server lag or missed unravel triggers.
 - **Resource Satchel Restocking:** Automatically detects or prompts for an oak board satchel in the player's backpack. When root backpack boards fall below threshold (default 12 boards), automatically restocks a batch from the satchel.
 - **Auto-Stashing Ingredients:** Automatically moves newly extracted Magical Residue and Enchanted Essence from the backpack into the resource satchel to keep the main backpack uncluttered.
-- **Unravel Confirmation Dialog Handling:** Detects and confirms native server unravel confirmation dialogs automatically.
+- **Unravel Confirmation Dialog Handling:** Detects and confirms native server unravel confirmation dialogs automatically with 2.0s latency tolerance.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
   - Real-time status (`Crafting staff...`, `Unraveling...`, `Restocking boards...`, `Paused`, `Running`)
   - Live Imbuing and Carpentry skill levels, caps, and automatic skill gain announcements

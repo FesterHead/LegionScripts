@@ -18,8 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Interactive Control Gump: 350x275 movable interface featuring real-time status, triple-skill tracking (Provocation, Peacemaking, Musicianship) with skill caps and gain announcements, Target 1 & 2 live HP% and distance monitoring, interactive delay stepper (`[-] 6.0s [+]`, 3.0s–15.0s range) to tune barding cooldowns live without restarting, and Pause/Resume/Stop controls.
   - Unconditional execution call for reliable double-click launch support in TazUO.
 
-- Added `FesterUO/TrainImbuingCraftUnravel.py` (v1.0.2):
+- Added `FesterUO/TrainImbuingCraftUnravel.py` (v1.1.0):
   - Created an intermediate Imbuing training script that crafts Oak Quarterstaves using saws via "Make Last" from the Carpentry menu and immediately unravels each crafted staff at a nearby Soulforge.
+  - Periodic 10-Imbue Reset & Sweep Routine: added `SWEEP_INTERVAL: int = 10` maintenance cycle that re-synchronizes the satchel container window, checks saw health, and unravels ALL lingering quarterstaves accumulated in the backpack.
+  - Lingering Staves Auto-Sweep: automatically scans and unravels backpack staves whenever 2 or more staves accumulate, preventing unraveled items from piling up in the backpack.
+  - Enhanced Soulforge Unravel Confirmation: widened confirmation sub-gump wait timeout to 2.0s with broader detection keywords to ensure unravel confirmations are never missed during latency spikes.
+  - Stray Gump Cleanup: automatically detects and closes lingering non-imbuing menus prior to invoking Imbuing to prevent gump concurrency conflicts.
+  - Expanded Staff Artwork Coverage: broadened `ALL_STAFF_GRAPHICS` and added `is_quarter_staff()` fallback checking both graphic IDs and item names.
   - Multi-saw management: automatically cycles through saws in the backpack as tools wear out or break.
   - Resource satchel restocking: automatically detects or prompts for an oak board satchel in the backpack and restocks working board buffers when backpack supply drops below threshold.
   - Auto-stashing: automatically deposits reclaimed Magical Residue and Enchanted Essence from the backpack into the resource satchel.

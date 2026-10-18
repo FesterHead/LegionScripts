@@ -36,7 +36,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.2"
+SCRIPT_VERSION: str = "1.1.0"
 
 # Target Imbuing skill to stop training (e.g. 120.0 for Legendary, 100.0 for GM, 50.0 for early bracket)
 TARGET_IMBUING_SKILL: float = 120.0
@@ -50,6 +50,9 @@ RESTOCK_DELAY: float = 0.8        # Satchel restock pause delay
 # Working buffer of Oak Boards in root backpack
 MIN_BACKPACK_BOARDS: int = 12     # Restock when backpack boards drop below this (Quarterstaff takes 6 boards)
 RESTOCK_BATCH_BOARDS: int = 50    # Amount of oak boards to pull from satchel per restock batch
+
+# Periodic maintenance & backpack unravel sweep interval (in crafts/cycles)
+SWEEP_INTERVAL: int = 10          # Every 10 imbues, re-synchronize containers and unravel all lingering staves in backpack
 
 # Stash harvested ingredients (Magical Residue & Enchanted Essence) into satchel
 AUTO_STASH_INGREDIENTS: bool = True
@@ -94,7 +97,13 @@ OAK_WOOD_HUE: int = 0x07DA  # 2010 (Standard Oak Wood hue in ServUO / ModernUO /
 
 # Quarter Staff graphics
 QUARTER_STAFF_GRAPHICS: List[int] = [0x0E8A, 0x0E89]
-ALL_STAFF_GRAPHICS: List[int] = [0x0E8A, 0x0E89, 0x13F8, 0x0E81]
+ALL_STAFF_GRAPHICS: List[int] = [
+    0x0E8A, 0x0E89,  # Quarter Staff
+    0x13F8, 0x13F9,  # Gnarled Staff
+    0x0DF0, 0x0DF1,  # Black Staff
+    0x0E81, 0x0E82,  # Shepherd's Crook
+    0x26C1, 0x26CB,  # Wild Staff
+]
 
 # Soulforge structures
 SOULFORGE_GRAPHICS: Set[int] = {
@@ -775,6 +784,16 @@ def execute_unravel_item(item_serial: int) -> bool:
     update_status("Unraveling...")
     API.ClearJournal()
     API.Pause(0.3)
+
+    # If a non-imbuing gump is currently open (e.g. lingering craft menu), close it
+    if API.HasGump():
+        if not (API.GumpContains("Adds or modifies") or
+                API.GumpContains("Repeats the last") or
+                API.GumpContains("IMBUING MENU") or
+                API.GumpContains("Unravels all items")):
+            API.CloseGump()
+            API.Pause(0.2)
+
     API.UseSkill("Imbuing")
 
     if not wait_for_imbuing_menu(timeout=4.0):
@@ -798,11 +817,12 @@ def execute_unravel_item(item_serial: int) -> bool:
     # Handle confirmation sub-gump if it appears
     import time
     start_c = time.time()
-    while (time.time() - start_c) < 1.0:
+    while (time.time() - start_c) < 2.0:
         if API.HasGump():
             if (API.GumpContains("special material") or
                     API.GumpContains("DESTROYED") or
-                    API.GumpContains("UNRAVEL MAGIC ITEM CONFIRMATION")):
+                    API.GumpContains("UNRAVEL MAGIC ITEM CONFIRMATION") or
+                    API.GumpContains("unravel")):
                 conf_gump = API.GetGump()
                 conf_buttons = []
                 if conf_gump and hasattr(conf_gump, "Children"):
@@ -856,6 +876,72 @@ def execute_unravel_item(item_serial: int) -> bool:
 
     return False
 
+
+def is_quarter_staff(item: Any) -> bool:
+    """Checks if an item is a quarterstaff or crafted training staff."""
+    if not item:
+        return False
+    g = getattr(item, "Graphic", 0)
+    name = str(getattr(item, "Name", "") or "").lower()
+    return g in ALL_STAFF_GRAPHICS or "staff" in name or "quarter" in name
+
+
+def get_backpack_staves() -> List[Any]:
+    """Finds all quarterstaves or crafted staves currently in the root backpack."""
+    items = API.ItemsInContainer(API.Backpack, recursive=False) or []
+    return [it for it in items if is_quarter_staff(it)]
+
+
+def sweep_and_unravel_all_staves(reason: str = "Backpack Sweep") -> int:
+    """
+    Scans the root backpack and unravels all quarterstaves currently present.
+    Returns the number of staves unraveled during this sweep.
+    """
+    staves = get_backpack_staves()
+    if not staves:
+        return 0
+
+    API.SysMsg(f"[Trainer] [{reason}] Found {len(staves)} quarterstaff/staves in backpack. Unraveling all...", HUE_INFO)
+    update_status(f"Unraveling ({len(staves)} staves)")
+
+    unraveled_count = 0
+    for staff in staves:
+        if API.StopRequested or is_stopped:
+            break
+        # Verify item still exists in backpack before attempting unravel
+        if API.FindItem(staff.Serial):
+            if execute_unravel_item(staff.Serial):
+                unraveled_count += 1
+            wait_with_ui(0.4)
+
+    return unraveled_count
+
+
+def perform_periodic_reset(cycle_num: int) -> None:
+    """
+    Executes a periodic refresh ('starting again' maintenance cycle):
+    1. Pre-opens / touches satchel to keep server container window synchronized.
+    2. Verifies active saw and Soulforge proximity.
+    3. Unravels ALL quarterstaves accumulated in the backpack.
+    4. Stashes any reclaimed residue and essence into the satchel.
+    """
+    API.SysMsg(f"[Trainer] [10-Imbue Reset] Cycle {cycle_num}: Re-synchronizing containers & sweeping backpack staves...", HUE_INFO)
+
+    # 1. Resynchronize satchel container
+    if satchel_serial:
+        API.UseObject(satchel_serial)
+        API.Pause(0.3)
+
+    # 2. Check saw health
+    get_active_saw()
+
+    # 3. Unravel any and all staves in backpack
+    sweep_and_unravel_all_staves("10-Imbue Reset")
+
+    # 4. Stash all accumulated ingredients
+    stash_unraveled_ingredients()
+
+
 # ==============================================================================
 # Main Orchestration Loop
 # ==============================================================================
@@ -907,17 +993,9 @@ def main():
     API.SysMsg(f"[Trainer] Ready! Saws: {len(saws)} | Boards: {count_backpack_boards()} pack, {count_satchel_boards()} satchel.", HUE_SUCCESS)
 
     # Clean up any leftover quarterstaves in backpack first
-    leftovers = [
-        it for it in (API.ItemsInContainer(API.Backpack, recursive=False) or [])
-        if it.Graphic in ALL_STAFF_GRAPHICS
-    ]
-    if leftovers:
-        API.SysMsg(f"[Trainer] Unraveling {len(leftovers)} leftover staff/staves in backpack first...", HUE_INFO)
-        for staff in leftovers:
-            if API.StopRequested or is_stopped:
-                break
-            execute_unravel_item(staff.Serial)
-            wait_with_ui(0.5)
+    sweep_and_unravel_all_staves("Startup")
+
+    cycle_count: int = 0
 
     # 6. Core Craft & Unravel Loop
     while not API.StopRequested and not is_stopped:
@@ -931,6 +1009,10 @@ def main():
             update_status("Target Reached")
             break
 
+        # Periodic 10-imbue reset routine ("think it's starting again")
+        if cycle_count > 0 and (cycle_count % SWEEP_INTERVAL) == 0:
+            perform_periodic_reset(cycle_count)
+
         # Step 1: Craft an Oak Quarterstaff via Make Last
         staff_serial = craft_oak_quarterstaff()
 
@@ -938,6 +1020,13 @@ def main():
         if staff_serial:
             wait_with_ui(0.3)
             execute_unravel_item(staff_serial)
+
+        # Safety sweep: If lingering staves were missed and are accumulating in backpack, sweep them immediately
+        lingering = get_backpack_staves()
+        if len(lingering) >= 2:
+            sweep_and_unravel_all_staves("Lingering Staves")
+
+        cycle_count += 1
 
         # Brief cycle breather
         wait_with_ui(0.4)
