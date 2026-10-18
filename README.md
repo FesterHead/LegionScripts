@@ -566,18 +566,40 @@ An automated, resource-efficient Imbuing skill training script with interactive 
 
 - **Dual Training Architecture:**
   - **Reimbue Loop Training (40.0 – 120.0):** Loops the high-speed "Reimbue Last" skill function at a Soulforge on working equipment (daggers, caps, jingasas, etc.), tracking attempts per item up to the optimal 20-imbue limit before diminishing returns.
-  - **Mass Unraveling / Recycler Mode (0.0 – 50.0+ / Material Farming):** Automates bulk item and container unraveling at a Soulforge to gain early skill and amass Magical Residues, Enchanted Essences, and Relic Fragments.
+  - **Mass Unraveling / Recycler Mode (0.0 – 50.0+ / Material Farming):** Automates bulk item and container unraveling at a Soulforge to gain early skill and amass Magical Residues, Enchanted Essences, and Relic Fragments. Supports both backpack containers and external house chests.
+- **External Supply Chest & Backpack Drawing:** Automatically differentiates between backpack containers and external chests (such as chests on house tables or ground). When unraveling from an external chest, automatically pulls items into the backpack individually to comply with server backpack proximity rules (`"This item must be in your backpack to be used"`).
+- **Skill-Threshold Auto-Return & Session Blacklist:** Detects server messages when an item requires higher Imbuing skill than your character currently possesses (`"You are not skilled enough to unravel this item"`). Automatically moves the item back into the house supply container and blacklists its serial for the duration of the session so it is never pulled again, halting with status `"Supply Depleted"` once all eligible items are processed.
 - **Resource-Efficient Recycling via Soulforge Unraveling:** Automatically unravels finished items at the Soulforge after reaching maximum imbue attempts (default 20), reclaiming valuable Magical Residues and Enchanted Essences. Includes alternative Trash Barrel / Discard Bag support for automated non-recyclable item disposal.
 - **Milestone Guidance & Success Rate Optimization:** Tracks progression milestones and recommends optimal properties (Reflect Physical Damage, Hit Dispel, Damage Increase, Lower Reagent Cost, etc.) to maintain the ~50–60% success rate sweet spot for maximum skill gains. Features an interactive **"Setup Imbue"** button allowing manual calibration of properties and intensity at any time.
-- **Resource Satchel & Chest Restocking:** Monitors backpack Magical Residues, Enchanted Essences, and Gem reserves (Citrine, Amber, Tourmaline, etc.) and restocks working buffers automatically from a designated resource satchel or chest.
+- **Resource Satchel & Chest Restocking / Stashing:** Automatically stashes newly gained unraveled ingredients (Magical Residue, Enchanted Essence, Relic Fragments) from the backpack directly into the designated resource satchel or chest. During imbuing, monitors backpack reserves and automatically restocks working buffers from the satchel when supplies run low.
 - **Item Supply Management:** Automatically draws fresh items to imbue from an Item Supply Container into the backpack when an active item reaches capacity.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
-  - Real-time training status (`Imbuing <Item> (N/20)...`, `Unraveling Container...`, `Paused`, `Finished`)
+  - Real-time training status (`Imbuing <Item> (N/20)...`, `Unraveling <Item>...`, `Paused`, `Finished`)
   - Live Imbuing skill level, skill cap, and automatic skill gain announcements
   - Item attempt counter (e.g. `Item: Dagger | Attempts: 14/20`)
   - Running counters for **Imbued**, **Unraveled**, and **Failed** attempts
   - Live backpack resource counts (Residue, Essence, Gems) and container binding indicators
   - Interactive **Pause/Resume**, **Mode Toggle**, **Setup Imbue**, **Supply Bag**, **Resources**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
+#### [TrainImbuingCraftUnravel.py](FesterUO/TrainImbuingCraftUnravel.py)
+
+An intermediate Imbuing training script designed to bridge the skill gain gap when low on Magical Residue or when direct imbuing success rates are inefficient:
+
+- **Craft & Unravel Training Architecture:**
+  - **Make Last Crafting Loop:** Uses saws in the player's backpack to craft Oak Quarterstaves via "Make Last" from the Carpentry crafting menu.
+  - **Soulforge Unraveling:** Immediately unravels each crafted oak staff at a nearby Soulforge, extracting valuable Magical Residue and Enchanted Essence while actively advancing Imbuing skill.
+- **Multi-Saw Management:** Automatically scans and selects saws from the backpack, cycling to the next available saw whenever a tool breaks without interrupting the loop.
+- **Resource Satchel Restocking:** Automatically detects or prompts for an oak board satchel in the player's backpack. When root backpack boards fall below threshold (default 12 boards), automatically restocks a batch from the satchel.
+- **Auto-Stashing Ingredients:** Automatically moves newly extracted Magical Residue and Enchanted Essence from the backpack into the resource satchel to keep the main backpack uncluttered.
+- **Unravel Confirmation Dialog Handling:** Detects and confirms native server unravel confirmation dialogs automatically.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time status (`Crafting staff...`, `Unraveling...`, `Restocking boards...`, `Paused`, `Running`)
+  - Live Imbuing and Carpentry skill levels, caps, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Unraveled**, and **Failed** attempts
+  - Live resource tracking for Oak Boards (Backpack + Satchel) and available Saws
+  - Total Magical Residue and Enchanted Essence counters with session yield totals
+  - Interactive **Pause/Resume**, **Set Satchel**, **Set Trash**, and **Stop** buttons
 - **Attribution:** Created by FesterHead.
 
 #### [MoveItemsBetweenContainers.py](FesterUO/MoveItemsBetweenContainers.py)

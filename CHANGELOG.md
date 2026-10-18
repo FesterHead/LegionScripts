@@ -7,7 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `FesterUO/TrainImbuingCraftUnravel.py` (v1.0.2):
+  - Created an intermediate Imbuing training script that crafts Oak Quarterstaves using saws via "Make Last" from the Carpentry menu and immediately unravels each crafted staff at a nearby Soulforge.
+  - Multi-saw management: automatically cycles through saws in the backpack as tools wear out or break.
+  - Resource satchel restocking: automatically detects or prompts for an oak board satchel in the backpack and restocks working board buffers when backpack supply drops below threshold.
+  - Auto-stashing: automatically deposits reclaimed Magical Residue and Enchanted Essence from the backpack into the resource satchel.
+  - Interactive Control Gump: displays live Imbuing & Carpentry skills with gain announcements, staves crafted/unraveled counters, board/saw counts, and Pause, Set Satchel, Set Trash, and Stop controls.
+  - Fixed false-positive "Out of oak boards" pause by evaluating total boards across both root backpack and satchel (`count_total_boards()`) rather than aborting when root backpack count was zero.
+  - Added automatic container pre-opening (`API.UseObject(satchel_serial)`) upon satchel detection and during restocking so the game server registers container access and permits item extraction.
+  - Fixed script execution when double-clicked in the TazUO client by calling `main()` unconditionally instead of relying on an `if __name__ == "__main__":` guard.
+  - Set default Gump position to `(520, 80)` to prevent overlap with client journal and status displays.
+
 ### Changed
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.14:
+  - Added `API.ProcessCallbacks()` to `wait_with_ui()` and the main training loop, resolving the issue where Gump buttons (Pause, Resume, Stop, Mode) were unresponsive.
+  - Added interactive target item selection in backpack mode when multiple imbuable items are present, preventing the script from inadvertently grabbing unintended items (such as a Scepter instead of a Dagger).
+  - Enhanced `Setup Imbue` mode to prompt and lock onto the designated training item.
+  - Adjusted default Gump position to `(520, 80)` so it is clearly visible and not obscured by the chat/journal window.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.13:
+  - Eliminated false-positive success reporting (`Successfully unraveled 'Item (0x0)'`) by verifying item existence in the backpack before targeting and requiring positive journal confirmation (`"extract"`, `"obtain"`, `"residue"`, `"essence"`, `"relic"`) or confirmed item destruction.
+  - Added arrival verification loop after `API.MoveItem` when drawing items from external chests into the backpack.
+  - Improved item name tracking and fallback naming during unravel attempts.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.12:
+  - Added automatic stashing (`stash_unraveled_ingredients`) that moves unraveled materials (Magical Residue, Enchanted Essence, and Relic Fragments) from the root backpack into the configured resource satchel/chest.
+  - Updated resource counting to track total materials across both the backpack and the resource satchel on the control Gump label.
+  - Automatically sweeps existing loose unraveled ingredients from the backpack into the resource satchel at the start of each unravel cycle.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.11:
+  - Added session skip tracking (`skipped_unravel_serials`) for items requiring higher Imbuing skill than the character currently possesses.
+  - Added journal detection in `execute_unravel_item` for server low-skill messages (`"not skilled enough"`, `"not high enough"`, `"lack the skill"`, `"cannot be unraveled"`).
+  - Automatically returns items requiring higher skill back into the external house supply chest and skips them from being retrieved again during the current session.
+  - Pauses trainer gracefully with status `"Supply Depleted"` when all unravelable items in the supply container have been processed.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.10:
+  - Fixed missing on-screen control Gump by calling `API.Gumps.AddGump(gump)` in `create_control_gump()`, restoring the interactive user interface with Pause, Resume, Mode Toggle, and Stop controls.
+  - Added support for external supply chests in Unravel mode: when the supply container is outside the backpack (e.g. in the house/table), the script automatically moves items into the backpack and unravels them individually via `Unravel Item` (Button 10010) to satisfy the server's requirement that items must reside in the backpack.
+  - Added journal detection for server `This item must be in your backpack to be used` prompts.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.9:
+  - Corrected native Soulforge Imbuing Menu button IDs based on runtime discovery (`[10005, 10006, 10007, 10008, 10010, 10011, 1]`):
+    - Mapped `GUMP_BTN_UNRAVEL_CONTAINER = 10011` (was `6`).
+    - Mapped `GUMP_BTN_UNRAVEL_ITEM = 10010` (was `5`).
+    - Mapped `GUMP_BTN_REIMBUE_LAST = 10006` (was `2`).
+    - Mapped `GUMP_BTN_IMBUE_ITEM = 10005` (was `1`).
+    - Mapped `GUMP_BTN_CANCEL = 1` (was `0`).
+  - Resolves the `Invalid gump response, disconnecting...` root cause: sending button ID 6 caused ServUO/ModernUO to reject the packet because 6 was not a valid button ID on `ImbuingGump`.
+  - Added dynamic button ID inspection and response for special material confirmation dialogs in Step 5.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.8:
+  - Eliminated runaway retry loop that repeatedly spammed `UseSkill("Imbuing")` on timeouts and triggered server disconnects (`WorldMap loading...`).
+  - Added graceful pause (`pause_trainer("Target Timeout")`) and automatic cleanup (`API.CloseGump()`) if the target cursor does not appear.
+  - Added runtime gump child control inspection to discover all button IDs on the server's Imbuing menu.
+  - Implemented dual-mode `ReplyGump` (explicit Gump ID with fallback to default top-level gump).
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.7:
+  - Enabled detailed diagnostic telemetry (`DEBUG = True`) and injected step-by-step console milestone tracking (`[1/5]` through `[5/5]`) in `execute_unravel_container_cycle`.
+  - Added live Gump ID logging upon server Imbuing menu detection to verify server packet alignment before dispatching `ReplyGump`.
+  - Added pacing buffer and target cursor state verification before targeting containers.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.6:
+  - Fixed client disconnect (`Invalid gump response, disconnecting...`) caused by sending gump responses when no server gump was open:
+    - Removed broad keywords (`"unravel"`, `"warning"`) from confirmation gump checks that falsely matched the script's own client-side control Gump.
+    - Restricted confirmation sub-gump responses exclusively to genuine server prompts (`"special material"`, `"DESTROYED"`, `"UNRAVEL MAGIC ITEM CONFIRMATION"`).
+    - Standardized all `API.ReplyGump(button)` calls to use TazUO's default top server gump resolution (`gump=1337`) instead of passing manual IDs.
+    - Updated `wait_for_imbuing_menu` to return a boolean after verifying phrases exclusive to the server's Imbuing menu (`"Adds or modifies"`, `"Repeats the last"`, `"IMBUING MENU"`, `"Unravels all items"`).
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.4:
+  - Added dedicated `wait_for_imbuing_menu` helper using `API.GumpContains` text verification ("IMBUING" / "Imbue Item" / "Unravel") before replying, ensuring the client never sends button packets to open container gumps or before the server menu arrives.
+  - Added action cooldown buffers (`API.Pause`) after container interactions and before `API.UseSkill("Imbuing")` calls to eliminate action timer collisions that blocked the skill menu from opening.
+  - Hardened confirmation dialog polling with timeout-bounded loops to prevent premature or mismatched gump responses.
 
 - Updated `FesterUO/TrainImbuing.py` to v1.0.3:
   - Corrected native Soulforge Imbuing Menu button ID mappings: updated `GUMP_BTN_UNRAVEL_CONTAINER` to `6` (was `4`) and `GUMP_BTN_UNRAVEL_ITEM` to `5` (was `3`), and mapped `GUMP_BTN_IMBUE_LAST_ITEM` (`3`) and `GUMP_BTN_IMBUE_LAST_PROP` (`4`).
