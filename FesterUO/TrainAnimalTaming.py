@@ -114,11 +114,11 @@ HEAL_HP_PERCENT: int = 50
 BANDAGE_GRAPHIC: int = 0x0E21
 
 # Optional Magery Culling:
-# If True, automatically casts Energy Bolt on released hostile/gray creatures to
+# If True, automatically casts Flamestrike on released hostile/gray creatures to
 # clear wildlife spawns and train Magery concurrently with strict zero-karma-loss protection.
 ENABLE_MAGERY_CULL: bool = False
-CULL_SPELL: str = "Energy Bolt"
-CULL_MIN_MANA: int = 20
+CULL_SPELL: str = "Flamestrike"
+CULL_MIN_MANA: int = 40
 
 # Enable verbose debug output to client console
 DEBUG: bool = False
