@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `FesterUO/TrainImbuing.py` (v1.0.22):
+  - Created an automated full-spectrum Imbuing trainer supporting both Reimbue property loops and mass container unraveling at any Soulforge.
+  - Imbue Last Property Cursor Cycling: sends `10008` ("Imbue Last Property") to prompt for a target cursor on each fresh item, resolving server "must be in your backpack" errors.
+  - Fresh Item Retirement: added `RETIRE_ON_SUCCESS = True` to retire items upon a successful imbue to prevent wasting resources repeating identical properties with zero skill gain.
+  - Retired Items Session Registry: introduced `retired_item_serials` cache to prevent the item selection loop from re-selecting daggers that completed training or failed all imbue attempts.
+  - Robust Soulforge Unraveling Handshake: added pacing pauses (`API.Pause(0.2)`) during unravel targeting with target cursor retry verification and broadened confirmation sub-gump detection to reliably handle server confirmation dialogs.
+  - Informative Unravel Diagnostics: added explicit journal checks for non-magical / low-intensity items and skill-too-low notifications.
+  - Dual-layer Resource Management: dynamically counts and restocks Magical Residue, Enchanted Essence, and Gems across backpack and supply satchels.
+  - Interactive Control Gump: 330x240 movable interface featuring live Imbuing skill tracking, recommendation tier helper, attempt counters, real-time resource meters, and Pause/Mode/Setup/Supply/Resource/Trash/Stop controls.
+
 - Added `FesterUO/TrainProvokeAndPeace.py` (v1.0.0):
   - Created an automated dual-barding trainer that alternates between provoking two target creatures onto each other and peacing them to train Provocation, Peacemaking, and Musicianship concurrently.
   - Interactive Target Configuration: prompts player to select Target 1 and Target 2 on launch, with on-screen Gump buttons (`[Set Target 1]` and `[Set Target 2]`) to retarget at any time without restarting the script.
@@ -47,6 +57,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Filtered static object names to exclude non-mineable objects (e.g. gravestones, tombstones, cobblestones, milestones, dead stumps).
   - Added infinite loop protection to both `mine_deposit` and `chop_tree`: if a spot yields no resources after 5 consecutive swings, or reaches 35 swings, the node is marked depleted and the script advances to the next node.
   - Automatically marks nodes as depleted if targeting fails or is unaccepted, preventing repetitive re-targeting.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.21:
+  - Resolved `The item must be in your backpack to imbue it`: replaced `GUMP_BTN_REIMBUE_LAST` (10006, which attempts to re-imbue the previous ghost item) with `GUMP_BTN_IMBUE_LAST_PROP` (10008, which requests a target cursor from the server to apply the last property onto a fresh item).
+  - Fixed supply container targeting: targeting your main backpack when prompted for a supply container now correctly engages direct backpack mode without attempting to drag items from the backpack into itself.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.20:
+  - Fixed `UnboundLocalError: local variable 'current_item_name' referenced before assignment`: declared `current_item_name` and `current_item_serial` as global within `execute_reimbue_cycle()`.
+  - Declared `target_training_graphic` as global within `get_or_fetch_target_item()`.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.19:
+  - Fixed false-positive "Out of Magical Residue" pause loop: changed the resource verification in `reimbue_target_item()` from `count_backpack_residue()` (root backpack only) to `count_total_residue()` (recursive backpack + satchel), allowing the script to properly recognize residue stored inside resource satchels.
+  - Excluded spell scrolls (`0x1F2D–0x1F72`), potions, and consumables in `is_imbuable_item()` to prevent non-equipment (such as Recall scrolls) from being drawn as training targets.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.18:
+  - Resolved the zero-gain training loop flaw where the script continued to imbue the same item up to 20 times after already succeeding: in UO mechanics, re-imbuing the exact same property onto an item that already has it yields zero skill gains.
+  - Added `RETIRE_ON_SUCCESS = True`: as soon as an item is successfully imbued, it is immediately retired (unraveled at the Soulforge to reclaim Magical Residue) so the next attempt trains on a fresh item.
+  - Added automatic batch item cycling (`target_training_graphic`): when training with multiple items in the backpack (e.g. 10 daggers), the script automatically sequences through every dagger in the backpack without pausing or requiring manual re-targeting.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.17:
+  - Fixed redundant gem and residue restocking: when the configured resource container is inside the player's backpack (`is_in_backpack`), the script now skips pulling working batches into the root backpack because the Ultima Online server automatically consumes ingredients directly from subcontainers. Restocking is now strictly reserved for external containers (e.g. house chests).
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.16:
+  - Updated progression ladder recommendations for 45.0–55.0 to **Hit Dispel** (`Amber + Magical Residue`) on weapons and **Luck** (`Citrine + Magical Residue`) on armor/weapons, eliminating references to Damage Increase which crosses into the Enchanted Essence bracket at train-level intensities.
+
+- Updated `FesterUO/TrainImbuing.py` to v1.0.15:
+  - Clarified progression ladder recommendations for the 45.0–55.0 and 70.0–90.0 skill brackets: explicitly distinguished between weapons (which use **Damage Increase** with Citrine + Residue or **Hit Dispel** with Amber + Residue) and armor pieces (which can use **Luck** or **Reflect Physical Damage** with Citrine + Residue), resolving confusion when attempting to locate Reflect Physical on daggers or other weapons.
 
 - Updated `FesterUO/TrainImbuing.py` to v1.0.14:
   - Added `API.ProcessCallbacks()` to `wait_with_ui()` and the main training loop, resolving the issue where Gump buttons (Pause, Resume, Stop, Mode) were unresponsive.

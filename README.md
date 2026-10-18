@@ -584,18 +584,20 @@ An automated, resource-efficient Tailoring training engine with interactive cont
 An automated, resource-efficient Imbuing skill training script with interactive control Gump, Soulforge awareness, dual training modes, auto-unravel recycling, and resource restocking:
 
 - **Dual Training Architecture:**
-  - **Reimbue Loop Training (40.0 – 120.0):** Loops the high-speed "Reimbue Last" skill function at a Soulforge on working equipment (daggers, caps, jingasas, etc.), tracking attempts per item up to the optimal 20-imbue limit before diminishing returns.
+  - **Fresh Item Imbuing Loop (45.0 – 120.0):** Rapidly imbues fresh items using "Imbue Last Property" (`10008`) with automatic target cursor cycling. Once an item is successfully imbued (`RETIRE_ON_SUCCESS = True`), it is immediately retired to a fresh item to prevent repeating identical properties with zero skill gains.
   - **Mass Unraveling / Recycler Mode (0.0 – 50.0+ / Material Farming):** Automates bulk item and container unraveling at a Soulforge to gain early skill and amass Magical Residues, Enchanted Essences, and Relic Fragments. Supports both backpack containers and external house chests.
+- **Automated Target Retirement & History Tracking:** Automatically registers retired items (unraveled, trashed, or non-magical) in a session registry (`retired_item_serials`) so that items that have already completed training are never re-selected from the backpack.
+- **Robust Soulforge Unraveling Handshake:** Implements pacing delays and retry verification for target cursors, alongside broad confirmation sub-gump detection to ensure server unravel confirmation dialogs are seamlessly accepted.
 - **External Supply Chest & Backpack Drawing:** Automatically differentiates between backpack containers and external chests (such as chests on house tables or ground). When unraveling from an external chest, automatically pulls items into the backpack individually to comply with server backpack proximity rules (`"This item must be in your backpack to be used"`).
 - **Skill-Threshold Auto-Return & Session Blacklist:** Detects server messages when an item requires higher Imbuing skill than your character currently possesses (`"You are not skilled enough to unravel this item"`). Automatically moves the item back into the house supply container and blacklists its serial for the duration of the session so it is never pulled again, halting with status `"Supply Depleted"` once all eligible items are processed.
-- **Resource-Efficient Recycling via Soulforge Unraveling:** Automatically unravels finished items at the Soulforge after reaching maximum imbue attempts (default 20), reclaiming valuable Magical Residues and Enchanted Essences. Includes alternative Trash Barrel / Discard Bag support for automated non-recyclable item disposal.
+- **Resource-Efficient Recycling via Soulforge Unraveling:** Automatically unravels finished items at the Soulforge after reaching maximum imbue attempts (default 10) or upon success, reclaiming valuable Magical Residues and Enchanted Essences. Includes alternative Trash Barrel / Discard Bag support for automated non-recyclable item disposal.
 - **Milestone Guidance & Success Rate Optimization:** Tracks progression milestones and recommends optimal properties (Reflect Physical Damage, Hit Dispel, Damage Increase, Lower Reagent Cost, etc.) to maintain the ~50–60% success rate sweet spot for maximum skill gains. Features an interactive **"Setup Imbue"** button allowing manual calibration of properties and intensity at any time.
 - **Resource Satchel & Chest Restocking / Stashing:** Automatically stashes newly gained unraveled ingredients (Magical Residue, Enchanted Essence, Relic Fragments) from the backpack directly into the designated resource satchel or chest. During imbuing, monitors backpack reserves and automatically restocks working buffers from the satchel when supplies run low.
 - **Item Supply Management:** Automatically draws fresh items to imbue from an Item Supply Container into the backpack when an active item reaches capacity.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
-  - Real-time training status (`Imbuing <Item> (N/20)...`, `Unraveling <Item>...`, `Paused`, `Finished`)
+  - Real-time training status (`Imbuing <Item> (N/10)...`, `Unraveling <Item>...`, `Paused`, `Finished`)
   - Live Imbuing skill level, skill cap, and automatic skill gain announcements
-  - Item attempt counter (e.g. `Item: Dagger | Attempts: 14/20`)
+  - Item attempt counter (e.g. `Item: Dagger | Attempts: 1/10`)
   - Running counters for **Imbued**, **Unraveled**, and **Failed** attempts
   - Live backpack resource counts (Residue, Essence, Gems) and container binding indicators
   - Interactive **Pause/Resume**, **Mode Toggle**, **Setup Imbue**, **Supply Bag**, **Resources**, **Trash Can**, and **Stop** buttons

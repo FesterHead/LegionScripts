@@ -56,7 +56,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.14"
+SCRIPT_VERSION: str = "1.0.22"
 
 # Target Imbuing skill to stop training (e.g. 100.0 for GM, 120.0 for Legendary)
 TARGET_SKILL: float = 120.0
@@ -64,11 +64,14 @@ TARGET_SKILL: float = 120.0
 # Initial Training Mode: "REIMBUE" (Active Imbuing) or "UNRAVEL" (Mass Unraveling)
 TRAINING_MODE: str = "REIMBUE"
 
-# Maximum imbue attempts allowed on a single item before retiring/recycling it.
-# In standard UO mechanics, 20 imbues is the maximum threshold before severe diminishing returns.
-MAX_IMBUES_PER_ITEM: int = 20
+# Retire item immediately upon a successful imbue to move to a fresh item.
+# In standard UO mechanics, repeating the same property on an item that already has it yields ZERO skill gains.
+RETIRE_ON_SUCCESS: bool = True
 
-# Automatically unravel items at the Soulforge after reaching MAX_IMBUES_PER_ITEM
+# Maximum fail attempts allowed on a single item before retiring/recycling it.
+MAX_IMBUES_PER_ITEM: int = 10
+
+# Automatically unravel items at the Soulforge after retiring them
 # to reclaim valuable Magical Residue and Enchanted Essence.
 AUTO_UNRAVEL_AFTER_MAX: bool = True
 
@@ -191,11 +194,11 @@ TRASH_BARREL_GRAPHICS: Set[int] = {0x0E77}
 # Optimal Progression Ladder: (min_skill, max_skill, recommended_property, required_materials, recommendation_notes)
 PROGRESSION_LADDER: List[Tuple[float, float, str, str, str]] = [
     (0.0, 45.0, "Unravel Magic Loot / Items", "Magical items (loot/crafted)", "0-45: Mass unravel at Soulforge for free skill & residue"),
-    (45.0, 55.0, "Reflect Physical Damage", "Citrine + Residue", "Caps / Daggers (low intensity ~8-10%, ~55% success)"),
-    (55.0, 70.0, "Hit Dispel or Damage Increase", "Amber/Citrine + Residue", "Daggers / Butcher Knives (~50-55% success)"),
-    (70.0, 90.0, "Reflect Physical / LRC", "Citrine/Tourmaline + Residue", "Platemail Jingasas / Caps (~50-55% success)"),
-    (90.0, 105.0, "Damage Increase / Luck", "Citrine + Residue/Essence", "Weapons / Armor (mid-high intensity, ~50-55% success)"),
-    (105.0, 120.0, "High Intensity Imbues", "Gems + Essence/Residue", "Weapons / Armor (high intensity, ~50-55% success)"),
+    (45.0, 55.0, "Hit Dispel (Weapons) or Luck (Armor/Weapons)", "Amber / Citrine + Residue", "Daggers: Hit Dispel (Amber + Residue) | Armor/Weapons: Luck (Citrine + Residue, ~50-55% success)"),
+    (55.0, 70.0, "Hit Dispel or Luck (Higher Intensity)", "Amber / Citrine + Residue", "Daggers / Butcher Knives / Jingasas (~50-55% success)"),
+    (70.0, 90.0, "Hit Dispel / LRC", "Amber/Tourmaline + Residue", "Weapons: Hit Dispel | Armor: Lower Reagent Cost (~50-55% success)"),
+    (90.0, 105.0, "Damage Increase / High Intensity", "Citrine/Gems + Essence", "Weapons / Armor (mid-high intensity, ~50-55% success)"),
+    (105.0, 120.0, "High Intensity Imbues", "Gems + Essence/Relics", "Weapons / Armor (high intensity, ~50-55% success)"),
 ]
 
 
@@ -230,6 +233,7 @@ custom_soulforge_serial: Optional[int] = None
 current_item_serial: Optional[int] = None
 current_item_name: str = "None"
 current_item_imbue_count: int = 0
+target_training_graphic: Optional[int] = None
 
 # Runtime flags
 is_paused: bool = False
@@ -240,8 +244,10 @@ total_imbued: int = 0
 total_unraveled: int = 0
 total_failed: int = 0
 
-# Session-level cache of items that cannot be unraveled due to insufficient skill
+# Session-level cache of items that cannot be unraveled due to insufficient skill or low magic
 skipped_unravel_serials: Set[int] = set()
+# Items that have finished their training cycle (prevent re-selecting failed/plain or unraveled items)
+retired_item_serials: Set[int] = set()
 
 last_imbuing_skill: Optional[float] = None
 recommended_prop_name: str = "Initializing..."
@@ -495,9 +501,14 @@ def stash_unraveled_ingredients() -> None:
 
 
 def restock_resources_from_chest() -> bool:
-    """Restocks Magical Residues and Gems from the resource chest/satchel into the backpack."""
+    """Restocks Magical Residues and Gems from an external resource chest into the backpack."""
     if not resource_chest_serial:
         return False
+
+    # If the resource container is already inside the player's backpack (e.g. a satchel or pouch),
+    # the UO server automatically consumes gems and residue directly from it. No restocking needed!
+    if is_in_backpack(resource_chest_serial):
+        return True
 
     chest_items = API.ItemsInContainer(resource_chest_serial, recursive=True) or []
     if not chest_items:
@@ -535,12 +546,16 @@ def restock_resources_from_chest() -> bool:
 # ==============================================================================
 
 def is_imbuable_item(item: Any) -> bool:
-    """Validates if an item qualifies as a training target (excluding resources/tools/containers)."""
+    """Validates if an item qualifies as a training target (excluding resources/tools/containers/scrolls)."""
     if not item:
         return False
-    if item.Graphic in EXCLUDED_GRAPHICS:
+    g = getattr(item, "Graphic", 0)
+    if g in EXCLUDED_GRAPHICS or (0x1F2D <= g <= 0x1F72):  # All Magery/Spell scrolls
         return False
     if item.IsContainer:
+        return False
+    name = str(getattr(item, "Name", "") or "").lower()
+    if any(w in name for w in ["scroll", "reagent", "ingot", "board", "log", "cloth", "leather", "potion", "gem"]):
         return False
     return True
 
@@ -551,7 +566,7 @@ def get_or_fetch_target_item() -> Optional[Any]:
     If the current item reached max imbues or does not exist, handles disposal
     and fetches a fresh item from the supply container or backpack.
     """
-    global current_item_serial, current_item_name, current_item_imbue_count
+    global current_item_serial, current_item_name, current_item_imbue_count, target_training_graphic
 
     # 1. Check if current active item is still valid and below max imbues
     if current_item_serial:
@@ -570,40 +585,41 @@ def get_or_fetch_target_item() -> Optional[Any]:
 
     # 2. Check backpack for an existing imbuable item
     if not supply_container_serial:
-        eligible_bp = [it for it in (API.ItemsInContainer(API.Backpack, recursive=False) or []) if is_imbuable_item(it)]
-        if len(eligible_bp) == 1:
-            it = eligible_bp[0]
-            current_item_serial = it.Serial
-            current_item_name = it.Name or f"Item (0x{it.Graphic:X})"
-            current_item_imbue_count = 0
-            API.SysMsg(f"[Imbuing] Active target set to backpack item: {current_item_name}", HUE_INFO)
-            update_stats()
-            return it
-        elif len(eligible_bp) > 1:
-            API.SysMsg("[Imbuing] Multiple imbuable items in backpack! Please target the one you want to train on (e.g. Dagger)...", HUE_INFO)
-            t_serial = API.RequestTarget(timeout=8.0)
-            if t_serial and t_serial != API.Player.Serial:
-                t_obj = API.FindItem(t_serial)
-                if t_obj and is_imbuable_item(t_obj):
-                    current_item_serial = t_obj.Serial
-                    current_item_name = t_obj.Name or f"Item (0x{t_obj.Graphic:X})"
-                    current_item_imbue_count = 0
-                    API.SysMsg(f"[Imbuing] Target item locked to: {current_item_name}", HUE_SUCCESS)
-                    update_stats()
-                    return t_obj
+        eligible_bp = [
+            it for it in (API.ItemsInContainer(API.Backpack, recursive=False) or [])
+            if is_imbuable_item(it) and it.Serial not in retired_item_serials and it.Serial not in skipped_unravel_serials
+        ]
+        if eligible_bp:
+            match = None
+            if target_training_graphic is not None:
+                for it in eligible_bp:
+                    if it.Graphic == target_training_graphic:
+                        match = it
+                        break
+            if not match:
+                first_g = eligible_bp[0].Graphic
+                if all(it.Graphic == first_g for it in eligible_bp) or len(eligible_bp) == 1:
+                    match = eligible_bp[0]
+                    target_training_graphic = match.Graphic
+                else:
+                    API.SysMsg("[Imbuing] Multiple item types in backpack! Target the item type you want to train on (e.g. Dagger)...", HUE_INFO)
+                    t_serial = API.RequestTarget(timeout=8.0)
+                    if t_serial and t_serial != API.Player.Serial:
+                        t_obj = API.FindItem(t_serial)
+                        if t_obj and is_imbuable_item(t_obj):
+                            match = t_obj
+                            target_training_graphic = t_obj.Graphic
 
-    bp_items = API.ItemsInContainer(API.Backpack, recursive=False) or []
-    for it in bp_items:
-        if is_imbuable_item(it):
-            current_item_serial = it.Serial
-            current_item_name = it.Name or f"Item (0x{it.Graphic:X})"
-            current_item_imbue_count = 0
-            API.SysMsg(f"[Imbuing] Active target set to backpack item: {current_item_name}", HUE_INFO)
-            update_stats()
-            return it
+            if match:
+                current_item_serial = match.Serial
+                current_item_name = match.Name or f"Item (0x{match.Graphic:X})"
+                current_item_imbue_count = 0
+                API.SysMsg(f"[Imbuing] Active target set to backpack item: {current_item_name}", HUE_INFO)
+                update_stats()
+                return match
 
     # 3. Check Supply Container for fresh items
-    if supply_container_serial:
+    if supply_container_serial and supply_container_serial != API.Backpack:
         supply_items = API.ItemsInContainer(supply_container_serial, recursive=False) or []
         if not supply_items:
             API.UseObject(supply_container_serial)
@@ -611,11 +627,13 @@ def get_or_fetch_target_item() -> Optional[Any]:
             supply_items = API.ItemsInContainer(supply_container_serial, recursive=False) or []
 
         for it in supply_items:
-            if is_imbuable_item(it):
+            if is_imbuable_item(it) and it.Serial not in retired_item_serials and it.Serial not in skipped_unravel_serials:
                 name = it.Name or f"Item (0x{it.Graphic:X})"
-                API.SysMsg(f"[Imbuing] Drawing fresh item '{name}' from supply container...", HUE_INFO)
-                API.MoveItem(it.Serial, API.Backpack)
-                API.Pause(MOVE_DELAY)
+                # Only move item to backpack if it isn't already inside the root backpack
+                if it.Container != API.Backpack:
+                    API.SysMsg(f"[Imbuing] Drawing fresh item '{name}' from supply container...", HUE_INFO)
+                    API.MoveItem(it.Serial, API.Backpack)
+                    API.Pause(MOVE_DELAY)
 
                 current_item_serial = it.Serial
                 current_item_name = name
@@ -636,7 +654,12 @@ def get_or_fetch_target_item() -> Optional[Any]:
 
 def retire_finished_item(item: Any) -> None:
     """Disposes or recycles a finished item via Soulforge Unraveling or returns to supply."""
-    global total_unraveled
+    global total_unraveled, retired_item_serials
+
+    if not item:
+        return
+
+    retired_item_serials.add(item.Serial)
 
     # Option A: Auto-Unravel at Soulforge
     if AUTO_UNRAVEL_AFTER_MAX:
@@ -663,7 +686,7 @@ def retire_finished_item(item: Any) -> None:
 
 def execute_reimbue_cycle(target_item: Any) -> bool:
     """Executes a single Reimbue Last attempt on the specified item."""
-    global total_imbued, total_failed, current_item_imbue_count
+    global total_imbued, total_failed, current_item_imbue_count, current_item_serial, current_item_name
 
     # Check Soulforge proximity
     if not is_near_soulforge():
@@ -672,14 +695,21 @@ def execute_reimbue_cycle(target_item: Any) -> bool:
         API.Pause(1.0)
         return True
 
-    # Check resources in backpack
-    if count_backpack_residue() < 1 or count_backpack_gems() < 1:
-        if resource_chest_serial:
+    # Check total available resources across backpack and satchel/chest
+    if count_total_residue() < 1:
+        API.SysMsg("[Imbuing] Out of Magical Residue! Please refill supplies.", HUE_ERROR)
+        pause_trainer("Out of Residue")
+        return True
+
+    if count_total_gems() < 1:
+        API.SysMsg("[Imbuing] Out of Gems! Please refill supplies.", HUE_ERROR)
+        pause_trainer("Out of Gems")
+        return True
+
+    # If using an external chest (outside backpack), restock working buffer into backpack
+    if resource_chest_serial and not is_in_backpack(resource_chest_serial):
+        if count_backpack_residue() < 1 or count_backpack_gems() < 1:
             restock_resources_from_chest()
-        if count_backpack_residue() < 1:
-            API.SysMsg("[Imbuing] Out of Magical Residue! Please refill supplies.", HUE_ERROR)
-            pause_trainer("Out of Residue")
-            return True
 
     update_status(f"Imbuing {current_item_name} ({current_item_imbue_count + 1}/{MAX_IMBUES_PER_ITEM})...")
     API.ClearJournal()
@@ -704,12 +734,16 @@ def execute_reimbue_cycle(target_item: Any) -> bool:
         pause_trainer("Setup Required")
         return True
 
-    # Send "Reimbue Last" button response
-    API.ReplyGump(GUMP_BTN_REIMBUE_LAST)
+    # Send "Imbue Last Property" (10008) so the server prompts for a target cursor for the current fresh item
+    API.ReplyGump(GUMP_BTN_IMBUE_LAST_PROP)
 
-    # If target cursor requested, target our active item
-    if API.WaitForTarget(timeout=2.0):
+    # Target our active item
+    if API.WaitForTarget(timeout=2.5):
         API.Target(target_item.Serial)
+    else:
+        # Fallback if server expected Reimbue Last
+        debug_msg("Imbue target cursor did not appear, trying Reimbue Last...")
+        API.ReplyGump(GUMP_BTN_REIMBUE_LAST)
 
     # Action delay
     if not wait_with_ui(IMBUE_DELAY):
@@ -750,14 +784,38 @@ def execute_reimbue_cycle(target_item: Any) -> bool:
     if any("successfully" in t or "you imbue" in t or "you infuse" in t for t in j_text):
         total_imbued += 1
         current_item_imbue_count += 1
-        debug_msg(f"Imbue success! Attempt {current_item_imbue_count}/{MAX_IMBUES_PER_ITEM}")
+        debug_msg(f"Imbue success! Attempt {current_item_imbue_count}")
+
+        if RETIRE_ON_SUCCESS:
+            API.SysMsg(f"[Imbuing] Success on '{current_item_name}'! Retiring to next item for skill gains.", HUE_SUCCESS)
+            retire_finished_item(target_item)
+            current_item_serial = None
+            current_item_name = "None"
+            current_item_imbue_count = 0
+            update_stats()
+            return True
     elif any("fail" in t for t in j_text):
         total_failed += 1
         current_item_imbue_count += 1
         debug_msg(f"Imbue failed. Attempt {current_item_imbue_count}/{MAX_IMBUES_PER_ITEM}")
+        if current_item_imbue_count >= MAX_IMBUES_PER_ITEM:
+            API.SysMsg(f"[Imbuing] Item reached fail attempt limit ({MAX_IMBUES_PER_ITEM}). Retiring item.", HUE_WARN)
+            retire_finished_item(target_item)
+            current_item_serial = None
+            current_item_name = "None"
+            current_item_imbue_count = 0
+            update_stats()
+            return True
     else:
         # Default increment attempt counter to ensure items cycle safely
         current_item_imbue_count += 1
+        if current_item_imbue_count >= MAX_IMBUES_PER_ITEM:
+            retire_finished_item(target_item)
+            current_item_serial = None
+            current_item_name = "None"
+            current_item_imbue_count = 0
+            update_stats()
+            return True
 
     update_stats()
     return True
@@ -792,39 +850,43 @@ def execute_unravel_item(item_serial: int, fallback_name: str = "") -> bool:
         API.ReplyGump(GUMP_BTN_UNRAVEL_ITEM)
 
     if API.WaitForTarget(timeout=3.0):
+        API.Pause(0.2)
         API.Target(item_serial)
+        API.Pause(0.2)
+        if API.HasTarget():
+            debug_msg("Unravel target cursor still active; repeating target...")
+            API.Target(item_serial)
     else:
         return False
 
     API.Pause(UNRAVEL_DELAY)
 
-    # Check for confirmation sub-gump (only reply if genuine confirmation dialog appears)
+    # Check for confirmation sub-gump (handle any confirmation dialog flexibly)
     start_c = time.time()
-    while (time.time() - start_c) < 1.0:
+    while (time.time() - start_c) < 1.2:
         if API.HasGump():
-            if (API.GumpContains("special material") or
-                    API.GumpContains("DESTROYED") or
-                    API.GumpContains("UNRAVEL MAGIC ITEM CONFIRMATION")):
-                conf_gump = API.GetGump()
+            curr_gump = API.GetGump()
+            gump_text = API.GetGumpContents().lower() if API.GetGumpContents() else ""
+            if any(w in gump_text for w in ["unravel", "destroy", "special", "confirmation", "continue", "magic item", "sure"]):
                 conf_buttons = []
-                if conf_gump and hasattr(conf_gump, "Children"):
-                    for child in conf_gump.Children:
-                        if hasattr(child, "ButtonID") and child.ButtonID is not None:
+                if curr_gump and hasattr(curr_gump, "Children"):
+                    for child in curr_gump.Children:
+                        if hasattr(child, "ButtonID") and child.ButtonID is not None and child.ButtonID > 0:
                             conf_buttons.append(child.ButtonID)
-                btn = conf_buttons[0] if conf_buttons and conf_buttons[0] != 0 else GUMP_BTN_CONFIRM
+                btn = conf_buttons[0] if conf_buttons else GUMP_BTN_CONFIRM
+                API.SysMsg(f"[Imbuing] Confirming unravel dialog with button {btn}...", HUE_INFO)
                 API.ReplyGump(btn)
                 API.Pause(0.4)
                 break
         API.Pause(0.1)
 
-    # Inspect journal results for failure / insufficient skill
+    # Inspect journal results for failure / insufficient skill / non-magical item
     entries = API.GetJournalEntries(UNRAVEL_DELAY + 1.2)
     j_text = [str(e.Text).lower() for e in entries] if entries else []
 
     # Check if skill was not high enough or item cannot be unraveled
-    if any("not skilled enough" in t or "not high enough" in t or "lack the skill" in t or
-           "cannot be unraveled" in t or "cannot unravel" in t for t in j_text):
-        API.SysMsg(f"[Imbuing] Skill too low to unravel '{item_name}'. Skipping for this session.", HUE_WARN)
+    if any("not skilled enough" in t or "not high enough" in t or "lack the skill" in t for t in j_text):
+        API.SysMsg(f"[Imbuing] Skill too low to unravel '{item_name}'. Skipping.", HUE_WARN)
         skipped_unravel_serials.add(item_serial)
 
         # Return item to house supply container if external
@@ -832,6 +894,11 @@ def execute_unravel_item(item_serial: int, fallback_name: str = "") -> bool:
             API.SysMsg(f"[Imbuing] Returning '{item_name}' to supply container...", HUE_INFO)
             API.MoveItem(item_serial, supply_container_serial)
             API.Pause(MOVE_DELAY)
+        return False
+
+    if any("not a magical" in t or "cannot be unraveled" in t or "cannot unravel" in t or "not enough magical" in t for t in j_text):
+        API.SysMsg(f"[Imbuing] Cannot unravel '{item_name}' (plain/non-magical or low intensity).", HUE_WARN)
+        skipped_unravel_serials.add(item_serial)
         return False
 
     # Check if item was successfully destroyed/unraveled
@@ -1242,21 +1309,22 @@ def main() -> None:
     trash_barrel_serial = None
 
     # 4. Prompt for Item Supply Container
-    API.SysMsg("[Imbuing] Target your Item Supply Container (or press ESC / self for backpack only)...", HUE_INFO)
+    bp_serial = API.Backpack
+    API.SysMsg("[Imbuing] Target your Item Supply Container (or click your backpack / press ESC for backpack only)...", HUE_INFO)
     s_serial = API.RequestTarget(timeout=6.0)
-    if s_serial and s_serial != API.Player.Serial:
+    if s_serial and s_serial != API.Player.Serial and s_serial != bp_serial:
         supply_container_serial = s_serial
         API.SysMsg(f"[Imbuing] Supply Container set: 0x{supply_container_serial:X}", HUE_SUCCESS)
         API.UseObject(supply_container_serial)
         API.Pause(0.4)
     else:
         supply_container_serial = None
-        API.SysMsg("[Imbuing] Using items in backpack.", HUE_INFO)
+        API.SysMsg("[Imbuing] Backpack mode: Training directly on items in backpack.", HUE_SUCCESS)
 
     # 5. Prompt for Resource Chest / Satchel
     API.SysMsg("[Imbuing] Target your Resource Chest / Satchel with Residue/Essence/Gems (or press ESC / self for backpack only)...", HUE_INFO)
     r_serial = API.RequestTarget(timeout=6.0)
-    if r_serial and r_serial != API.Player.Serial:
+    if r_serial and r_serial != API.Player.Serial and r_serial != bp_serial:
         resource_chest_serial = r_serial
         API.SysMsg(f"[Imbuing] Resource Chest set: 0x{resource_chest_serial:X}", HUE_SUCCESS)
         API.UseObject(resource_chest_serial)
