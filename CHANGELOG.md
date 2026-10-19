@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-18
+
 ### Added
 
 - Added `FesterUO/TrainImbuing.py` (v1.1.4):
@@ -24,7 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Informative Unravel Diagnostics: added explicit journal checks for non-magical / low-intensity items and skill-too-low notifications.
   - Dual-layer Resource Management: dynamically counts and restocks Magical Residue, Enchanted Essence, and Gems across backpack and supply satchels.
   - Interactive Control Gump: 330x240 movable interface featuring live Imbuing skill tracking, recommendation tier helper, attempt counters, real-time resource meters, and Pause/Mode/Setup/Supply/Resource/Trash/Stop controls.
-
 - Added `FesterUO/TrainProvokeAndPeace.py` (v1.0.0):
   - Created an automated dual-barding trainer that alternates between provoking two target creatures onto each other and peacing them to train Provocation, Peacemaking, and Musicianship concurrently.
   - Interactive Target Configuration: prompts player to select Target 1 and Target 2 on launch, with on-screen Gump buttons (`[Set Target 1]` and `[Set Target 2]`) to retarget at any time without restarting the script.
@@ -33,7 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Alternating Peacemaking: alternates peace attempts between Target 1 and Target 2 to maintain calm combatants and protect creature health pools.
   - Interactive Control Gump: 350x275 movable interface featuring real-time status, triple-skill tracking (Provocation, Peacemaking, Musicianship) with skill caps and gain announcements, Target 1 & 2 live HP% and distance monitoring, interactive delay stepper (`[-] 6.0s [+]`, 3.0s–15.0s range) to tune barding cooldowns live without restarting, and Pause/Resume/Stop controls.
   - Unconditional execution call for reliable double-click launch support in TazUO.
-
 - Added `FesterUO/TrainImbuingCraftUnravel.py` (v1.1.0):
   - Created an intermediate Imbuing training script that crafts Oak Quarterstaves using saws via "Make Last" from the Carpentry menu and immediately unravels each crafted staff at a nearby Soulforge.
   - Periodic 10-Imbue Reset & Sweep Routine: added `SWEEP_INTERVAL: int = 10` maintenance cycle that re-synchronizes the satchel container window, checks saw health, and unravels ALL lingering quarterstaves accumulated in the backpack.
@@ -49,197 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added automatic container pre-opening (`API.UseObject(satchel_serial)`) upon satchel detection and during restocking so the game server registers container access and permits item extraction.
   - Fixed script execution when double-clicked in the TazUO client by calling `main()` unconditionally instead of relying on an `if __name__ == "__main__":` guard.
   - Set default Gump position to `(520, 80)` to prevent overlap with client journal and status displays.
-
-### Changed
-
-- Updated `FesterUO/MiningAndLumberjackAuto.py` to v1.0.2:
-  - Resolved issue where the script attempted to lumberjack headstones, crosses, and cemetery monuments.
-  - Added `GRAVESTONE_GRAPHICS` filter covering all headstone, tomb, cross, and cemetery monument artwork (`0x1165–0x1184`, `0x1B01–0x1B10`, `0x1ED0–0x1EE2`, `0x1224–0x1229`, `0x1240–0x1250`).
-  - Added `is_valid_tree_static(s)` to `find_nearby_trees()`: checks both graphic exclusions and filters object names against non-tree terms (`"grave"`, `"tomb"`, `"headstone"`, `"cross"`, `"marker"`, `"crypt"`, `"monument"`, `"statue"`).
-  - Expanded `CHOP_DEPLETED_KEYWORDS` with additional server refusal phrases (`"cannot chop"`, `"can't chop"`, `"chop that"`, `"not a tree"`, `"cannot use"`, `"invalid"`).
-  - Resolved issue in Felucca where the script became stuck repeatedly digging at dead trees with the message `Where do you wish to dig?`.
-  - Disentangled Land Tile IDs (`MINEABLE_LAND_TILES`) from Static Graphic IDs (`MINEABLE_STATIC_GRAPHICS`): previously, Land Tile IDs (220–601, representing mountain terrain) were tested against statics, causing Felucca static dead trees and swamp foliage (which share static IDs 220–300) to be falsely classified as ore deposits.
-  - Added strict tree exclusion (`if getattr(s, "IsTree", False): continue`) in `find_nearby_deposits()` to guarantee vegetation is never targeted as a mineable vein.
-  - Filtered static object names to exclude non-mineable objects (e.g. gravestones, tombstones, cobblestones, milestones, dead stumps).
-  - Added infinite loop protection to both `mine_deposit` and `chop_tree`: if a spot yields no resources after 5 consecutive swings, or reaches 35 swings, the node is marked depleted and the script advances to the next node.
-  - Automatically marks nodes as depleted if targeting fails or is unaccepted, preventing repetitive re-targeting.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.21:
-  - Resolved `The item must be in your backpack to imbue it`: replaced `GUMP_BTN_REIMBUE_LAST` (10006, which attempts to re-imbue the previous ghost item) with `GUMP_BTN_IMBUE_LAST_PROP` (10008, which requests a target cursor from the server to apply the last property onto a fresh item).
-  - Fixed supply container targeting: targeting your main backpack when prompted for a supply container now correctly engages direct backpack mode without attempting to drag items from the backpack into itself.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.20:
-  - Fixed `UnboundLocalError: local variable 'current_item_name' referenced before assignment`: declared `current_item_name` and `current_item_serial` as global within `execute_reimbue_cycle()`.
-  - Declared `target_training_graphic` as global within `get_or_fetch_target_item()`.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.19:
-  - Fixed false-positive "Out of Magical Residue" pause loop: changed the resource verification in `reimbue_target_item()` from `count_backpack_residue()` (root backpack only) to `count_total_residue()` (recursive backpack + satchel), allowing the script to properly recognize residue stored inside resource satchels.
-  - Excluded spell scrolls (`0x1F2D–0x1F72`), potions, and consumables in `is_imbuable_item()` to prevent non-equipment (such as Recall scrolls) from being drawn as training targets.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.18:
-  - Resolved the zero-gain training loop flaw where the script continued to imbue the same item up to 20 times after already succeeding: in UO mechanics, re-imbuing the exact same property onto an item that already has it yields zero skill gains.
-  - Added `RETIRE_ON_SUCCESS = True`: as soon as an item is successfully imbued, it is immediately retired (unraveled at the Soulforge to reclaim Magical Residue) so the next attempt trains on a fresh item.
-  - Added automatic batch item cycling (`target_training_graphic`): when training with multiple items in the backpack (e.g. 10 daggers), the script automatically sequences through every dagger in the backpack without pausing or requiring manual re-targeting.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.17:
-  - Fixed redundant gem and residue restocking: when the configured resource container is inside the player's backpack (`is_in_backpack`), the script now skips pulling working batches into the root backpack because the Ultima Online server automatically consumes ingredients directly from subcontainers. Restocking is now strictly reserved for external containers (e.g. house chests).
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.16:
-  - Updated progression ladder recommendations for 45.0–55.0 to **Hit Dispel** (`Amber + Magical Residue`) on weapons and **Luck** (`Citrine + Magical Residue`) on armor/weapons, eliminating references to Damage Increase which crosses into the Enchanted Essence bracket at train-level intensities.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.15:
-  - Clarified progression ladder recommendations for the 45.0–55.0 and 70.0–90.0 skill brackets: explicitly distinguished between weapons (which use **Damage Increase** with Citrine + Residue or **Hit Dispel** with Amber + Residue) and armor pieces (which can use **Luck** or **Reflect Physical Damage** with Citrine + Residue), resolving confusion when attempting to locate Reflect Physical on daggers or other weapons.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.14:
-  - Added `API.ProcessCallbacks()` to `wait_with_ui()` and the main training loop, resolving the issue where Gump buttons (Pause, Resume, Stop, Mode) were unresponsive.
-  - Added interactive target item selection in backpack mode when multiple imbuable items are present, preventing the script from inadvertently grabbing unintended items (such as a Scepter instead of a Dagger).
-  - Enhanced `Setup Imbue` mode to prompt and lock onto the designated training item.
-  - Adjusted default Gump position to `(520, 80)` so it is clearly visible and not obscured by the chat/journal window.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.13:
-  - Eliminated false-positive success reporting (`Successfully unraveled 'Item (0x0)'`) by verifying item existence in the backpack before targeting and requiring positive journal confirmation (`"extract"`, `"obtain"`, `"residue"`, `"essence"`, `"relic"`) or confirmed item destruction.
-  - Added arrival verification loop after `API.MoveItem` when drawing items from external chests into the backpack.
-  - Improved item name tracking and fallback naming during unravel attempts.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.12:
-  - Added automatic stashing (`stash_unraveled_ingredients`) that moves unraveled materials (Magical Residue, Enchanted Essence, and Relic Fragments) from the root backpack into the configured resource satchel/chest.
-  - Updated resource counting to track total materials across both the backpack and the resource satchel on the control Gump label.
-  - Automatically sweeps existing loose unraveled ingredients from the backpack into the resource satchel at the start of each unravel cycle.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.11:
-  - Added session skip tracking (`skipped_unravel_serials`) for items requiring higher Imbuing skill than the character currently possesses.
-  - Added journal detection in `execute_unravel_item` for server low-skill messages (`"not skilled enough"`, `"not high enough"`, `"lack the skill"`, `"cannot be unraveled"`).
-  - Automatically returns items requiring higher skill back into the external house supply chest and skips them from being retrieved again during the current session.
-  - Pauses trainer gracefully with status `"Supply Depleted"` when all unravelable items in the supply container have been processed.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.10:
-  - Fixed missing on-screen control Gump by calling `API.Gumps.AddGump(gump)` in `create_control_gump()`, restoring the interactive user interface with Pause, Resume, Mode Toggle, and Stop controls.
-  - Added support for external supply chests in Unravel mode: when the supply container is outside the backpack (e.g. in the house/table), the script automatically moves items into the backpack and unravels them individually via `Unravel Item` (Button 10010) to satisfy the server's requirement that items must reside in the backpack.
-  - Added journal detection for server `This item must be in your backpack to be used` prompts.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.9:
-  - Corrected native Soulforge Imbuing Menu button IDs based on runtime discovery (`[10005, 10006, 10007, 10008, 10010, 10011, 1]`):
-    - Mapped `GUMP_BTN_UNRAVEL_CONTAINER = 10011` (was `6`).
-    - Mapped `GUMP_BTN_UNRAVEL_ITEM = 10010` (was `5`).
-    - Mapped `GUMP_BTN_REIMBUE_LAST = 10006` (was `2`).
-    - Mapped `GUMP_BTN_IMBUE_ITEM = 10005` (was `1`).
-    - Mapped `GUMP_BTN_CANCEL = 1` (was `0`).
-  - Resolves the `Invalid gump response, disconnecting...` root cause: sending button ID 6 caused ServUO/ModernUO to reject the packet because 6 was not a valid button ID on `ImbuingGump`.
-  - Added dynamic button ID inspection and response for special material confirmation dialogs in Step 5.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.8:
-  - Eliminated runaway retry loop that repeatedly spammed `UseSkill("Imbuing")` on timeouts and triggered server disconnects (`WorldMap loading...`).
-  - Added graceful pause (`pause_trainer("Target Timeout")`) and automatic cleanup (`API.CloseGump()`) if the target cursor does not appear.
-  - Added runtime gump child control inspection to discover all button IDs on the server's Imbuing menu.
-  - Implemented dual-mode `ReplyGump` (explicit Gump ID with fallback to default top-level gump).
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.7:
-  - Enabled detailed diagnostic telemetry (`DEBUG = True`) and injected step-by-step console milestone tracking (`[1/5]` through `[5/5]`) in `execute_unravel_container_cycle`.
-  - Added live Gump ID logging upon server Imbuing menu detection to verify server packet alignment before dispatching `ReplyGump`.
-  - Added pacing buffer and target cursor state verification before targeting containers.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.6:
-  - Fixed client disconnect (`Invalid gump response, disconnecting...`) caused by sending gump responses when no server gump was open:
-    - Removed broad keywords (`"unravel"`, `"warning"`) from confirmation gump checks that falsely matched the script's own client-side control Gump.
-    - Restricted confirmation sub-gump responses exclusively to genuine server prompts (`"special material"`, `"DESTROYED"`, `"UNRAVEL MAGIC ITEM CONFIRMATION"`).
-    - Standardized all `API.ReplyGump(button)` calls to use TazUO's default top server gump resolution (`gump=1337`) instead of passing manual IDs.
-    - Updated `wait_for_imbuing_menu` to return a boolean after verifying phrases exclusive to the server's Imbuing menu (`"Adds or modifies"`, `"Repeats the last"`, `"IMBUING MENU"`, `"Unravels all items"`).
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.4:
-  - Added dedicated `wait_for_imbuing_menu` helper using `API.GumpContains` text verification ("IMBUING" / "Imbue Item" / "Unravel") before replying, ensuring the client never sends button packets to open container gumps or before the server menu arrives.
-  - Added action cooldown buffers (`API.Pause`) after container interactions and before `API.UseSkill("Imbuing")` calls to eliminate action timer collisions that blocked the skill menu from opening.
-  - Hardened confirmation dialog polling with timeout-bounded loops to prevent premature or mismatched gump responses.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.3:
-  - Corrected native Soulforge Imbuing Menu button ID mappings: updated `GUMP_BTN_UNRAVEL_CONTAINER` to `6` (was `4`) and `GUMP_BTN_UNRAVEL_ITEM` to `5` (was `3`), and mapped `GUMP_BTN_IMBUE_LAST_ITEM` (`3`) and `GUMP_BTN_IMBUE_LAST_PROP` (`4`).
-  - Fixed client disconnect (`Invalid gump response`) caused by sending button 4 (which triggered `Imbue Last Property` instead of `Unravel Container`) and unconditionally firing `API.ReplyGump(GUMP_BTN_CONFIRM)` when no confirmation dialog was open.
-  - Added strict `API.GumpContains` text validation before dispatching confirmation responses for items made of special materials.
-  - Added automatic journal empty-container detection to pause the trainer gracefully when all container items have been unraveled.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.2:
-  - Replaced invalid `API.ItemsOnGround` calls with TazUO's native `API.GetItemsOnGround` in `find_nearby_trash_barrel` and `is_near_soulforge`, resolving the `'LegionAPI' object has no attribute 'ItemsOnGround'` runtime exception.
-  - Added safe attribute extraction (`getattr`, `hasattr`) for ground items and tooltips to prevent property access exceptions.
-
-- Updated `FesterUO/TrainImbuing.py` to v1.0.1:
-  - Fixed script execution when double-clicked in the TazUO client by invoking `main()` unconditionally instead of relying on an `if __name__ == "__main__":` guard, which evaluates to False in TazUO's embedded Python runtime.
-  - Rendered interactive control Gump immediately upon launch so that the trainer interface displays without delay before container targeting prompts.
-  - Included script version in startup `SysMsg` notification.
-
-- Updated `FesterUO/LobsterTrapAuto.py` to v1.0.1:
-  - Fixed script execution when double-clicked in the TazUO client by calling `run_lobster_auto()` unconditionally instead of relying on an `if __name__ == "__main__":` guard.
-  - Included script version in startup `SysMsg` notification.
-
-- Updated `FesterUO/TrainVeterinary.py` to v1.1.0:
-  - Added Resource Satchel & Subcontainer Bandage Support: Automatically recognizes and utilizes bandages held inside specialized resource satchels or subcontainers within the player's backpack.
-  - Added Automatic Bandage Restocking (`AUTO_RESTOCK_SATCHEL = True`): Automatically monitors backpack bandages and pulls working batches (`RESTOCK_BATCH_SIZE = 100`) from the satchel into the main backpack whenever supply drops below `MIN_BACKPACK_BANDAGES = 20`.
-  - Added interactive Gump "Satchel" button (`btn_satchel`): Allows players to manually target and designate their resource satchel or container at runtime, with fallback auto-detection.
-  - Updated Gump bandage display: Displays total available bandages across satchels and subcontainers alongside current backpack count (e.g. `Bandages: 10,000 (BP: 100)`).
-  - Enhanced bandage resolution in `apply_bandage_to_pet`: Pulls from root backpack, designated satchel, or subcontainers seamlessly to prevent false "Out of Bandages" stops when bandages reside in satchels.
-
-- Updated `FesterUO/TrainAnimalTaming.py` to v1.0.3:
-  - Prioritized direct full-name speech release (`<actual_name> release`, e.g. `a hind release`): directly commands newly tamed wildlife using their exact in-game names to open the release confirmation dialog immediately.
-  - Set `confirm_release_gump` primary response to `Button 2` (standard CONTINUE button in ServUO/RunUO `PetReleaseGump.cs`) with fallback to `Button 1`, preventing release dialog cancellations.
-  - Fixed `cleanup_stuck_followers` targeting: targets tracked follower serials directly to prevent accidentally clicking ambient untamed wildlife (such as innocent deer or great harts).
-
-- Updated `FesterUO/TrainAnimalTaming.py` to v1.0.2:
-  - Removed creature renaming (`API.Rename`): completely eliminated the indexed renaming attempt (`Tame1`, `Tame2`, etc.) which caused server-side validation rejections (`System: That name is unacceptable.`) on wild creatures, eliminating unnecessary delays and journal spam.
-  - Added in-game `SysMsg` notification when pet release confirmation dialogs are confirmed.
-
-- Updated `FesterUO/TrainAnimalTaming.py` to v1.0.1:
-  - Extended `TAME_DELAY` from 12.0s to 18.0s: prevents premature taming timeouts that aborted successful tames (which take 12-14 seconds in standard UO) right before the server sent completion packets, fixing an issue where tamed animals were abandoned without releasing.
-  - Added post-loop journal inspection in `execute_tame_attempt` to catch success messages arriving on the final tick.
-  - Fixed pet release dialog confirmation (`confirm_release_gump`): prioritized Button 1 (standard Confirm/OK in ServUO/RunUO BaseCreature release gump) with fallback to Button 2, preventing dialog cancellations caused by sending Button 2 first.
-  - Refactored `release_pet` to guarantee both packet Context Menu and universal speech (`all release`) attempts without skipping speech if context menu dispatches, properly targeting pets upon cursor prompt.
-  - Enhanced lingering follower detection: automatically triggers `cleanup_stuck_followers` whenever follower counts exceed baseline followers, ensuring abandoned pets from interrupted cycles are promptly released.
-  - Expanded `RELEASE_JOURNAL_PHRASES` with additional server release match patterns.
-
-- Standardized script versioning and author branding across all 28 scripts in `FesterUO/`:
-  - Added internal version constants (`SCRIPT_VERSION: str = "1.0.0"`) to every script.
-  - Standardized Gump author and version labels across all 25 interactive interfaces: `lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)` positioned uniformly in the top header row, alongside simplified, readable title labels.
-  - Included version numbers and author attribution in startup console/SysMsg notifications.
-
-- Updated `AGENTS.md` and `.github/copilot-instructions.md`:
-  - Added mandatory script versioning and incrementing rules (`SCRIPT_VERSION: str = "X.Y.Z"`): agents must increment the script version on every modification (PATCH for bug fixes/pacing, MINOR for features/controls, MAJOR for architectural overhauls) and reflect it on Gump author labels and startup messages.
-  - Added explicit instructions for AI agents and assistants to enforce workspace markdownlint rules defined in `.markdownlint.json` when creating or modifying Markdown files.
-  - Mandated resolving all supported formatting issues (equivalent to running the VS Code command `markdownlint: Fix all supported issues in file`), maintaining clean list hierarchies, proper blank line separation between blocks, and eliminating trailing whitespace.
-
-- Updated `FesterUO/MiningAndLumberjackAuto.py`:
-  - Added interactive Gump stepper tuning controls (`[-]` / `[+]`) for **Veins per Cycle** and **Trees per Cycle**, enabling real-time ratio adjustments on the fly in-game to match whatever area or resource density you are working in without modifying or restarting the script.
-  - Replaced invalid `API.GetItems` calls with `API.ItemsInContainer` for backpack tool and axe discovery.
-
-- Decoupled `FesterUO/HuntAnimals.py` and resource harvesting scripts to operate as completely standalone scripts:
-  - Removed all inter-script combat pause semaphores (`ExternalCombatActive`) and harvester coordination persistent variables (`HarvesterRunning`, `HarvestReadyForHunt`).
-  - Restored `FesterUO/ChopTreeAuto.py`, `FesterUO/MiningAuto.py`, and `FesterUO/MiningAndLumberjackAuto.py` as fully independent harvesting scripts without external pause loops or persistent character variable signaling.
-  - Refactored `FesterUO/HuntAnimals.py` to operate purely as an independent standalone hunting script with a streamlined Gump UI (removed semaphore signal label).
-- Updated `FesterUO/HuntAnimals.py`:
-  - Added interactive Gump toggle checkboxes (`CreateGumpCheckbox`) for runtime category filtering: **Birds**, **Passives**, **Predators**, and **Defend Threats**. Clicking any checkbox immediately toggles targeting behavior in real-time with client feedback without needing script reloads.
-  - Added Pre-Combat Sheep Shearing (`AUTO_SHEAR_SHEEP = True`): Automatically approaches wooly sheep (`0x00CF`) into melee range and shears their wool before engaging in combat, yielding both sheared wool and corpse mutton/hides.
-  - Added Backpack Skinning Knife Autodetection: Prioritizes finding a Skinning Knife (`0x0EC4` or by name) directly in the main backpack for shearing and corpse carving, with fallback to shears and other bladed tools.
-  - Added interactive Gump checkbox for **Shear Sheep** and real-time counter for **Sheep Sheared** (`Defeated: N | Sheared: N`).
-  - Added Karma Protection (`PROTECT_KARMA = True`): Removed horses, llamas, and ostards from passive hunting lists, and added strict exclusions for all karma-losing creatures (`KARMA_LOSS_GRAPHICS` for wild horses, llamas, ostards, dolphins, dogs, and cats) to prevent negative karma loss.
-  - Fixed predator false positive prioritization: removed unconditional predator classification from `is_aggressive_mobile` so that ambient predators (wolves, bears, cougars) are only targeted when `HUNT_PREDATORS` is `True` or when actively attacking the player in War Mode, preventing them from overriding `HUNT_PREDATORS = False` and skipping over closer birds and passive animals.
-  - Fixed an issue where ambient wildlife was mistakenly rejected due to uninitialized client health packets (`mob.Hits <= 0`), added fallback to `API.NearestMobiles` for mobile discovery, corrected backpack carving tool lookup to `API.FindType`, upgraded combat pursuit to `API.PathfindEntity` with extended corpse approach range, corrected `API.WaitForTarget` keyword argument from `delay` to `timeout`, corrected `API.PathfindEntity` timeout argument to integer (`int`) to prevent `expected Int32, got float` errors, hooked `on_gump_disposed` to `API.Stop()` so right-clicking to close the Gump stops the script immediately without requiring a double toggle on reload, and improved dress profile equipment reliability with increased swap delays (`DRESS_DELAY = 1.25s`), hand verification retries, and War Mode safety checks to prevent equipment change blocks.
-- Updated `FesterUO/TrainCooking.py`: Corrected `API.WaitForTarget` keyword argument from `delay` to `timeout`.
-- Updated `FesterUO/Fish.py` with hostile mob awareness, automatic combat defense, and Archery dress switching:
-  - Actively scans for nearby hostile mobiles (Gray, Criminal, Enemy, Murderer notorieties or sea monsters like Sea Serpents, Krakens, Water Elementals, and Leviathans) within a 12-tile radius.
-  - Automatically halts fishing, unquips the fishing pole to backpack, undresses the "Fishing" profile, and switches to the "Archery" dress profile (with backpack bow equip fallback).
-  - Enters War Mode and attacks the hostile mobile.
-  - Halts automated fishing with a "Combat - Click Start when ready" Gump status, leaving the player in full manual control without automatically resuming fishing until the player clicks "Start".
-- Updated `FesterUO/TrainAnimalTaming.py`:
-  - Resolved shaky pet release and follower creep issues: fixed a race condition where confirmation gump handling inadvertently sent Button 1 (Cancel) after Button 2 (OK), actively cancelling pet releases on standard RunUO/ServUO servers.
-  - Fixed server confirmation gump response targeting (`confirm_release_gump`): omitted invalid gump instance ID from `API.ReplyGump(button)` calls to properly target the active server gump via TazUO's default gump parameter (`1337`), restoring automatic Button 2 (OK) and fallback Button 1 confirmation clicks.
-  - Refactored `cleanup_stuck_followers`: added comprehensive follower detection scanning nearby tamed and innocent creatures (`is_innocent_animal`, `(tame)` tooltips, `ignored_mobiles`, and `tamed_pets_pending_release`), dispatches emergency broadcast `all release` with gump confirmation, and resyncs player status packets by interacting with the player paperdoll.
-  - Implemented multi-tiered pet release verification (`is_pet_released_state`): expanded release journal keyword detection across 18+ server variants, verified follower count drops, and checked creature notoriety reversion to Gray (`API.Notoriety.Gray`).
-  - Enforced server pet command anti-spam pacing: eliminated rapid command bursts, increased general action delay (`ACTION_DELAY = 1.5s`), added explicit command pacing (`COMMAND_DELAY = 1.5s`), spaced server dialog replies (`GUMP_DELAY = 1.0s`), and added detection for server rate-limit messages (`"commands were tried too fast"`) with automatic 2.0s backoff delays.
-  - Added follower cap pre-taming safeguard: checks `API.Player.Followers` against `FollowersMax` before attempting to tame and cleans up stuck followers or halts safely.
-  - Added indexed pet renaming (`Tame1`, `Tame2`, etc.) upon taming: eliminates pet name ambiguity, spaces, and leading articles during speech release, and permanently flags the creature in the game world.
-  - Improved wild mobile target filtering and tamed history: added property/tooltip inspection (`mob.NameAndProps`) to ignore creatures already flagged `[tame]`, `[bonded]`, or `[commandable]`, and automatically skips any wildlife starting with `Tame` to prevent re-taming across script restarts.
-  - Added Safe Magery Culling (`ENABLE_MAGERY_CULL`, default `False`): safely casts Energy Bolt on released hostile/gray creatures to clear spawns and train Magery concurrently. Includes strict multi-tier protections against criminal flagging and karma loss (verifies mobile is not owned, strictly forbids casting on `Innocent` (Blue) creatures, checks `KARMA_LOSS_GRAPHICS` and keywords, and verifies mana reserves).
-  - Added interactive Gump feature toggle checkboxes (`CreateGumpCheckbox`): provides in-game runtime toggles for **Peacemaking**, **Animal Lore**, **Veterinary**, **Safety Heal**, and **Cull (E-Bolt)**, and added real-time tracking for culled creatures on the statistics label.
-- Updated [`.gitignore`](.gitignore) and untracked base TazUO client-generated files (`API.py`, `__builtins__.py`, `_ScriptContext.cs`, `LegionScripts.csproj`) so that client updates and local API stub regenerations do not dirty git status, while keeping user workspace settings (`LegionScripts.code-workspace`) tracked.
-
-### Added
-
 - Added `FesterUO/TrainAnimalTaming.py`: Automated Animal Taming skill training script with interactive control Gump created by FesterHead:
   - Dual Training Architecture:
     - **Wild Roam Mode (`DEFAULT_MODE = "WILD_ROAM"`):** Autonomously scans for nearby wild animals matching the player's skill level within `SEARCH_RADIUS` (18 tiles), pathfinds to them, actively follows moving/fleeing animals during the taming timer, and automatically releases them upon success.
@@ -256,7 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Safety & Peacemaking Support:
     - Optional Peacemaking integration to pacify hostile or angry wildlife before and after taming attempts.
     - Automated emergency self-healing (bandages or Greater Heal) if player HP drops below threshold.
-
 - Added `FesterUO/TrainVeterinary.py`: Automated Veterinary skill training script with interactive control Gump created by FesterHead:
   - Dual Training Architecture:
     - **Dual Pet Sparring Mode (`DEFAULT_MODE = "SPARRING"`):** Coordinates two pets sparring against each other, continuously monitors both health pools, and applies bandages to whichever pet has lower HP or is poisoned.
@@ -271,7 +79,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Monitors remaining bandages in real-time on the Gump and issues low-supply warnings.
   - Interactive Movable Control Gump:
     - Displays real-time status, live Veterinary skill progress with gain tracker, individual pet health gauges with percentage and status tags (`[POISON]`, `[DEAD]`), bandage counter, heal/cure/resurrection statistics, mode toggle, and Pause/Resume/Stop controls.
-
 - Added `FesterUO/TrainImbuing.py`: Automated resource-efficient Imbuing skill training script with interactive control Gump created by FesterHead:
   - Dual Training Architecture:
     - **Reimbue Loop Training**: Loops the high-speed "Reimbue Last" skill function at a Soulforge on working equipment (daggers, caps, jingasas, etc.), tracking attempts per item up to the optimal 20-imbue limit before diminishing returns.
@@ -286,14 +93,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Interactive Movable Control Gump:
     - Displays real-time status, live Imbuing skill and cap with gain announcements, live item attempt counter (e.g. `Item: Dagger (14/20)`), Imbued / Unraveled / Failed counters, and live Resource counts.
     - Interactive buttons: `Pause / Resume`, `Mode: Reimbue / Unravel`, `Setup Imbue`, `Supply Bag`, `Resources`, `Trash Can`, and `Stop`.
-
 - Added `FesterUO/MiningAndLumberjackAndMageryAuto.py`: Unified roaming mining, lumberjacking, and Magery skill training script with interactive ratio tuning Gump created by FesterHead:
   - Tri-skill training engine combining ore deposit mining, static tree lumberjacking, and batch Magery training without target cursor or equipment race conditions.
   - Alternating harvest ratio cycle (`TREES_PER_MINING_SPOT = 4`, `MINING_SPOTS_PER_CYCLE = 1` by default) with automatic dress profile switching (`"Mining"`, `"Lumberjack"`, `"Mage"`).
   - Spot-depletion Magery training cycle: burns accumulated mana on skill-bracket appropriate spells whenever a vein or tree node is depleted before pathfinding to the next node.
   - Supports both Resist Training (Mind Blast, Energy Bolt, Flamestrike with self-healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
   - Interactive Movable Control Gump: Displays real-time status, Mining/Lumberjacking/Magery skill levels with gain announcements, Mana/LRC tracking, two-column 8-reagent inventory matrix, interactive stepper buttons (`[-]` / `[+]`) for **Veins/Cycle** and **Trees/Cycle**, and Pause/Resume/Stop controls.
-
 - Added `FesterUO/HuntAnimals.py`: Automated standalone animal and bird hunting script with interactive control Gump and multi-category wildlife selection created by FesterHead:
   - Multi-Category Wildlife Detection:
     - `HUNT_BIRDS` (default True): Targets wild Birds, Eagles, Chickens, Turkeys, and Cranes to generate feathers and poultry.
@@ -303,7 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Autonomous combat execution: Equips the `"Fighting"` dress profile, enters War Mode, and pursues/attacks fleeing animals until defeated.
   - TazUO AutoLoot Integration & Corpse Carving: Automatically carves animal corpses with equipped axes or backpack bladed tools to produce leather, meat, feathers, and wool, opens the corpse, and triggers TazUO's native AutoLoot agent (`API.AutoLootContainer`) to handle looting according to client settings.
   - Interactive control Gump: Semi-transparent dark UI with live status, animals defeated counter, active categories indicator, and Pause/Resume and Stop buttons.
-
 - Added `FesterUO/TrainTailoring.py`: Automated resource-efficient Tailoring skill training script with interactive control Gump created by FesterHead:
   - Progresses through the optimal resource-efficient progression ladder from 0.0 to 120.0 Tailoring (Short Pants/Skirt -> Skullcap/Bandana -> Body Sash/Cap -> Cloak/Robe -> Oil Cloth [1 cloth!] -> Elven Shirt / Studded Armor).
   - Milestone Recommendations & "Set Recipe" Manual Override: Proactively notifies the player when reaching a skill bracket to recommend the next item, and features an interactive "Set Recipe" button allowing players to manually prime any craft recipe.
@@ -312,7 +116,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Resource Satchel Integration: Supports direct satchel crafting or automated buffer restocking of cloth and leather into the backpack.
   - Tool Upkeep via Tinkering: Automatically detects broken or missing Sewing Kits and crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
   - Interactive Control Gump: Features a semi-transparent dark UI displaying real-time training status, live Tailoring skill and cap with gain tracking (+X.X), Recipe recommendation, Crafted / Cut / Trashed / Failed counters, Satchel & Backpack material counts, Tool & Trash indicators, and interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Trash Can**, and **Stop** buttons.
-
 - Added `FesterUO/MoveArtifacts.py`: Targeted Weapon, Armor, Shield, and Jewelry Artifact and Magic Item Mover with interactive control Gump created by FesterHead:
   - Interactive Container Targeting: Prompts the player to select a SOURCE container and DESTINATION container with timeout and graceful cancellation handling.
   - Active OPL Tooltip Evaluation: Inspects item property lists using `API.ItemNameAndProps` to evaluate exact rarity and artifact tiers directly from the game server.
@@ -358,6 +161,165 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Features comprehensive item graphics and keyword recognition covering Magery, Necromancy, and Pagan reagents; standard and special ML/SA gems; ingots, ore, boards, logs, shafts, feathers, arrows, bolts, leather, hides, cloth, wool, cotton, scales, bones, granite, sand, bandages, bottles, raw meat, and imbuing/special essences.
   - Features an interactive control Gump displaying real-time transfer status, live counters for **Reagents Moved**, **Gems Moved**, **Resources Moved**, **Total Moved**, and **Items Skipped** (equipment/scrolls preserved), and **Pause/Resume** and **Stop** buttons.
   - Safely pre-opens both containers to ensure server synchronization, validates that targets are distinct, and incorporates responsive cancellation with `API.StopRequested` safety.
+
+### Changed
+
+- Updated `FesterUO/MiningAndLumberjackAuto.py` to v1.0.2:
+  - Resolved issue where the script attempted to lumberjack headstones, crosses, and cemetery monuments.
+  - Added `GRAVESTONE_GRAPHICS` filter covering all headstone, tomb, cross, and cemetery monument artwork (`0x1165–0x1184`, `0x1B01–0x1B10`, `0x1ED0–0x1EE2`, `0x1224–0x1229`, `0x1240–0x1250`).
+  - Added `is_valid_tree_static(s)` to `find_nearby_trees()`: checks both graphic exclusions and filters object names against non-tree terms (`"grave"`, `"tomb"`, `"headstone"`, `"cross"`, `"marker"`, `"crypt"`, `"monument"`, `"statue"`).
+  - Expanded `CHOP_DEPLETED_KEYWORDS` with additional server refusal phrases (`"cannot chop"`, `"can't chop"`, `"chop that"`, `"not a tree"`, `"cannot use"`, `"invalid"`).
+  - Resolved issue in Felucca where the script became stuck repeatedly digging at dead trees with the message `Where do you wish to dig?`.
+  - Disentangled Land Tile IDs (`MINEABLE_LAND_TILES`) from Static Graphic IDs (`MINEABLE_STATIC_GRAPHICS`): previously, Land Tile IDs (220–601, representing mountain terrain) were tested against statics, causing Felucca static dead trees and swamp foliage (which share static IDs 220–300) to be falsely classified as ore deposits.
+  - Added strict tree exclusion (`if getattr(s, "IsTree", False): continue`) in `find_nearby_deposits()` to guarantee vegetation is never targeted as a mineable vein.
+  - Filtered static object names to exclude non-mineable objects (e.g. gravestones, tombstones, cobblestones, milestones, dead stumps).
+  - Added infinite loop protection to both `mine_deposit` and `chop_tree`: if a spot yields no resources after 5 consecutive swings, or reaches 35 swings, the node is marked depleted and the script advances to the next node.
+  - Automatically marks nodes as depleted if targeting fails or is unaccepted, preventing repetitive re-targeting.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.21:
+  - Resolved `The item must be in your backpack to imbue it`: replaced `GUMP_BTN_REIMBUE_LAST` (10006, which attempts to re-imbue the previous ghost item) with `GUMP_BTN_IMBUE_LAST_PROP` (10008, which requests a target cursor from the server to apply the last property onto a fresh item).
+  - Fixed supply container targeting: targeting your main backpack when prompted for a supply container now correctly engages direct backpack mode without attempting to drag items from the backpack into itself.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.20:
+  - Fixed `UnboundLocalError: local variable 'current_item_name' referenced before assignment`: declared `current_item_name` and `current_item_serial` as global within `execute_reimbue_cycle()`.
+  - Declared `target_training_graphic` as global within `get_or_fetch_target_item()`.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.19:
+  - Fixed false-positive "Out of Magical Residue" pause loop: changed the resource verification in `reimbue_target_item()` from `count_backpack_residue()` (root backpack only) to `count_total_residue()` (recursive backpack + satchel), allowing the script to properly recognize residue stored inside resource satchels.
+  - Excluded spell scrolls (`0x1F2D–0x1F72`), potions, and consumables in `is_imbuable_item()` to prevent non-equipment (such as Recall scrolls) from being drawn as training targets.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.18:
+  - Resolved the zero-gain training loop flaw where the script continued to imbue the same item up to 20 times after already succeeding: in UO mechanics, re-imbuing the exact same property onto an item that already has it yields zero skill gains.
+  - Added `RETIRE_ON_SUCCESS = True`: as soon as an item is successfully imbued, it is immediately retired (unraveled at the Soulforge to reclaim Magical Residue) so the next attempt trains on a fresh item.
+  - Added automatic batch item cycling (`target_training_graphic`): when training with multiple items in the backpack (e.g. 10 daggers), the script automatically sequences through every dagger in the backpack without pausing or requiring manual re-targeting.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.17:
+  - Fixed redundant gem and residue restocking: when the configured resource container is inside the player's backpack (`is_in_backpack`), the script now skips pulling working batches into the root backpack because the Ultima Online server automatically consumes ingredients directly from subcontainers. Restocking is now strictly reserved for external containers (e.g. house chests).
+- Updated `FesterUO/TrainImbuing.py` to v1.0.16:
+  - Updated progression ladder recommendations for 45.0–55.0 to **Hit Dispel** (`Amber + Magical Residue`) on weapons and **Luck** (`Citrine + Magical Residue`) on armor/weapons, eliminating references to Damage Increase which crosses into the Enchanted Essence bracket at train-level intensities.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.15:
+  - Clarified progression ladder recommendations for the 45.0–55.0 and 70.0–90.0 skill brackets: explicitly distinguished between weapons (which use **Damage Increase** with Citrine + Residue or **Hit Dispel** with Amber + Residue) and armor pieces (which can use **Luck** or **Reflect Physical Damage** with Citrine + Residue), resolving confusion when attempting to locate Reflect Physical on daggers or other weapons.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.14:
+  - Added `API.ProcessCallbacks()` to `wait_with_ui()` and the main training loop, resolving the issue where Gump buttons (Pause, Resume, Stop, Mode) were unresponsive.
+  - Added interactive target item selection in backpack mode when multiple imbuable items are present, preventing the script from inadvertently grabbing unintended items (such as a Scepter instead of a Dagger).
+  - Enhanced `Setup Imbue` mode to prompt and lock onto the designated training item.
+  - Adjusted default Gump position to `(520, 80)` so it is clearly visible and not obscured by the chat/journal window.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.13:
+  - Eliminated false-positive success reporting (`Successfully unraveled 'Item (0x0)'`) by verifying item existence in the backpack before targeting and requiring positive journal confirmation (`"extract"`, `"obtain"`, `"residue"`, `"essence"`, `"relic"`) or confirmed item destruction.
+  - Added arrival verification loop after `API.MoveItem` when drawing items from external chests into the backpack.
+  - Improved item name tracking and fallback naming during unravel attempts.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.12:
+  - Added automatic stashing (`stash_unraveled_ingredients`) that moves unraveled materials (Magical Residue, Enchanted Essence, and Relic Fragments) from the root backpack into the configured resource satchel/chest.
+  - Updated resource counting to track total materials across both the backpack and the resource satchel on the control Gump label.
+  - Automatically sweeps existing loose unraveled ingredients from the backpack into the resource satchel at the start of each unravel cycle.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.11:
+  - Added session skip tracking (`skipped_unravel_serials`) for items requiring higher Imbuing skill than the character currently possesses.
+  - Added journal detection in `execute_unravel_item` for server low-skill messages (`"not skilled enough"`, `"not high enough"`, `"lack the skill"`, `"cannot be unraveled"`).
+  - Automatically returns items requiring higher skill back into the external house supply chest and skips them from being retrieved again during the current session.
+  - Pauses trainer gracefully with status `"Supply Depleted"` when all unravelable items in the supply container have been processed.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.10:
+  - Fixed missing on-screen control Gump by calling `API.Gumps.AddGump(gump)` in `create_control_gump()`, restoring the interactive user interface with Pause, Resume, Mode Toggle, and Stop controls.
+  - Added support for external supply chests in Unravel mode: when the supply container is outside the backpack (e.g. in the house/table), the script automatically moves items into the backpack and unravels them individually via `Unravel Item` (Button 10010) to satisfy the server's requirement that items must reside in the backpack.
+  - Added journal detection for server `This item must be in your backpack to be used` prompts.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.9:
+  - Corrected native Soulforge Imbuing Menu button IDs based on runtime discovery (`[10005, 10006, 10007, 10008, 10010, 10011, 1]`):
+    - Mapped `GUMP_BTN_UNRAVEL_CONTAINER = 10011` (was `6`).
+    - Mapped `GUMP_BTN_UNRAVEL_ITEM = 10010` (was `5`).
+    - Mapped `GUMP_BTN_REIMBUE_LAST = 10006` (was `2`).
+    - Mapped `GUMP_BTN_IMBUE_ITEM = 10005` (was `1`).
+    - Mapped `GUMP_BTN_CANCEL = 1` (was `0`).
+  - Resolves the `Invalid gump response, disconnecting...` root cause: sending button ID 6 caused ServUO/ModernUO to reject the packet because 6 was not a valid button ID on `ImbuingGump`.
+  - Added dynamic button ID inspection and response for special material confirmation dialogs in Step 5.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.8:
+  - Eliminated runaway retry loop that repeatedly spammed `UseSkill("Imbuing")` on timeouts and triggered server disconnects (`WorldMap loading...`).
+  - Added graceful pause (`pause_trainer("Target Timeout")`) and automatic cleanup (`API.CloseGump()`) if the target cursor does not appear.
+  - Added runtime gump child control inspection to discover all button IDs on the server's Imbuing menu.
+  - Implemented dual-mode `ReplyGump` (explicit Gump ID with fallback to default top-level gump).
+- Updated `FesterUO/TrainImbuing.py` to v1.0.7:
+  - Enabled detailed diagnostic telemetry (`DEBUG = True`) and injected step-by-step console milestone tracking (`[1/5]` through `[5/5]`) in `execute_unravel_container_cycle`.
+  - Added live Gump ID logging upon server Imbuing menu detection to verify server packet alignment before dispatching `ReplyGump`.
+  - Added pacing buffer and target cursor state verification before targeting containers.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.6:
+  - Fixed client disconnect (`Invalid gump response, disconnecting...`) caused by sending gump responses when no server gump was open:
+    - Removed broad keywords (`"unravel"`, `"warning"`) from confirmation gump checks that falsely matched the script's own client-side control Gump.
+    - Restricted confirmation sub-gump responses exclusively to genuine server prompts (`"special material"`, `"DESTROYED"`, `"UNRAVEL MAGIC ITEM CONFIRMATION"`).
+    - Standardized all `API.ReplyGump(button)` calls to use TazUO's default top server gump resolution (`gump=1337`) instead of passing manual IDs.
+    - Updated `wait_for_imbuing_menu` to return a boolean after verifying phrases exclusive to the server's Imbuing menu (`"Adds or modifies"`, `"Repeats the last"`, `"IMBUING MENU"`, `"Unravels all items"`).
+- Updated `FesterUO/TrainImbuing.py` to v1.0.4:
+  - Added dedicated `wait_for_imbuing_menu` helper using `API.GumpContains` text verification ("IMBUING" / "Imbue Item" / "Unravel") before replying, ensuring the client never sends button packets to open container gumps or before the server menu arrives.
+  - Added action cooldown buffers (`API.Pause`) after container interactions and before `API.UseSkill("Imbuing")` calls to eliminate action timer collisions that blocked the skill menu from opening.
+  - Hardened confirmation dialog polling with timeout-bounded loops to prevent premature or mismatched gump responses.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.3:
+  - Corrected native Soulforge Imbuing Menu button ID mappings: updated `GUMP_BTN_UNRAVEL_CONTAINER` to `6` (was `4`) and `GUMP_BTN_UNRAVEL_ITEM` to `5` (was `3`), and mapped `GUMP_BTN_IMBUE_LAST_ITEM` (`3`) and `GUMP_BTN_IMBUE_LAST_PROP` (`4`).
+  - Fixed client disconnect (`Invalid gump response`) caused by sending button 4 (which triggered `Imbue Last Property` instead of `Unravel Container`) and unconditionally firing `API.ReplyGump(GUMP_BTN_CONFIRM)` when no confirmation dialog was open.
+  - Added strict `API.GumpContains` text validation before dispatching confirmation responses for items made of special materials.
+  - Added automatic journal empty-container detection to pause the trainer gracefully when all container items have been unraveled.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.2:
+  - Replaced invalid `API.ItemsOnGround` calls with TazUO's native `API.GetItemsOnGround` in `find_nearby_trash_barrel` and `is_near_soulforge`, resolving the `'LegionAPI' object has no attribute 'ItemsOnGround'` runtime exception.
+  - Added safe attribute extraction (`getattr`, `hasattr`) for ground items and tooltips to prevent property access exceptions.
+- Updated `FesterUO/TrainImbuing.py` to v1.0.1:
+  - Fixed script execution when double-clicked in the TazUO client by invoking `main()` unconditionally instead of relying on an `if __name__ == "__main__":` guard, which evaluates to False in TazUO's embedded Python runtime.
+  - Rendered interactive control Gump immediately upon launch so that the trainer interface displays without delay before container targeting prompts.
+  - Included script version in startup `SysMsg` notification.
+- Updated `FesterUO/LobsterTrapAuto.py` to v1.0.1:
+  - Fixed script execution when double-clicked in the TazUO client by calling `run_lobster_auto()` unconditionally instead of relying on an `if __name__ == "__main__":` guard.
+  - Included script version in startup `SysMsg` notification.
+- Updated `FesterUO/TrainVeterinary.py` to v1.1.0:
+  - Added Resource Satchel & Subcontainer Bandage Support: Automatically recognizes and utilizes bandages held inside specialized resource satchels or subcontainers within the player's backpack.
+  - Added Automatic Bandage Restocking (`AUTO_RESTOCK_SATCHEL = True`): Automatically monitors backpack bandages and pulls working batches (`RESTOCK_BATCH_SIZE = 100`) from the satchel into the main backpack whenever supply drops below `MIN_BACKPACK_BANDAGES = 20`.
+  - Added interactive Gump "Satchel" button (`btn_satchel`): Allows players to manually target and designate their resource satchel or container at runtime, with fallback auto-detection.
+  - Updated Gump bandage display: Displays total available bandages across satchels and subcontainers alongside current backpack count (e.g. `Bandages: 10,000 (BP: 100)`).
+  - Enhanced bandage resolution in `apply_bandage_to_pet`: Pulls from root backpack, designated satchel, or subcontainers seamlessly to prevent false "Out of Bandages" stops when bandages reside in satchels.
+- Updated `FesterUO/TrainAnimalTaming.py` to v1.0.3:
+  - Prioritized direct full-name speech release (`<actual_name> release`, e.g. `a hind release`): directly commands newly tamed wildlife using their exact in-game names to open the release confirmation dialog immediately.
+  - Set `confirm_release_gump` primary response to `Button 2` (standard CONTINUE button in ServUO/RunUO `PetReleaseGump.cs`) with fallback to `Button 1`, preventing release dialog cancellations.
+  - Fixed `cleanup_stuck_followers` targeting: targets tracked follower serials directly to prevent accidentally clicking ambient untamed wildlife (such as innocent deer or great harts).
+- Updated `FesterUO/TrainAnimalTaming.py` to v1.0.2:
+  - Removed creature renaming (`API.Rename`): completely eliminated the indexed renaming attempt (`Tame1`, `Tame2`, etc.) which caused server-side validation rejections (`System: That name is unacceptable.`) on wild creatures, eliminating unnecessary delays and journal spam.
+  - Added in-game `SysMsg` notification when pet release confirmation dialogs are confirmed.
+- Updated `FesterUO/TrainAnimalTaming.py` to v1.0.1:
+  - Extended `TAME_DELAY` from 12.0s to 18.0s: prevents premature taming timeouts that aborted successful tames (which take 12-14 seconds in standard UO) right before the server sent completion packets, fixing an issue where tamed animals were abandoned without releasing.
+  - Added post-loop journal inspection in `execute_tame_attempt` to catch success messages arriving on the final tick.
+  - Fixed pet release dialog confirmation (`confirm_release_gump`): prioritized Button 1 (standard Confirm/OK in ServUO/RunUO BaseCreature release gump) with fallback to Button 2, preventing dialog cancellations caused by sending Button 2 first.
+  - Refactored `release_pet` to guarantee both packet Context Menu and universal speech (`all release`) attempts without skipping speech if context menu dispatches, properly targeting pets upon cursor prompt.
+  - Enhanced lingering follower detection: automatically triggers `cleanup_stuck_followers` whenever follower counts exceed baseline followers, ensuring abandoned pets from interrupted cycles are promptly released.
+  - Expanded `RELEASE_JOURNAL_PHRASES` with additional server release match patterns.
+- Standardized script versioning and author branding across all 28 scripts in `FesterUO/`:
+  - Added internal version constants (`SCRIPT_VERSION: str = "1.0.0"`) to every script.
+  - Standardized Gump author and version labels across all 25 interactive interfaces: `lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)` positioned uniformly in the top header row, alongside simplified, readable title labels.
+  - Included version numbers and author attribution in startup console/SysMsg notifications.
+- Updated `AGENTS.md` and `.github/copilot-instructions.md`:
+  - Added mandatory script versioning and incrementing rules (`SCRIPT_VERSION: str = "X.Y.Z"`): agents must increment the script version on every modification (PATCH for bug fixes/pacing, MINOR for features/controls, MAJOR for architectural overhauls) and reflect it on Gump author labels and startup messages.
+  - Added explicit instructions for AI agents and assistants to enforce workspace markdownlint rules defined in `.markdownlint.json` when creating or modifying Markdown files.
+  - Mandated resolving all supported formatting issues (equivalent to running the VS Code command `markdownlint: Fix all supported issues in file`), maintaining clean list hierarchies, proper blank line separation between blocks, and eliminating trailing whitespace.
+- Updated `FesterUO/MiningAndLumberjackAuto.py`:
+  - Added interactive Gump stepper tuning controls (`[-]` / `[+]`) for **Veins per Cycle** and **Trees per Cycle**, enabling real-time ratio adjustments on the fly in-game to match whatever area or resource density you are working in without modifying or restarting the script.
+  - Replaced invalid `API.GetItems` calls with `API.ItemsInContainer` for backpack tool and axe discovery.
+- Decoupled `FesterUO/HuntAnimals.py` and resource harvesting scripts to operate as completely standalone scripts:
+  - Removed all inter-script combat pause semaphores (`ExternalCombatActive`) and harvester coordination persistent variables (`HarvesterRunning`, `HarvestReadyForHunt`).
+  - Restored `FesterUO/ChopTreeAuto.py`, `FesterUO/MiningAuto.py`, and `FesterUO/MiningAndLumberjackAuto.py` as fully independent harvesting scripts without external pause loops or persistent character variable signaling.
+  - Refactored `FesterUO/HuntAnimals.py` to operate purely as an independent standalone hunting script with a streamlined Gump UI (removed semaphore signal label).
+- Updated `FesterUO/HuntAnimals.py`:
+  - Added interactive Gump toggle checkboxes (`CreateGumpCheckbox`) for runtime category filtering: **Birds**, **Passives**, **Predators**, and **Defend Threats**. Clicking any checkbox immediately toggles targeting behavior in real-time with client feedback without needing script reloads.
+  - Added Pre-Combat Sheep Shearing (`AUTO_SHEAR_SHEEP = True`): Automatically approaches wooly sheep (`0x00CF`) into melee range and shears their wool before engaging in combat, yielding both sheared wool and corpse mutton/hides.
+  - Added Backpack Skinning Knife Autodetection: Prioritizes finding a Skinning Knife (`0x0EC4` or by name) directly in the main backpack for shearing and corpse carving, with fallback to shears and other bladed tools.
+  - Added interactive Gump checkbox for **Shear Sheep** and real-time counter for **Sheep Sheared** (`Defeated: N | Sheared: N`).
+  - Added Karma Protection (`PROTECT_KARMA = True`): Removed horses, llamas, and ostards from passive hunting lists, and added strict exclusions for all karma-losing creatures (`KARMA_LOSS_GRAPHICS` for wild horses, llamas, ostards, dolphins, dogs, and cats) to prevent negative karma loss.
+  - Fixed predator false positive prioritization: removed unconditional predator classification from `is_aggressive_mobile` so that ambient predators (wolves, bears, cougars) are only targeted when `HUNT_PREDATORS` is `True` or when actively attacking the player in War Mode, preventing them from overriding `HUNT_PREDATORS = False` and skipping over closer birds and passive animals.
+  - Fixed an issue where ambient wildlife was mistakenly rejected due to uninitialized client health packets (`mob.Hits <= 0`), added fallback to `API.NearestMobiles` for mobile discovery, corrected backpack carving tool lookup to `API.FindType`, upgraded combat pursuit to `API.PathfindEntity` with extended corpse approach range, corrected `API.WaitForTarget` keyword argument from `delay` to `timeout`, corrected `API.PathfindEntity` timeout argument to integer (`int`) to prevent `expected Int32, got float` errors, hooked `on_gump_disposed` to `API.Stop()` so right-clicking to close the Gump stops the script immediately without requiring a double toggle on reload, and improved dress profile equipment reliability with increased swap delays (`DRESS_DELAY = 1.25s`), hand verification retries, and War Mode safety checks to prevent equipment change blocks.
+- Updated `FesterUO/TrainCooking.py`: Corrected `API.WaitForTarget` keyword argument from `delay` to `timeout`.
+- Updated `FesterUO/Fish.py` with hostile mob awareness, automatic combat defense, and Archery dress switching:
+  - Actively scans for nearby hostile mobiles (Gray, Criminal, Enemy, Murderer notorieties or sea monsters like Sea Serpents, Krakens, Water Elementals, and Leviathans) within a 12-tile radius.
+  - Automatically halts fishing, unquips the fishing pole to backpack, undresses the "Fishing" profile, and switches to the "Archery" dress profile (with backpack bow equip fallback).
+  - Enters War Mode and attacks the hostile mobile.
+  - Halts automated fishing with a "Combat - Click Start when ready" Gump status, leaving the player in full manual control without automatically resuming fishing until the player clicks "Start".
+- Updated `FesterUO/TrainAnimalTaming.py`:
+  - Resolved shaky pet release and follower creep issues: fixed a race condition where confirmation gump handling inadvertently sent Button 1 (Cancel) after Button 2 (OK), actively cancelling pet releases on standard RunUO/ServUO servers.
+  - Fixed server confirmation gump response targeting (`confirm_release_gump`): omitted invalid gump instance ID from `API.ReplyGump(button)` calls to properly target the active server gump via TazUO's default gump parameter (`1337`), restoring automatic Button 2 (OK) and fallback Button 1 confirmation clicks.
+  - Refactored `cleanup_stuck_followers`: added comprehensive follower detection scanning nearby tamed and innocent creatures (`is_innocent_animal`, `(tame)` tooltips, `ignored_mobiles`, and `tamed_pets_pending_release`), dispatches emergency broadcast `all release` with gump confirmation, and resyncs player status packets by interacting with the player paperdoll.
+  - Implemented multi-tiered pet release verification (`is_pet_released_state`): expanded release journal keyword detection across 18+ server variants, verified follower count drops, and checked creature notoriety reversion to Gray (`API.Notoriety.Gray`).
+  - Enforced server pet command anti-spam pacing: eliminated rapid command bursts, increased general action delay (`ACTION_DELAY = 1.5s`), added explicit command pacing (`COMMAND_DELAY = 1.5s`), spaced server dialog replies (`GUMP_DELAY = 1.0s`), and added detection for server rate-limit messages (`"commands were tried too fast"`) with automatic 2.0s backoff delays.
+  - Added follower cap pre-taming safeguard: checks `API.Player.Followers` against `FollowersMax` before attempting to tame and cleans up stuck followers or halts safely.
+  - Added indexed pet renaming (`Tame1`, `Tame2`, etc.) upon taming: eliminates pet name ambiguity, spaces, and leading articles during speech release, and permanently flags the creature in the game world.
+  - Improved wild mobile target filtering and tamed history: added property/tooltip inspection (`mob.NameAndProps`) to ignore creatures already flagged `[tame]`, `[bonded]`, or `[commandable]`, and automatically skips any wildlife starting with `Tame` to prevent re-taming across script restarts.
+  - Added Safe Magery Culling (`ENABLE_MAGERY_CULL`, default `False`): safely casts Energy Bolt on released hostile/gray creatures to clear spawns and train Magery concurrently. Includes strict multi-tier protections against criminal flagging and karma loss (verifies mobile is not owned, strictly forbids casting on `Innocent` (Blue) creatures, checks `KARMA_LOSS_GRAPHICS` and keywords, and verifies mana reserves).
+  - Added interactive Gump feature toggle checkboxes (`CreateGumpCheckbox`): provides in-game runtime toggles for **Peacemaking**, **Animal Lore**, **Veterinary**, **Safety Heal**, and **Cull (E-Bolt)**, and added real-time tracking for culled creatures on the statistics label.
+- Updated [`.gitignore`](.gitignore) and untracked base TazUO client-generated files (`API.py`, `__builtins__.py`, `_ScriptContext.cs`, `LegionScripts.csproj`) so that client updates and local API stub regenerations do not dirty git status, while keeping user workspace settings (`LegionScripts.code-workspace`) tracked.
 
 ### Fixed
 
