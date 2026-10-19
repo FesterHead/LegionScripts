@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `FesterUO/TrainImbuing.py` (v1.1.1):
-  - Created an automated full-spectrum Imbuing trainer supporting both Reimbue property loops and mass container unraveling at any Soulforge.
-  - Container Move Retry & Anti-Fast-Loot Synchronization: increased `MOVE_DELAY` to `0.85s` to satisfy ServUO's `NextActionTime` drag timer and added automatic drag retry logic with backoff when pulling items from external supply containers into the backpack.
+- Added `FesterUO/TrainImbuing.py` (v1.1.4):
+  - Resource Satchel Window Preservation: added open-state detection (`satchel_item.GetContainerGump()`) to immediately restore the resource satchel window whenever TazUO refreshes the backpack, countering ClassicUO's native behavior of closing subcontainers when their parent container is refreshed.
+  - Streamlined Container Synchronization: eliminated redundant pre-draw inventory refreshes so that backpack queries only run when an item has physically been drawn from the supply container.
+  - Backpack Container Auto-Refresh & Anti-Ghosting: added `refresh_backpack()` (`API.UseObject(API.Backpack)`) following item moves to force the server to refresh container contents, eliminating ghosted items and ensuring moved items are immediately recognized in the backpack.
   - Unmovable Item Auto-Blacklist: automatically registers items that fail to move after retries (due to house lockdowns, `Movable = false`, or backpack capacity) into `skipped_unravel_serials` / `retired_item_serials` so the queue never stalls on inaccessible items.
   - ServUO Publish 57 20-Imbue Re-imbuing Support: configured `MAX_SUCCESSES_PER_ITEM = 20` to allow items to be repeatedly re-imbued up to 20 successful imbuements matching ServUO's `TimesImbued(item) < 20` skill gain rule without prematurely unraveling or discarding.
   - Overwrite Confirmation Handling: implemented immediate sub-gump detection and response when the server prompts to overwrite existing properties on previously imbued items.
