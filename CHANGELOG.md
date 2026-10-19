@@ -9,8 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `FesterUO/TrainImbuing.py` (v1.1.0):
+- Added `FesterUO/TrainImbuing.py` (v1.1.1):
   - Created an automated full-spectrum Imbuing trainer supporting both Reimbue property loops and mass container unraveling at any Soulforge.
+  - Container Move Retry & Anti-Fast-Loot Synchronization: increased `MOVE_DELAY` to `0.85s` to satisfy ServUO's `NextActionTime` drag timer and added automatic drag retry logic with backoff when pulling items from external supply containers into the backpack.
+  - Unmovable Item Auto-Blacklist: automatically registers items that fail to move after retries (due to house lockdowns, `Movable = false`, or backpack capacity) into `skipped_unravel_serials` / `retired_item_serials` so the queue never stalls on inaccessible items.
   - ServUO Publish 57 20-Imbue Re-imbuing Support: configured `MAX_SUCCESSES_PER_ITEM = 20` to allow items to be repeatedly re-imbued up to 20 successful imbuements matching ServUO's `TimesImbued(item) < 20` skill gain rule without prematurely unraveling or discarding.
   - Overwrite Confirmation Handling: implemented immediate sub-gump detection and response when the server prompts to overwrite existing properties on previously imbued items.
   - Success and Fail Tracking: split attempt counter into distinct `Success: X/20` and `Fails: Y/30` metrics displayed live on the interactive control Gump.

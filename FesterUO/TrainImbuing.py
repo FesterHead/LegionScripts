@@ -60,7 +60,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.1.0"
+SCRIPT_VERSION: str = "1.1.1"
 
 # Target Imbuing skill to stop training (e.g. 100.0 for GM, 120.0 for Legendary)
 TARGET_SKILL: float = 120.0
@@ -83,7 +83,7 @@ AUTO_UNRAVEL_AFTER_MAX: bool = True
 # Action delays in seconds
 IMBUE_DELAY: float = 1.6          # Delay after sending an imbue command
 UNRAVEL_DELAY: float = 1.2        # Delay after sending an unravel command
-MOVE_DELAY: float = 0.65          # Container drag/drop delay
+MOVE_DELAY: float = 0.85          # Container drag/drop delay (satisfies ServUO 750ms-1000ms NextActionTime)
 RESTOCK_DELAY: float = 0.8        # Restock pause delay
 
 # Working buffer of Magical Residue and Gems maintained in main backpack
@@ -637,10 +637,33 @@ def get_or_fetch_target_item() -> Optional[Any]:
         for it in supply_items:
             if is_imbuable_item(it) and it.Serial not in retired_item_serials and it.Serial not in skipped_unravel_serials:
                 name = it.Name or f"Item (0x{it.Graphic:X})"
-                # Only move item to backpack if it isn't already inside the root backpack
                 if it.Container != API.Backpack:
                     API.SysMsg(f"[Imbuing] Drawing fresh item '{name}' from supply container...", HUE_INFO)
                     API.MoveItem(it.Serial, API.Backpack)
+                    start_m = time.time()
+                    while (time.time() - start_m) < 1.2:
+                        bp_it = API.FindItem(it.Serial)
+                        if bp_it and (bp_it.Container == API.Backpack or getattr(bp_it, "RootContainer", 0) == API.Player.Serial):
+                            break
+                        API.Pause(0.1)
+
+                    bp_it = API.FindItem(it.Serial)
+                    if not bp_it or (bp_it.Container != API.Backpack and getattr(bp_it, "RootContainer", 0) != API.Player.Serial):
+                        debug_msg(f"Retrying move for '{name}' after cooldown...")
+                        API.Pause(0.6)
+                        API.MoveItem(it.Serial, API.Backpack)
+                        start_m2 = time.time()
+                        while (time.time() - start_m2) < 1.2:
+                            bp_it2 = API.FindItem(it.Serial)
+                            if bp_it2 and (bp_it2.Container == API.Backpack or getattr(bp_it2, "RootContainer", 0) == API.Player.Serial):
+                                break
+                            API.Pause(0.1)
+
+                    bp_it = API.FindItem(it.Serial)
+                    if not bp_it or (bp_it.Container != API.Backpack and getattr(bp_it, "RootContainer", 0) != API.Player.Serial):
+                        API.SysMsg(f"[Imbuing] Could not move '{name}' into backpack (unmovable/full). Skipping item.", HUE_WARN)
+                        retired_item_serials.add(it.Serial)
+                        continue
                     API.Pause(MOVE_DELAY)
 
                 current_item_serial = it.Serial
@@ -963,22 +986,35 @@ def execute_unravel_container_cycle() -> bool:
                 return True
 
             item_to_pull = eligible_items[0]
-            name = item_to_pull.Name or f"Item (0x{item_to_pull.Graphic:X})"
             API.SysMsg(f"[Imbuing] Drawing '{name}' from supply container into backpack...", HUE_INFO)
             API.MoveItem(item_to_pull.Serial, API.Backpack)
 
             # Wait for item to physically arrive in backpack
             start_m = time.time()
-            while (time.time() - start_m) < 1.5:
+            while (time.time() - start_m) < 1.2:
                 bp_it = API.FindItem(item_to_pull.Serial)
                 if bp_it and (bp_it.Container == API.Backpack or getattr(bp_it, "RootContainer", 0) == API.Player.Serial):
                     break
                 API.Pause(0.1)
 
             bp_unravel = API.FindItem(item_to_pull.Serial)
+            # If not in backpack after initial attempt, retry once after a drag delay buffer
             if not bp_unravel or (bp_unravel.Container != API.Backpack and getattr(bp_unravel, "RootContainer", 0) != API.Player.Serial):
-                API.SysMsg(f"[Imbuing] Could not move '{name}' into backpack. Check distance/weight.", HUE_WARN)
-                API.Pause(0.5)
+                debug_msg(f"First move attempt for '{name}' did not land. Retrying move after cooldown...")
+                API.Pause(0.6)
+                API.MoveItem(item_to_pull.Serial, API.Backpack)
+                start_m2 = time.time()
+                while (time.time() - start_m2) < 1.2:
+                    bp_it = API.FindItem(item_to_pull.Serial)
+                    if bp_it and (bp_it.Container == API.Backpack or getattr(bp_it, "RootContainer", 0) == API.Player.Serial):
+                        break
+                    API.Pause(0.1)
+
+            bp_unravel = API.FindItem(item_to_pull.Serial)
+            if not bp_unravel or (bp_unravel.Container != API.Backpack and getattr(bp_unravel, "RootContainer", 0) != API.Player.Serial):
+                API.SysMsg(f"[Imbuing] Could not move '{name}' into backpack (unmovable, locked down, or backpack full). Skipping item.", HUE_WARN)
+                skipped_unravel_serials.add(item_to_pull.Serial)
+                API.Pause(0.4)
                 return True
 
         update_status(f"Unraveling {bp_unravel.Name or name}...")
