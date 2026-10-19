@@ -7,12 +7,14 @@ Target Client: TazUO (Legion Scripting Engine)
 Description:
     Fully automated, resource-efficient Imbuing skill training script for TazUO featuring:
     - Dual Training Modes (Toggleable via Gump or Configuration):
-        * Reimbue Loop Training (Primary Workhorse, 40.0 - 120.0):
-            - Automatically invokes the "Reimbue Last" skill function at a Soulforge.
-            - Iterates repeatedly over working items up to the optimal 20-imbue limit.
-            - Automatically detects and confirms overwrite sub-gumps.
-            - Automatically draws fresh items (weapons, caps, jingasas, etc.) from an Item Supply
-              Container into the backpack when an active item reaches capacity.
+        * Reimbue Loop Training (Primary Workhorse, 45.0 - 120.0):
+            - Automatically invokes "Imbue Last Property" (`10008`) with target cursor cycling at a Soulforge.
+            - ServUO Publish 57 20-Imbue Architecture: Repeatedly re-imbues the same item until it achieves
+              20 successful imbuements (matching ServUO's `TimesImbued(item) < 20` skill gain limit).
+            - Failed attempts continue rolling for skill gains without counting toward the 20-success cap.
+            - Automatically detects and confirms property replacement sub-gumps immediately.
+            - Automatically draws fresh items (daggers, caps, jingasas, etc.) from an Item Supply
+              Container or backpack when an active item reaches 20 successes or capacity.
         * Mass Unraveling / Recycler Mode (0.0 - 50.0+ / Material Farming):
             - Automates bulk item or container unraveling at a Soulforge to gain early skill
               and stock up on Magical Residues, Enchanted Essences, and Relic Fragments.
@@ -23,8 +25,9 @@ Description:
               house supply chest and blacklists its serial so it is skipped for the rest of the
               session, pausing cleanly with "Supply Depleted" once all eligible items are done.
     - Automated Item Recycling via Soulforge Unraveling:
-        * Once an item reaches its maximum imbue attempts (default 20), the script can automatically
-          unravel it at the Soulforge, reclaiming substantial Magical Residue and Enchanted Essence.
+        * Once an item reaches 20 successes (or maximum server capacity), the script automatically
+          unravels it at the Soulforge, reclaiming substantial Magical Residue and Enchanted Essence
+          from the fully imbued, high-intensity item.
         * Alternative Trash Barrel / Discard Bag support for items that cannot be unraveled.
     - Resource Satchel & Chest Restocking / Stashing:
         * Prompts player to target a Resource Chest / Satchel containing Magical Residues,
@@ -34,12 +37,13 @@ Description:
         * Automatically restocks working buffers into the main backpack when reserves run low.
     - Milestone Guidance & Success Rate Optimization:
         * Dynamic progression ladder recommending optimal properties (Reflect Physical Damage,
-          Hit Dispel, Damage Increase, Lower Reagent Cost, etc.) to maintain the ~50-60% success
+          Hit Dispel, Damage Increase, Lower Reagent Cost, etc.) to maintain the ~50-70% success
           rate sweet spot for maximum skill gains.
         * Interactive "Setup Imbue" button allowing manual calibration of properties and intensity.
     - Interactive Control Gump:
         * Real-time training status, live Imbuing skill level and cap with gain announcements.
-        * Item attempt counter (e.g., "Item: Dagger (14/20)"), Imbued / Unraveled / Failed counters.
+        * Dual success and fail attempt counters (e.g., "Item: Dagger | Success: 14/20 | Fails: 3"),
+          Imbued / Unraveled / Failed counters.
         * Live Resource counts (Residue, Essence, Gems) and container binding indicators.
         * Interactive Pause / Resume, Mode Toggle, Setup Imbue, Item Supply, Resources, Trash,
           and Stop buttons.
@@ -56,7 +60,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.22"
+SCRIPT_VERSION: str = "1.1.0"
 
 # Target Imbuing skill to stop training (e.g. 100.0 for GM, 120.0 for Legendary)
 TARGET_SKILL: float = 120.0
@@ -64,12 +68,13 @@ TARGET_SKILL: float = 120.0
 # Initial Training Mode: "REIMBUE" (Active Imbuing) or "UNRAVEL" (Mass Unraveling)
 TRAINING_MODE: str = "REIMBUE"
 
-# Retire item immediately upon a successful imbue to move to a fresh item.
-# In standard UO mechanics, repeating the same property on an item that already has it yields ZERO skill gains.
-RETIRE_ON_SUCCESS: bool = True
+# Target successful imbuements on a single item before retiring/recycling it.
+# In ServUO (Publish 57 / Stygian Abyss Imbuing.cs), skill gains are granted up to 20 successful imbuements
+# on the same item (TimesImbued < 20). Repeated imbuements are not penalized, and fails still grant rolls.
+MAX_SUCCESSES_PER_ITEM: int = 20
 
-# Maximum fail attempts allowed on a single item before retiring/recycling it.
-MAX_IMBUES_PER_ITEM: int = 10
+# Maximum fail attempts allowed on a single item before retiring it as a safety precaution.
+MAX_FAILS_PER_ITEM: int = 30
 
 # Automatically unravel items at the Soulforge after retiring them
 # to reclaim valuable Magical Residue and Enchanted Essence.
@@ -194,11 +199,11 @@ TRASH_BARREL_GRAPHICS: Set[int] = {0x0E77}
 # Optimal Progression Ladder: (min_skill, max_skill, recommended_property, required_materials, recommendation_notes)
 PROGRESSION_LADDER: List[Tuple[float, float, str, str, str]] = [
     (0.0, 45.0, "Unravel Magic Loot / Items", "Magical items (loot/crafted)", "0-45: Mass unravel at Soulforge for free skill & residue"),
-    (45.0, 55.0, "Hit Dispel (Weapons) or Luck (Armor/Weapons)", "Amber / Citrine + Residue", "Daggers: Hit Dispel (Amber + Residue) | Armor/Weapons: Luck (Citrine + Residue, ~50-55% success)"),
-    (55.0, 70.0, "Hit Dispel or Luck (Higher Intensity)", "Amber / Citrine + Residue", "Daggers / Butcher Knives / Jingasas (~50-55% success)"),
-    (70.0, 90.0, "Hit Dispel / LRC", "Amber/Tourmaline + Residue", "Weapons: Hit Dispel | Armor: Lower Reagent Cost (~50-55% success)"),
-    (90.0, 105.0, "Damage Increase / High Intensity", "Citrine/Gems + Essence", "Weapons / Armor (mid-high intensity, ~50-55% success)"),
-    (105.0, 120.0, "High Intensity Imbues", "Gems + Essence/Relics", "Weapons / Armor (high intensity, ~50-55% success)"),
+    (45.0, 55.0, "Hit Dispel (Weapons) or Luck (Armor/Weapons)", "Amber / Citrine + Residue", "Daggers: Hit Dispel (Amber + Residue) | Armor/Weapons: Luck (Citrine + Residue, ~50-70% success)"),
+    (55.0, 70.0, "Hit Dispel or Luck (Higher Intensity)", "Amber / Citrine + Residue", "Daggers / Butcher Knives / Jingasas (~50-70% success)"),
+    (70.0, 90.0, "Hit Dispel / LRC", "Amber/Tourmaline + Residue", "Weapons: Hit Dispel | Armor: Lower Reagent Cost (~50-70% success)"),
+    (90.0, 105.0, "Damage Increase / High Intensity", "Citrine/Gems + Essence", "Weapons / Armor (mid-high intensity, ~50-70% success)"),
+    (105.0, 120.0, "High Intensity Imbues", "Gems + Essence/Relics", "Weapons / Armor (high intensity, ~50-70% success)"),
 ]
 
 
@@ -232,7 +237,8 @@ custom_soulforge_serial: Optional[int] = None
 # Active Item State
 current_item_serial: Optional[int] = None
 current_item_name: str = "None"
-current_item_imbue_count: int = 0
+current_item_successes: int = 0
+current_item_fails: int = 0
 target_training_graphic: Optional[int] = None
 
 # Runtime flags
@@ -309,7 +315,7 @@ def update_stats() -> None:
 
     # 3. Item & Attempts label
     if lbl_item:
-        lbl_item.Text = f"Item: {current_item_name} | Attempts: {current_item_imbue_count}/{MAX_IMBUES_PER_ITEM}"
+        lbl_item.Text = f"Item: {current_item_name} | Success: {current_item_successes}/{MAX_SUCCESSES_PER_ITEM} | Fails: {current_item_fails}"
 
     # 4. Counters label
     if lbl_counts:
@@ -563,25 +569,26 @@ def is_imbuable_item(item: Any) -> bool:
 def get_or_fetch_target_item() -> Optional[Any]:
     """
     Returns the active item to imbue.
-    If the current item reached max imbues or does not exist, handles disposal
+    If the current item reached max successes (20) or fails (30), handles disposal
     and fetches a fresh item from the supply container or backpack.
     """
-    global current_item_serial, current_item_name, current_item_imbue_count, target_training_graphic
+    global current_item_serial, current_item_name, current_item_successes, current_item_fails, target_training_graphic
 
-    # 1. Check if current active item is still valid and below max imbues
+    # 1. Check if current active item is still valid and below max successes and fails
     if current_item_serial:
         item = API.FindItem(current_item_serial)
-        if item and item.Container == API.Backpack and current_item_imbue_count < MAX_IMBUES_PER_ITEM:
+        if item and item.Container == API.Backpack and current_item_successes < MAX_SUCCESSES_PER_ITEM and current_item_fails < MAX_FAILS_PER_ITEM:
             return item
 
-        # Item reached max attempts or is missing -> Dispose / Recycle it
-        if item and current_item_imbue_count >= MAX_IMBUES_PER_ITEM:
-            API.SysMsg(f"[Imbuing] Item '{current_item_name}' completed {current_item_imbue_count} imbues.", HUE_INFO)
+        # Item reached max successes, fail limit, or is missing -> Dispose / Recycle it
+        if item and (current_item_successes >= MAX_SUCCESSES_PER_ITEM or current_item_fails >= MAX_FAILS_PER_ITEM):
+            API.SysMsg(f"[Imbuing] Item '{current_item_name}' completed {current_item_successes} successes ({current_item_fails} fails).", HUE_INFO)
             retire_finished_item(item)
 
         current_item_serial = None
         current_item_name = "None"
-        current_item_imbue_count = 0
+        current_item_successes = 0
+        current_item_fails = 0
 
     # 2. Check backpack for an existing imbuable item
     if not supply_container_serial:
@@ -613,7 +620,8 @@ def get_or_fetch_target_item() -> Optional[Any]:
             if match:
                 current_item_serial = match.Serial
                 current_item_name = match.Name or f"Item (0x{match.Graphic:X})"
-                current_item_imbue_count = 0
+                current_item_successes = 0
+                current_item_fails = 0
                 API.SysMsg(f"[Imbuing] Active target set to backpack item: {current_item_name}", HUE_INFO)
                 update_stats()
                 return match
@@ -637,7 +645,8 @@ def get_or_fetch_target_item() -> Optional[Any]:
 
                 current_item_serial = it.Serial
                 current_item_name = name
-                current_item_imbue_count = 0
+                current_item_successes = 0
+                current_item_fails = 0
                 update_stats()
                 return it
 
@@ -686,7 +695,7 @@ def retire_finished_item(item: Any) -> None:
 
 def execute_reimbue_cycle(target_item: Any) -> bool:
     """Executes a single Reimbue Last attempt on the specified item."""
-    global total_imbued, total_failed, current_item_imbue_count, current_item_serial, current_item_name
+    global total_imbued, total_failed, current_item_successes, current_item_fails, current_item_serial, current_item_name
 
     # Check Soulforge proximity
     if not is_near_soulforge():
@@ -711,7 +720,7 @@ def execute_reimbue_cycle(target_item: Any) -> bool:
         if count_backpack_residue() < 1 or count_backpack_gems() < 1:
             restock_resources_from_chest()
 
-    update_status(f"Imbuing {current_item_name} ({current_item_imbue_count + 1}/{MAX_IMBUES_PER_ITEM})...")
+    update_status(f"Imbuing {current_item_name}...")
     API.ClearJournal()
 
     # Pacing pause to ensure no action delay collision
@@ -734,40 +743,51 @@ def execute_reimbue_cycle(target_item: Any) -> bool:
         pause_trainer("Setup Required")
         return True
 
-    # Send "Imbue Last Property" (10008) so the server prompts for a target cursor for the current fresh item
+    # Send "Imbue Last Property" (10008) so the server prompts for a target cursor
     API.ReplyGump(GUMP_BTN_IMBUE_LAST_PROP)
 
     # Target our active item
     if API.WaitForTarget(timeout=2.5):
         API.Target(target_item.Serial)
     else:
-        # Fallback if server expected Reimbue Last
+        # Fallback if server expected Reimbue Last directly
         debug_msg("Imbue target cursor did not appear, trying Reimbue Last...")
         API.ReplyGump(GUMP_BTN_REIMBUE_LAST)
 
-    # Action delay
-    if not wait_with_ui(IMBUE_DELAY):
-        return False
-
-    # Check for confirmation sub-gump (only if overwrite/replace warning is genuinely displayed)
+    # Check immediately for confirmation sub-gump (ServUO prompt when replacing/re-imbuing an existing property)
     start_c = time.time()
-    while (time.time() - start_c) < 0.8:
+    while (time.time() - start_c) < 1.0:
         if API.HasGump():
-            if (API.GumpContains("replace") or API.GumpContains("overwrite") or
-                    API.GumpContains("continue") or API.GumpContains("confirm")):
-                API.ReplyGump(GUMP_BTN_CONFIRM)
-                API.Pause(0.4)
+            curr_gump = API.GetGump()
+            gump_text = API.GetGumpContents().lower() if API.GetGumpContents() else ""
+            if any(w in gump_text for w in ["replace", "overwrite", "continue", "proceed", "confirm", "warning"]):
+                conf_buttons = []
+                if curr_gump and hasattr(curr_gump, "Children"):
+                    for child in curr_gump.Children:
+                        if hasattr(child, "ButtonID") and child.ButtonID is not None and child.ButtonID > 0:
+                            conf_buttons.append(child.ButtonID)
+                btn = conf_buttons[0] if conf_buttons else GUMP_BTN_CONFIRM
+                API.ReplyGump(btn)
+                API.Pause(0.3)
                 break
         API.Pause(0.1)
 
+    # Action delay for server response
+    if not wait_with_ui(IMBUE_DELAY):
+        return False
+
     # Evaluate results via Journal
-    entries = API.GetJournalEntries(IMBUE_DELAY + 1.0)
+    entries = API.GetJournalEntries(IMBUE_DELAY + 1.2)
     j_text = [str(e.Text).lower() for e in entries] if entries else []
 
-    # Check for max capacity / cannot be imbued further
-    if any("cannot be imbued" in t or "reached its" in t or "limit" in t for t in j_text):
-        API.SysMsg(f"[Imbuing] Item reached server imbuing capacity!", HUE_WARN)
-        current_item_imbue_count = MAX_IMBUES_PER_ITEM
+    # Check for max capacity / cannot be imbued further (ServUO 20-imbue cap reached)
+    if any("cannot be imbued" in t or "reached its" in t or "limit" in t or "capacity" in t for t in j_text):
+        API.SysMsg(f"[Imbuing] Item reached server imbuing capacity! Retiring '{current_item_name}'.", HUE_WARN)
+        retire_finished_item(target_item)
+        current_item_serial = None
+        current_item_name = "None"
+        current_item_successes = 0
+        current_item_fails = 0
         update_stats()
         return True
 
@@ -783,37 +803,30 @@ def execute_reimbue_cycle(target_item: Any) -> bool:
     # Check for success
     if any("successfully" in t or "you imbue" in t or "you infuse" in t for t in j_text):
         total_imbued += 1
-        current_item_imbue_count += 1
-        debug_msg(f"Imbue success! Attempt {current_item_imbue_count}")
+        current_item_successes += 1
+        debug_msg(f"Imbue success! Item successes: {current_item_successes}/{MAX_SUCCESSES_PER_ITEM}")
 
-        if RETIRE_ON_SUCCESS:
-            API.SysMsg(f"[Imbuing] Success on '{current_item_name}'! Retiring to next item for skill gains.", HUE_SUCCESS)
+        if current_item_successes >= MAX_SUCCESSES_PER_ITEM:
+            API.SysMsg(f"[Imbuing] '{current_item_name}' reached {MAX_SUCCESSES_PER_ITEM} successes! Retiring item for unraveling.", HUE_SUCCESS)
             retire_finished_item(target_item)
             current_item_serial = None
             current_item_name = "None"
-            current_item_imbue_count = 0
+            current_item_successes = 0
+            current_item_fails = 0
             update_stats()
             return True
+
     elif any("fail" in t for t in j_text):
         total_failed += 1
-        current_item_imbue_count += 1
-        debug_msg(f"Imbue failed. Attempt {current_item_imbue_count}/{MAX_IMBUES_PER_ITEM}")
-        if current_item_imbue_count >= MAX_IMBUES_PER_ITEM:
-            API.SysMsg(f"[Imbuing] Item reached fail attempt limit ({MAX_IMBUES_PER_ITEM}). Retiring item.", HUE_WARN)
+        current_item_fails += 1
+        debug_msg(f"Imbue failed. Item fails: {current_item_fails}/{MAX_FAILS_PER_ITEM} (Successes: {current_item_successes}/{MAX_SUCCESSES_PER_ITEM})")
+        if current_item_fails >= MAX_FAILS_PER_ITEM:
+            API.SysMsg(f"[Imbuing] Item reached fail safety limit ({MAX_FAILS_PER_ITEM}). Retiring item.", HUE_WARN)
             retire_finished_item(target_item)
             current_item_serial = None
             current_item_name = "None"
-            current_item_imbue_count = 0
-            update_stats()
-            return True
-    else:
-        # Default increment attempt counter to ensure items cycle safely
-        current_item_imbue_count += 1
-        if current_item_imbue_count >= MAX_IMBUES_PER_ITEM:
-            retire_finished_item(target_item)
-            current_item_serial = None
-            current_item_name = "None"
-            current_item_imbue_count = 0
+            current_item_successes = 0
+            current_item_fails = 0
             update_stats()
             return True
 
@@ -1081,7 +1094,7 @@ def on_mode_clicked() -> None:
 
 def on_setup_clicked() -> None:
     """Pauses the trainer and opens the Imbuing menu on the working item for initial setup."""
-    global is_paused, btn_pause, current_item_serial, current_item_name, current_item_imbue_count
+    global is_paused, btn_pause, current_item_serial, current_item_name, current_item_successes, current_item_fails
     pause_trainer("Setup Imbue")
 
     API.SysMsg("=== Imbuing Setup Mode ===", HUE_INFO)
@@ -1092,12 +1105,14 @@ def on_setup_clicked() -> None:
         if tar_obj and is_imbuable_item(tar_obj):
             current_item_serial = tar_obj.Serial
             current_item_name = getattr(tar_obj, "Name", "") or f"Item (0x{getattr(tar_obj, 'Graphic', 0):X})"
-            current_item_imbue_count = 0
+            current_item_successes = 0
+            current_item_fails = 0
             API.SysMsg(f"[Imbuing] Target item locked to: {current_item_name}", HUE_SUCCESS)
             update_stats()
 
-    API.SysMsg("1. In the menu, select your property once (aim for ~50-60% success chance).", HUE_INFO)
-    API.SysMsg("2. Click 'Resume' on the Gump to begin automated training!", HUE_SUCCESS)
+    API.SysMsg("1. In the menu, select your property once (aim for ~50-70% success chance).", HUE_INFO)
+    API.SysMsg("2. Re-imbues on the same item grant skill up to 20 successes in ServUO!", HUE_INFO)
+    API.SysMsg("3. Click 'Resume' on the Gump to begin automated training!", HUE_SUCCESS)
 
     API.UseSkill("Imbuing")
 
@@ -1202,7 +1217,7 @@ def create_control_gump() -> None:
     gump.Add(lbl_mode)
 
     # Item & Attempts
-    lbl_item = API.Gumps.CreateGumpLabel("Item: None | Attempts: 0 / 20", 996)
+    lbl_item = API.Gumps.CreateGumpLabel(f"Item: None | Success: 0/{MAX_SUCCESSES_PER_ITEM} | Fails: 0", 996)
     lbl_item.SetPos(10, 88)
     gump.Add(lbl_item)
 

@@ -9,11 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `FesterUO/TrainImbuing.py` (v1.0.22):
+- Added `FesterUO/TrainImbuing.py` (v1.1.0):
   - Created an automated full-spectrum Imbuing trainer supporting both Reimbue property loops and mass container unraveling at any Soulforge.
+  - ServUO Publish 57 20-Imbue Re-imbuing Support: configured `MAX_SUCCESSES_PER_ITEM = 20` to allow items to be repeatedly re-imbued up to 20 successful imbuements matching ServUO's `TimesImbued(item) < 20` skill gain rule without prematurely unraveling or discarding.
+  - Overwrite Confirmation Handling: implemented immediate sub-gump detection and response when the server prompts to overwrite existing properties on previously imbued items.
+  - Success and Fail Tracking: split attempt counter into distinct `Success: X/20` and `Fails: Y/30` metrics displayed live on the interactive control Gump.
+  - Expanded Sweet-Spot Guidance: updated progression ladder and setup guidance to target the ~50%–70% success chance sweet spot.
   - Imbue Last Property Cursor Cycling: sends `10008` ("Imbue Last Property") to prompt for a target cursor on each fresh item, resolving server "must be in your backpack" errors.
-  - Fresh Item Retirement: added `RETIRE_ON_SUCCESS = True` to retire items upon a successful imbue to prevent wasting resources repeating identical properties with zero skill gain.
-  - Retired Items Session Registry: introduced `retired_item_serials` cache to prevent the item selection loop from re-selecting daggers that completed training or failed all imbue attempts.
+  - Retired Items Session Registry: introduced `retired_item_serials` cache to prevent the item selection loop from re-selecting daggers that completed training or reached imbuing capacity.
   - Robust Soulforge Unraveling Handshake: added pacing pauses (`API.Pause(0.2)`) during unravel targeting with target cursor retry verification and broadened confirmation sub-gump detection to reliably handle server confirmation dialogs.
   - Informative Unravel Diagnostics: added explicit journal checks for non-magical / low-intensity items and skill-too-low notifications.
   - Dual-layer Resource Management: dynamically counts and restocks Magical Residue, Enchanted Essence, and Gems across backpack and supply satchels.
