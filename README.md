@@ -10,12 +10,18 @@ A collection of automation and utility scripts developed for the [TazUO](https:/
 
 ---
 
+## 🤖 AI-Assisted Development
+
+This project is developed and managed using Google AI models. The architecture, implementation, and repository maintenance are guided by specialized AI agents to ensure engineering standards.
+
+---
+
 ## 📖 Table of Contents
 
+- [🤖 AI-Assisted Development](#-ai-assisted-development)
 - [⚔️ Overview](#️-overview)
 - [📜 Official Resources & Documentation](#-official-resources--documentation)
 - [🏛️ Base Client Files Explained](#️-base-client-files-explained)
-- [🤖 AI-Assisted Development](#-ai-assisted-development)
 - [🛠️ Development Environment Setup](#️-development-environment-setup)
 - [📦 Available Scripts](#-available-scripts)
 - [⚖️ Best Practices for Writing Legion Scripts](#️-best-practices-for-writing-legion-scripts)
@@ -52,12 +58,6 @@ When setting up TazUO Legion scripting, several files are provided directly from
 
 > [!NOTE]
 > These base files should not be modified directly. They are maintained by TazUO updates.
-
----
-
-## 🤖 AI-Assisted Development
-
-This project is developed and managed using Google AI models. The architecture, implementation, and repository maintenance are guided by specialized AI agents to ensure high-performance, minimalist engineering standards.
 
 ---
 
