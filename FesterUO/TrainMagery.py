@@ -38,6 +38,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Training mode:
 # Set to True to cast offensive spells on yourself (Mind Blast, Energy Bolt, Flamestrike)
 # to train Resisting Spells simultaneously while leveling Magery.
@@ -255,6 +258,9 @@ def create_control_gump():
     title = API.Gumps.CreateGumpLabel("Magery Trainer", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(175, 8)
+    gump.Add(lbl_author)
 
     # Status label
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)

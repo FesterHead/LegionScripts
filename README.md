@@ -152,8 +152,49 @@ A unified roaming mining and Magery skill training script that coordinates ore v
 - **Autonomous Equipment & Dress Switching:** Automatically equips your `"Mining"` profile (pickaxe/shovel) during the mining phase, and switches to your `"Lumberjack"` profile (axe) during the woodcutting phase, avoiding redundant dress delays across consecutive trees.
 - **Combined Spatial Scanning:** Scans for cave floors, mountain edges, rock outcroppings, and boulders for mining, and scans static trees via TazUO's native vegetation detection for lumberjacking.
 - **Pathfinding & Depletion Memory:** Safely pathfinds within reach (`distance <= 2`) of candidate nodes, maintaining separate depletion history queues for both veins (`DEPOSIT_HISTORY_LIMIT = 150`) and trees (`TREE_HISTORY_LIMIT = 50`) to avoid revisiting depleted spots.
-- **Integrated Control Gump:** Displays real-time activity status, dual skill bars for **Mining** and **Lumberjacking** with automatic gain announcements, combined counters for **Veins Mined / Total Ore** and **Trees Chopped / Total Logs**, Strength and Dexterity stats, Weight monitoring, and interactive **Pause/Resume** and **Stop** buttons.
+- **Integrated Control Gump with Live Ratio Tuning:** Displays real-time activity status, dual skill bars for **Mining** and **Lumberjacking** with automatic gain announcements, combined counters for **Veins Mined / Total Ore** and **Trees Chopped / Total Logs**, Strength and Dexterity stats, Weight monitoring, interactive stepper buttons (`[-]` / `[+]`) to dynamically tune **Veins/Cycle** and **Trees/Cycle** live in-game to suit whatever area you are harvesting without restarting or editing the script, and interactive **Pause/Resume** and **Stop** buttons.
 - **Backpack Weight Protection:** Continuously checks player weight against maximum capacity (`MAX_WEIGHT_CHECK`, `WEIGHT_BUFFER = 15`) and halts safely before becoming overburdened.
+- **Attribution:** Created by FesterHead.
+
+#### [MiningAndLumberjackAndMageryAuto.py](FesterUO/MiningAndLumberjackAndMageryAuto.py)
+
+A unified roaming mining, lumberjacking, and Magery skill training script that alternates between harvesting ore veins and chopping trees while training Magery during node downtime:
+
+- **Integrated Tri-Skill Training Loop:** Seamlessly combines roaming mining, roaming lumberjacking, and batch Magery training in a single engine, completely eliminating targeting cursor and equip conflicts.
+- **Configurable Harvest Ratio Workflow:** Automatically alternates between mining and lumberjacking with configurable cycle targets (`TREES_PER_MINING_SPOT = 4`, `MINING_SPOTS_PER_CYCLE = 1` by default).
+- **Spot-Depletion Batch Magery Cycle:** Whenever an ore vein or tree is depleted, the script enters a dedicated spell session to burn available mana on skill-appropriate Magery spells up to a configurable cast limit before moving to the next node.
+- **Interactive Control Gump with Live Ratio Tuning:** Displays real-time status, tri-skill progress (**Mining**, **Lumberjacking**, **Magery**) with automatic gain tracking, Mana / Max Mana, Lower Reagent Cost (LRC %), **Veins Mined / Total Ore**, **Trees Chopped / Total Logs**, Strength and Dexterity stats, Weight monitoring, interactive stepper buttons (`[-]` / `[+]`) to dynamically tune **Veins/Cycle** and **Trees/Cycle** live in-game, a live two-column 8-reagent matrix, and interactive **Pause/Resume** and **Stop** buttons.
+- **Dual Magery Training Modes:** Supports Resist Training (Mind Blast, Energy Bolt, Flamestrike with automated self-healing) and Non-Resist Training (Mana Drain, Invisibility, Mana Vampire).
+- **Equipment & Dress Management:** Automatically switches between `"Mining"`, `"Lumberjack"`, and optional `"Mage"` dress profiles at each phase.
+- **Attribution:** Created by FesterHead.
+
+#### [HuntAnimals.py](FesterUO/HuntAnimals.py)
+
+An autonomous wildlife and bird hunting script with an interactive control Gump, multi-category wildlife selection, automated combat, and corpse carving / autolooting:
+
+- **Multi-Category Wildlife Detection:**
+  - Real-time scanning for wild animals within a configurable search radius (`SEARCH_RADIUS = 15` tiles).
+  - **Birds (`HUNT_BIRDS = True`, default):** Targets birds, eagles, chickens, turkeys, and cranes to generate feathers and poultry.
+  - **Passive Animals (`HUNT_PASSIVE_ANIMALS = True`, default):** Targets hinds, great harts (deer), cows, bulls, pigs, boars, sheep, goats, and rabbits to generate leather/hides, raw ribs/meat, and wool.
+  - **Predators (`HUNT_PREDATORS = False`, optional):** Optional toggle to hunt wolves, bears, cougars, and panthers.
+  - **Karma Protection (`PROTECT_KARMA = True`, default):** Explicitly ignores horses, llamas, ostards, dolphins, dogs, and cats to prevent negative karma hits.
+  - Explicitly ignores the player, friends, guildmates, and tamed player pets (`IGNORE_TAMED_PETS = True`).
+- **Autonomous Combat Engagement:**
+  - Automatically equips the configured `"Fighting"` dress profile to arm weapons.
+  - Enters War Mode (`API.SetWarMode(True)`) and issues attack commands.
+  - Intelligently pathfinds to and pursues wandering or fleeing animals until in melee range, with timeout protection (`COMBAT_TIMEOUT = 25.0s`).
+- **TazUO AutoLoot Integration & Corpse Carving:**
+  - Locates the animal corpse upon kill and carves it using an equipped axe or backpack bladed tool (`AUTO_CARVE_CORPSE = True`) to produce leather/hides, feathers, meat, and wool.
+  - Automatically opens the corpse (`OPEN_CORPSE_FOR_AUTOLOOT = True`) and explicitly invokes TazUO's native AutoLoot agent (`TRIGGER_TAZUO_AUTOLOOT = True` via `API.AutoLootContainer`) to handle item collection according to your client settings.
+- **Pre-Combat Sheep Shearing & Tool Autodetection:**
+  - Detects wooly sheep (`0x00CF`) and automatically approaches into melee range to shear their wool before engaging in combat (`AUTO_SHEAR_SHEEP = True`).
+  - Autodetects a **Skinning Knife** (`0x0EC4`) directly in your main backpack (with fallback to shears or any equipped/backpack bladed tool) for both pre-combat shearing and corpse carving.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time status (`Scanning...`, `Hunting <Animal>...`, `Shearing <Sheep>...`, `Chasing...`, `Carving corpse...`, `Opening corpse...`, `AutoLooting...`, `Paused`, `Stopped`)
+  - Running counters for **Animals Defeated** and **Sheep Sheared**
+  - Interactive toggle checkboxes: Real-time toggles for **Birds**, **Passives**, **Predators**, **Shear Sheep**, and **Defend Threats** directly from the UI without needing to edit or restart the script
+  - Interactive **Pause/Resume** and **Stop** buttons
+- **Attribution:** Created by FesterHead.
 
 #### [TrainAnatomy.py](FesterUO/TrainAnatomy.py)
 
@@ -164,18 +205,54 @@ An automated Anatomy skill training script with configurable skill cooldowns, au
 - **Automatic Cap Detection:** Inspects `API.GetSkill("Anatomy").Cap` and automatically halts when the goal is reached.
 - **Skill Gain Tracking:** Announces incremental skill gains in the game client log.
 
+#### [TrainAnimalTaming.py](FesterUO/TrainAnimalTaming.py)
+
+An automated Animal Taming skill training script featuring an interactive dark control Gump, active range pursuit, integrated Veterinary healing, and dual training architectures:
+
+- **Dual Training Modes:**
+  - **Wild Roam Mode (`DEFAULT_MODE = "WILD_ROAM"`):** Autonomously scans for nearby wild animals matching the player's skill tier within `SEARCH_RADIUS` (18 tiles), pathfinds to them, actively pursues fleeing creatures during the taming timer, and auto-releases them upon success.
+  - **Target Trainer Mode (`DEFAULT_MODE = "TARGET_TRAIN"`):** Repeatedly tames, releases, and retames a designated or penned creature (such as a bull, bear, or horse) to rapidly gain skill up to the cap.
+- **Active Range Pursuit:** Continuously calculates distance during the 10-12s taming countdown and issues pathfinding steps to maintain the required 2-tile proximity without breaking the taming attempt.
+- **Integrated Veterinary Healing (`ENABLE_VETERINARY = True`):** Automatically applies bandages to injured or poisoned creatures before release (or during retaming) to train Veterinary skill concurrently.
+- **Automated Pet Release & Follower Management:** Dispatches direct speech and context menu commands with proper command pacing (0.8s-1.0s) to prevent server rate limiting, safely confirms release dialogs without breaking gump targeting (`confirm_release_gump`), and verifies release via normalized journal inspection, mobile notoriety reversion to Gray, and follower count reduction. Features automated stuck follower recovery (`cleanup_stuck_followers`) scanning nearby innocent/tamed creatures and dispatching emergency broadcast release, alongside follower cap protection to prevent follower creep.
+- **Safe Magery Culling (`ENABLE_MAGERY_CULL = False`):** Safely casts Energy Bolt on released hostile/gray creatures to clear spawns and train Magery concurrently. Features multi-tier protections against criminal flagging and karma loss (verifies mobile is not owned, strictly forbids casting on `Innocent` (Blue) creatures, checks `KARMA_LOSS_GRAPHICS` and keywords, and verifies mana reserves).
+- **Interactive Control Gump:** Movable, dark on-screen interface displaying real-time status, Animal Taming and Veterinary skill progression with gain announcements, total tamed count, attempt counter, culled counter, interactive checkboxes for runtime toggles (**Peacemaking**, **Animal Lore**, **Veterinary**, **Safety Heal**, and **Cull (E-Bolt)**), mode toggle button, auto-release toggle button, and Pause/Resume/Stop controls.
+- **Safety & Peacemaking Support:** Optional Peacemaking integration to soothe agitated animals, plus automated emergency self-healing (bandages or Greater Heal) if player HP drops below threshold.
+- **Attribution:** Created by FesterHead.
+
+#### [TrainVeterinary.py](FesterUO/TrainVeterinary.py)
+
+An automated Veterinary skill training script featuring dual training architectures, intelligent Dex-based bandage timers, and a comprehensive pet health monitoring Gump:
+
+- **Dual Training Modes:**
+  - **Dual Pet Sparring Mode (`DEFAULT_MODE = "SPARRING"`):** Coordinates two pets sparring against each other, continuously monitors both health pools, and applies bandages to whichever pet has lower HP or is poisoned.
+  - **Single Pet / Patient Mode (`DEFAULT_MODE = "SINGLE"`):** Continuously monitors a single target pet, mount, or summon, applying bandages whenever damaged or poisoned.
+- **Emergency Combat Separation:** Automatically broadcasts `"all stop"` and `"all follow me"` if either sparring pet falls below `EMERGENCY_HP_PERCENT` (default 30%), holding combat until both pets are healed back above `RESUME_HP_PERCENT` (default 85%).
+- **Poison Curing & Resurrection:** Prioritizes curing poisoned pets immediately before standard healing, and automatically detects bonded pet ghosts to attempt resurrection using bandages (requires 80.0+ Veterinary and Animal Lore).
+- **Intelligent Bandage Delays:** Computes classic UO Dexterity-based bandage application delays (`AUTO_BANDAGE_DELAY = True`) with manual override support.
+- **Resource Satchel & Subcontainer Support:** Automatically discovers and draws bandages from specialized resource satchels or subcontainers in the player's backpack, preventing "Out of Bandages" stops when holding unlimited bandages in a satchel.
+- **Automated Bandage Restocking:** Monitors backpack bandages and automatically pulls working batches (`RESTOCK_BATCH_SIZE = 100`) from the satchel whenever backpack reserves fall below threshold (`MIN_BACKPACK_BANDAGES = 20`).
+- **Interactive Control Gump:** Displays real-time action status, live Veterinary skill progress with gain tracker, individual pet health gauges with percentage and status tags (`[POISON]`, `[DEAD]`), bandage count breakdown (total and root backpack), heal/cure/resurrection statistics, interactive **"Satchel"** targeting button, mode toggle, and Pause/Resume/Stop controls.
+- **Attribution:** Created by FesterHead.
+
 #### [Fish.py](FesterUO/Fish.py)
 
-An automated fishing script featuring an interactive on-screen control Gump, dynamic water target selector, and persistent catch statistics:
+An automated fishing script featuring an interactive on-screen control Gump, dynamic water target selector, persistent catch statistics, and automatic hostile mob defense:
 
-- **Interactive Control Gump:** Displays real-time status (`Ready`, `Click water to fish...`, `Fishing (Cast #N)...`, `Spot Depleted`), cast counts, running catch totals, and live Fishing skill tracking (`XX.X / XXX.X`).
+- **Interactive Control Gump:** Displays real-time status (`Ready`, `Click water to fish...`, `Fishing (Cast #N)...`, `Combat - Click Start when ready`, `Spot Depleted`), cast counts, running catch totals, and live Fishing skill tracking (`XX.X / XXX.X`).
 - **Start / Stop Selector Button:** Features an interactive "Start" button that prompts the player with `"Click the water where you want to fish..."` and begins automated fishing on that spot. Toggles to "Stop" during active casting to permit early cancellation.
+- **Hostile Mob Awareness & Auto-Combat Defense:** Actively scans for nearby hostile mobiles and sea monsters within 12 tiles. When an enemy is detected:
+  1. Immediately halts fishing.
+  2. Unequips the fishing pole and undresses the `"Fishing"` profile.
+  3. Equips the `"Archery"` dress profile (with backpack bow equip fallback).
+  4. Enters War Mode and attacks the hostile enemy.
+  5. Leaves the player in full manual control without automatically resuming fishing until the player clicks "Start".
 - **Spot Cast Counter:** Accurately counts casts made at the current fishing spot and automatically resets to zero whenever "Start" is clicked.
 - **Persistent Catch Totals:** Maintains running totals of standard **Fish**, **Small Fish**, and **Junk** caught across multiple spots for the entire duration the Gump remains open.
 - **Multi-Source Catch Detection:** Detects catches using both backpack inventory deltas and client journal parsing.
 - **Coordinate & Graphic Locking:** Captures `API.LastTargetPos` and `API.LastTargetGraphic` to repeatedly target the exact water tile.
 - **Depletion Detection:** Monitors the client journal for spot exhaustion messages (`"the fish don't seem to be biting here"`, `"there are no fish here"`, etc.) and finishes cleanly.
-- **Pole Detection & Outfits:** Automatically detects equipped fishing poles or finds one inside your backpack, with optional `DRESS_PROFILE` support.
+- **Pole Detection & Outfits:** Automatically detects equipped fishing poles or finds one inside your backpack, with `"Fishing"` and `"Archery"` dress profile support.
 
 #### [FishAuto.py](FesterUO/FishAuto.py)
 
@@ -199,6 +276,28 @@ An automated boat fishing and combat defense script featuring interactive contro
   - Running **Fish Caught** and **Junk Caught** statistics
   - Enemies defeated counter
   - Interactive **Start / Pause / Resume** and **Stop** buttons.
+
+#### [LobsterTrapAuto.py](FesterUO/LobsterTrapAuto.py)
+
+An automated lobster and crab trap management script featuring an interactive on-screen control Gump, automated 5-spot ocean deployment, live buoy tracking, catch retrieval, and trap recycling:
+
+- **Up to 5 Concurrent Traps:** Deploys up to 5 lobster traps from your backpack into the surrounding ocean at well-spaced relative water offsets (Port Bow, Port Railing, Port Stern, Starboard Bow, Starboard Stern) obeying the 1-tile buoy spacing rule.
+- **Buoy Tracking & Bob Detection:** Actively tracks deployed trap buoys with elapsed timers (~60-65s cycle) and monitors for server bob/catch events.
+- **Automated Haul & Open Cycle:**
+  1. Double-clicks the buoy to haul the trap into your backpack.
+  2. Double-clicks the retrieved trap in your backpack to open and dump caught lobsters and crabs.
+  3. Optionally stashes caught crustaceans into a designated satchel or container.
+  4. Immediately re-tosses the emptied trap right back into the ocean at the same spot.
+- **Sunk & Destroyed Trap Detection:** Detects when buoys sink or are torn apart in the ocean, updates the **Traps Lost** counter, and automatically pulls replacement traps from your backpack, alerting you when spare traps run out.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time action status (Deploying, Waiting for Bobs, Hauling, Opening, Redeploying, Paused, Stopped)
+  - Active traps counter (`Active Traps: N / 5`)
+  - Running **Crustaceans Caught** and **Traps Lost / Sunk** statistics
+  - Live Fishing skill level, cap, and skill gain tracking
+  - Satchel destination indicator
+  - Interactive **Start / Pause / Resume** and **Stop** buttons
+  - Interactive **Set Satchel** button to designate a catch storage container
+  - Interactive **Set Spots** button to customize water targeting offsets.
 
 #### [TrainChivalry.py](FesterUO/TrainChivalry.py)
 
@@ -328,8 +427,8 @@ An automated, resource-efficient Inscription training engine with interactive co
 - **Resource-Efficient Spell Progression:** Automatically monitors your Inscription skill and crafts the lowest-cost, single/dual-reagent spells in each tier from 0 to 120 (GM / Legendary):
   - **0.0 – 30.0:** Reactive Armor (Circle 1, 4 Mana, 1 blank scroll, Garlic / Spiders' Silk / Sulfurous Ash)
   - **30.0 – 45.0:** Poison (Circle 3, 9 Mana, 1 blank scroll, Nightshade — _only 1 reagent!_)
-  - **45.0 – 65.0:** Lightning (Circle 4, 11 Mana, 1 blank scroll, Mandrake Root / Sulfurous Ash)
-  - **65.0 – 75.0:** Magic Reflection (Circle 5, 14 Mana, 1 blank scroll, Garlic / Mandrake Root / Spiders' Silk)
+  - **45.0 – 70.0:** Lightning (Circle 4, 11 Mana, 1 blank scroll, Mandrake Root / Sulfurous Ash)
+  - **70.0 – 75.0:** Magic Reflection (Circle 5, 14 Mana, 1 blank scroll, Garlic / Mandrake Root / Spiders' Silk)
   - **75.0 – 90.0:** Energy Bolt (Circle 6, 20 Mana, 1 blank scroll, Black Pearl / Nightshade)
   - **90.0 – 120.0:** Flamestrike (Circle 7, 40 Mana, 1 blank scroll, Spiders' Silk / Sulfurous Ash)
 - **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next spell. Players can click **"Set Recipe"** on the Gump at any time to manually choose any recipe or custom spell from the open craft menu.
@@ -342,7 +441,8 @@ An automated, resource-efficient Inscription training engine with interactive co
   - Automatically detects 100% Lower Reagent Cost (LRC) suits and completely bypasses reagent requirements.
   - If LRC < 100%, automatically monitors and restocks required reagents from the resource satchel.
   - Automatically restocks blank scrolls from the satchel when backpack reserves run low.
-- **Tool Upkeep via Tinkering:** Detects broken or missing Scribe's Pens and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
+- **Autonomous Dress Profile Loading:** Automatically equips the configured dress profile / macro (default `"Sorcery"`) at startup, upon exiting every meditation cycle, and whenever resuming from pause, ensuring your spellcasting gear and LRC suit remain equipped throughout training.
+- **Tool Upkeep via Tinkering & Pen Discrimination:** Detects broken or missing Scribe's Pens and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each). Strictly verifies pen tooltips via `API.ItemNameAndProps` to ensure Mapmaker's Pens (which share identical graphics `0x0FBF` / `0x0FC0`) are never mistakenly selected or used.
 - **Interactive Control Gump:** Movable, on-screen Gump featuring:
   - Real-time training status (`Crafted`, `Regenerating Mana...`, `Storing...`, `Trashing...`, `Tinkering Scribe's Pen...`, `Paused`, `Finished`)
   - Live Inscription skill level, skill cap, and automatic skill gain announcements
@@ -350,6 +450,232 @@ An automated, resource-efficient Inscription training engine with interactive co
   - Running counters for **Crafted**, **Stored**, **Trashed**, and **Failed** items
   - Live Satchel and Backpack blank scroll counts, plus pen count and destination indicator
   - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons
+
+#### [TrainCartography.py](FesterUO/TrainCartography.py)
+
+An automated, resource-efficient Cartography training engine with interactive control Gump, resource satchel support, dual storage/trash disposal, and Tinkering pen upkeep:
+
+- **Optimal Map Progression:** Automatically monitors your Cartography skill and crafts the optimal map in each tier from 0 to 100 (GM) / 120 (Legendary), requiring 1 blank scroll per craft:
+  - **0.0 – 50.0:** Local Map (1 blank scroll)
+  - **50.0 – 65.0:** City Map (1 blank scroll)
+  - **65.0 – 70.0:** Sea Chart (1 blank scroll)
+  - **70.0 – 120.0:** World Map (1 blank scroll)
+- **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next map. Players can click **"Set Recipe"** on the Gump at any time to manually choose any map from the open craft menu.
+- **Dual Crafted Map Management (Storage & Trash Disposal):**
+  - **Storage Container:** Allows targeting a container (map case, chest, or pouch) on startup or via the Gump's **"Storage"** button to automatically store all completed maps.
+  - **Trash Barrel:** Auto-detects nearby Trash Barrels or allows targeting one via the Gump's **"Trash Can"** button to automatically discard completed maps and avoid overweight.
+  - Deposits newly crafted maps via backpack serial diff, ensuring backpack cleanliness.
+- **Resource Satchel Integration:**
+  - Supports direct satchel crafting or maintains a lightweight working buffer of blank scrolls in the backpack.
+  - Automatically restocks blank scrolls from the satchel when backpack reserves run low.
+  - Recognizes standard Blank Scrolls (`0x0EF3`, `0x0E34`) with full fallback compatibility for Blank Maps (`0x14EB`, `0x14EC`).
+- **Tool Upkeep via Tinkering & Pen Discrimination:** Detects broken or missing Mapmaker's Pens, strictly rejects Scribe's Pens using active tooltip inspection, closes stale craft menus, and automatically crafts replacements on the fly using Tinker's Tools, iron ingots, and blank scrolls (1 ingot + 1 scroll) via serial diff tracking.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafted`, `Storing...`, `Trashing...`, `Tinkering Mapmaker's Pen...`, `Paused`, `Finished`)
+  - Live Cartography skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Stored**, **Trashed**, and **Failed** items
+  - Live Satchel and Backpack blank scroll counts, plus pen count and destination indicator
+  - Live character weight indicator (`Weight: Cur / Max`)
+  - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
+#### [TrainCooking.py](FesterUO/TrainCooking.py)
+
+An automated, resource-efficient Cooking training engine with interactive control Gump, resource satchel support, dual storage/trash disposal, heat source awareness, and Tinkering skillet upkeep:
+
+- **Optimal Cooking Progression:** Automatically monitors your Cooking skill and recommends the optimal recipe in each tier from 0 to 100.0 (GM):
+  - **0.0 – 50.0:** Fish Steak / Cooked Ribs (1 raw fish steak / cut of ribs)
+  - **50.0 – 65.0:** Dough / Bread Loaf (flour + water)
+  - **65.0 – 80.0:** Pan of Cookies / Meat Pie (sweet dough / ribs)
+  - **80.0 – 100.0:** Baked Fruit Pie / Miso Soup (fruit / miso / dough)
+- **Universal Dual-Mode Engine:**
+  - **Craft Gump Mode (Default):** Uses standard cooking tools (Skillet, Flour Sifter, Rolling Pin) with high-speed "Make Last" crafting.
+  - **Direct Heat Source Mode:** Automatically uses raw food directly on fires, ovens, stoves, forges, or heating stands for classic or shard-specific mechanics.
+- **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next recipe. Players can click **"Set Recipe"** on the Gump at any time to open the craft menu and select any custom recipe.
+- **Dual Crafted Food Management (Storage & Trash Disposal):**
+  - **Storage Container:** Allows targeting a food chest, cooler, or pouch on startup or via the Gump's **"Storage"** button to automatically store all completed cooked food.
+  - **Trash Barrel:** Auto-detects nearby Trash Barrels or allows targeting one via the Gump's **"Trash Can"** button to automatically discard cooked food and avoid overweight.
+  - Deposits cooked food via backpack serial diff and amount increases, handling both stackable food (fish steaks, ribs) and individual items (pies, loaves).
+- **Resource Satchel Integration:**
+  - Supports direct satchel crafting or maintains a lightweight working buffer of raw ingredients in the backpack.
+  - Automatically restocks raw food from the satchel when backpack reserves run low.
+- **Tool Upkeep via Tinkering:** Detects broken or missing Skillets and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (2 ingots each).
+- **Heat Source Awareness:** Auto-detects nearby campfires, ovens, stoves, hearths, forges, or portable heating stands.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafted`, `Storing...`, `Trashing...`, `Tinkering Skillet...`, `Paused`, `Finished`)
+  - Live Cooking skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Stored**, **Trashed**, and **Failed** items
+  - Live Satchel and Backpack ingredient counts, plus tool/mode and destination indicator
+  - Live character weight indicator (`Weight: Cur / Max`)
+  - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Storage**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
+#### [TrainMusicianship.py](FesterUO/TrainMusicianship.py)
+
+An automated Musicianship skill training script with interactive control Gump, multi-instrument auto-detection, breakage recovery, and automated container restocking:
+
+- **Multi-Instrument Auto-Detection:** Automatically scans the player's backpack for any valid musical instrument:
+  - Lute, Lap Harp, Standing Harp, Drum, Tambourine, Tambourine with Tassel, Bamboo Flute, Fire Horn, and Aud-Char.
+  - Displays the active instrument name and live count of spare instruments in the backpack.
+- **Seamless Breakage Recovery:** Monitors journal output and inventory changes for broken or exhausted instruments (`"broke your instrument"`, `"worn out"`, `"destroyed"`), automatically switching to the next available instrument in the backpack without missing a beat.
+- **Automated Restock Container Integration:**
+  - Allows designating a restock container (chest, satchel, crate, or pouch) via configuration or in-game targeting via the Gump's **"Restock"** button.
+  - Automatically opens the container and pulls fresh instruments into the backpack whenever backpack reserves run dry.
+- **Graceful Depletion Pausing:** If all instruments are exhausted, the script safely pauses execution with player alerts and keeps the control Gump active so training can be resumed with a single click after restocking.
+- **Smart Cooldown & Cooldown Handling:** Respects standard UO instrument delays (`PLAY_DELAY`, default 6.0s) and actively reacts to server cooldown wait messages (`"must wait to perform another action"`).
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Playing <Instrument>...`, `Waiting cooldown...`, `Restocking...`, `Out of Instruments`, `Paused`, `Complete!`)
+  - Live Musicianship skill level, skill cap, and session gain tracking (`+X.X`) with system message gain announcements
+  - Active instrument name and backpack count
+  - Running counters for **Played** and **Broken** instruments
+  - Restock container indicator (`Set (0xSerial)` or `Not Set`)
+  - Interactive **Pause/Resume**, **Restock**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
+#### [TrainProvokeAndPeace.py](FesterUO/TrainProvokeAndPeace.py)
+
+An automated dual-barding trainer that targets two creatures, provokes them against each other, peaces them to calm combat and allow regeneration, and repeats to advance Provocation, Peacemaking, and Musicianship:
+
+- **Targeted Barding Loop:** Prompts the player to select two creatures (e.g. penned bulls or bears) and alternates between provoking Target 1 onto Target 2, waiting for the barding recovery timer, peacing them, and repeating.
+- **Dynamic Barding Cooldown Stepper:** Features an interactive `[-] 6.0s [+]` stepper right on the Gump (3.0s to 15.0s range), allowing players to tune the pause delay live to match their server's exact barding timer without restarting or editing script files.
+- **Alternating Peacemaking:** Alternates peace attempts between Target 1 and Target 2 to keep both combatants pacified and prevent either creature from taking lethal damage.
+- **Multi-Instrument Auto-Detection & Breakage Recovery:**
+  - Scans the backpack for any valid instrument (Lap Harp, Standing Harp, Lute, Drum, Tambourine, Bamboo Flute, Fire Horn, Aud-Char).
+  - Automatically handles the `"What instrument shall you play?"` server prompt by targeting an available backpack instrument.
+  - Detects broken instruments via journal monitoring and instantly transitions to spare instruments in the backpack.
+- **Interactive Control Gump:** Movable 350x275 interface displaying:
+  - Real-time training status (`Provoking...`, `Peacing...`, `Waiting cooldown...`, `Paused`, `Completed!`)
+  - Live triple-skill tracking for **Provocation**, **Peacemaking**, and **Musicianship** with skill caps and gain announcements
+  - Target 1 & Target 2 HP% and distance monitoring (`T1: 100% (2t) | T2: 100% (2t)`)
+  - Interactive retargeting buttons (`[Set Target 1]` and `[Set Target 2]`) to swap creatures on the fly
+  - Interactive **Pause/Resume** and **Stop** controls
+- **Attribution:** Created by FesterHead.
+
+#### [TrainTailoring.py](FesterUO/TrainTailoring.py)
+
+An automated, resource-efficient Tailoring training engine with interactive control Gump, resource satchel support, automated cutting/recycling with Scissors, trash barrel disposal, and Tinkering sewing kit upkeep:
+
+- **Optimal Tailoring Progression:** Automatically monitors your Tailoring skill and recommends the lowest-cost, most resource-efficient recipe in each tier from 0 to 120 (GM / Legendary):
+  - **0.0 – 29.0:** Short Pants / Skirt (1–2 cut cloth)
+  - **29.0 – 41.5:** Skullcap / Bandana (2 cut cloth)
+  - **41.5 – 54.0:** Body Sash / Cap (4–11 cut cloth)
+  - **54.0 – 74.0:** Cloak / Robe (14–16 cut cloth)
+  - **74.0 – 99.6:** Oil Cloth (1 cut cloth — _ultra resource-efficient workhorse!_)
+  - **99.6 – 120.0:** Elven Shirt / Studded Suit (12 cut cloth / 14 cut leather)
+- **Milestone Recommendations & "Set Recipe" Override:** Proactively announces when your skill levels past a tier bracket and recommends the next recipe. Players can click **"Set Recipe"** on the Gump at any time to open the craft menu and select any custom recipe.
+- **Automated Cutting & Recycling via Scissors:** Automatically detects Scissors in the backpack and cuts newly crafted cloth and leather items back into raw cut cloth and leather, recovering a substantial percentage of materials and drastically reducing training costs.
+- **Automated Trash Barrel Disposal (Fallback):** Auto-detects nearby Trash Barrels or allows targeting one on startup or via the Gump's **"Trash Can"** button to automatically discard items that cannot be cut (e.g. certain hats or shoes), preventing weight overloads and backpack clutter.
+- **Resource Satchel Integration:**
+  - Supports direct satchel crafting or maintains a lightweight working buffer of cloth and leather in the backpack.
+  - Automatically restocks materials from the satchel when backpack reserves run low.
+  - Supports Cut Cloth (`0x1766`, `0x1767`), Bolts of Cloth (`0x0F95`), Cut Leather (`0x1067`, `0x1081`), and Hides (`0x1078`, `0x1079`).
+- **Tool Upkeep via Tinkering:** Detects broken or missing Sewing Kits (`0x0F9D`) and automatically crafts replacements on the fly using Tinker's Tools and iron ingots (1 ingot each).
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Crafted`, `Recycling with Scissors...`, `Trashing...`, `Tinkering Sewing Kit...`, `Restocking materials...`, `Paused`, `Finished`)
+  - Live Tailoring skill level, skill cap, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Cut**, **Trashed**, and **Failed** items
+  - Live Satchel and Backpack material counts, plus tool and trash indicators
+  - Live character weight indicator (`Weight: Cur / Max`)
+  - Interactive **Pause/Resume**, **Set Recipe**, **Satchel**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
+#### [TrainImbuing.py](FesterUO/TrainImbuing.py)
+
+An automated, resource-efficient Imbuing skill training script with interactive control Gump, Soulforge awareness, dual training modes, auto-unravel recycling, and resource restocking:
+
+- **Dual Training Architecture:**
+  - **ServUO 20-Imbue Re-imbuing Loop (45.0 – 120.0):** Rapidly imbues items using "Imbue Last Property" (`10008`) and automatically confirms property replacement dialogs. Following ServUO Publish 57 rules (`TimesImbued(item) < 20`), the script repeatedly re-imbues the same item until it achieves 20 successful imbuements (or hits server capacity) before retiring it to be unraveled, extracting maximum skill gain rolls from every base item.
+  - **Mass Unraveling / Recycler Mode (0.0 – 50.0+ / Material Farming):** Automates bulk item and container unraveling at a Soulforge to gain early skill and amass Magical Residues, Enchanted Essences, and Relic Fragments. Supports both backpack containers and external house chests.
+- **Automated Target Retirement & History Tracking:** Automatically registers retired items (unraveled, trashed, or non-magical) in a session registry (`retired_item_serials`) so that items that have already completed their 20 successes are never re-selected from the backpack.
+- **Robust Soulforge Unraveling Handshake:** Implements pacing delays and retry verification for target cursors, alongside broad confirmation sub-gump detection to ensure server unravel confirmation dialogs are seamlessly accepted.
+- **External Supply Chest & Backpack Drawing:** Automatically differentiates between backpack containers and external chests (such as chests on house tables or ground). When drawing from an external chest, pulls items individually with ServUO drag-cooldown synchronization (`0.85s`), automated drag retries, and unmovable item blacklisting to ensure the queue never stalls.
+- **Skill-Threshold Auto-Return & Session Blacklist:** Detects server messages when an item requires higher Imbuing skill than your character currently possesses (`"You are not skilled enough to unravel this item"`). Automatically moves the item back into the house supply container and blacklists its serial for the duration of the session so it is never pulled again, halting with status `"Supply Depleted"` once all eligible items are processed.
+- **Resource-Efficient Recycling via Soulforge Unraveling:** Automatically unravels finished items at the Soulforge after reaching 20 successes, reclaiming valuable Magical Residues and Enchanted Essences from high-intensity items. Includes alternative Trash Barrel / Discard Bag support for automated non-recyclable item disposal.
+- **Milestone Guidance & 50%–70% Sweet Spot Optimization:** Tracks progression milestones and recommends optimal properties (Reflect Physical Damage, Hit Dispel, Damage Increase, Lower Reagent Cost, etc.) to maintain the ~50–70% success rate sweet spot for maximum skill gains. Features an interactive **"Setup Imbue"** button allowing manual calibration of properties and intensity at any time.
+- **Resource Satchel & Chest Restocking / Stashing:** Automatically stashes newly gained unraveled ingredients (Magical Residue, Enchanted Essence, Relic Fragments) from the backpack directly into the designated resource satchel or chest. During imbuing, monitors backpack reserves and automatically restocks working buffers from the satchel when supplies run low.
+- **Item Supply Management:** Automatically draws fresh items to imbue from an Item Supply Container into the backpack when an active item reaches capacity.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time training status (`Imbuing <Item>...`, `Unraveling <Item>...`, `Paused`, `Finished`)
+  - Live Imbuing skill level, skill cap, and automatic skill gain announcements
+  - Dual success and fail attempt counters (`Item: <Item> | Success: X/20 | Fails: Y`)
+  - Running counters for **Imbued**, **Unraveled**, and **Failed** attempts
+  - Live backpack resource counts (Residue, Essence, Gems) and container binding indicators
+  - Interactive **Pause/Resume**, **Mode Toggle**, **Setup Imbue**, **Supply Bag**, **Resources**, **Trash Can**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
+#### [TrainImbuingCraftUnravel.py](FesterUO/TrainImbuingCraftUnravel.py)
+
+An intermediate Imbuing training script designed to bridge the skill gain gap when low on Magical Residue or when direct imbuing success rates are inefficient:
+
+- **Craft & Unravel Training Architecture:**
+  - **Make Last Crafting Loop:** Uses saws in the player's backpack to craft Oak Quarterstaves via "Make Last" from the Carpentry crafting menu.
+  - **Soulforge Unraveling:** Immediately unravels each crafted oak staff at a nearby Soulforge, extracting valuable Magical Residue and Enchanted Essence while actively advancing Imbuing skill.
+- **Multi-Saw Management:** Automatically scans and selects saws from the backpack, cycling to the next available saw whenever a tool breaks without interrupting the loop.
+- **Periodic 10-Imbue Reset Routine:** Every 10 crafts/cycles (`SWEEP_INTERVAL = 10`), the script automatically re-synchronizes the satchel container window, verifies active saw health, and unravels ALL quarterstaves accumulated in the backpack.
+- **Lingering Staves Auto-Sweep:** Constantly monitors root backpack inventory and automatically triggers an unravel sweep whenever 2 or more staves accumulate, guaranteeing staves never pile up due to occasional server lag or missed unravel triggers.
+- **Resource Satchel Restocking:** Automatically detects or prompts for an oak board satchel in the player's backpack. When root backpack boards fall below threshold (default 12 boards), automatically restocks a batch from the satchel.
+- **Auto-Stashing Ingredients:** Automatically moves newly extracted Magical Residue and Enchanted Essence from the backpack into the resource satchel to keep the main backpack uncluttered.
+- **Unravel Confirmation Dialog Handling:** Detects and confirms native server unravel confirmation dialogs automatically with 2.0s latency tolerance.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time status (`Crafting staff...`, `Unraveling...`, `Restocking boards...`, `Paused`, `Running`)
+  - Live Imbuing and Carpentry skill levels, caps, and automatic skill gain announcements
+  - Running counters for **Crafted**, **Unraveled**, and **Failed** attempts
+  - Live resource tracking for Oak Boards (Backpack + Satchel) and available Saws
+  - Total Magical Residue and Enchanted Essence counters with session yield totals
+  - Interactive **Pause/Resume**, **Set Satchel**, **Set Trash**, and **Stop** buttons
+- **Attribution:** Created by FesterHead.
+
+#### [MoveItemsBetweenContainers.py](FesterUO/MoveItemsBetweenContainers.py)
+
+A quick and reliable container-to-container item organizer and transfer utility script:
+
+- **Interactive Targeting:** Prompts the player to target the SOURCE container, then the DESTINATION container (with 10-second timeouts and graceful cancellation).
+- **Container Pre-Opening:** Automatically opens the source container (`API.UseObject`) to force the game server to send full container contents to the client if not already cached in memory.
+- **Validation & Safety:** Verifies that source and destination are valid and distinct entities, refusing to run if both targets are identical or if the source is empty.
+- **Graceful Cancellation & Loop Safety:** Checks `API.StopRequested` on each item iteration to ensure immediate, clean script halts when cancelled in the TazUO UI.
+- **Client Synchronization:** Uses `API.Pause(0.65)` between moves to prevent item drag/drop desynchronization or server packet drops.
+- **Attribution:** Created by FesterHead.
+
+#### [MoveResources.py](FesterUO/MoveResources.py)
+
+An intelligent container-to-container resource sorting and transfer script with an interactive control Gump:
+
+- **Targeted Categorical Transfer:** Prompts the player to target a SOURCE container, then a DESTINATION container, and automatically transfers all **Reagents**, **Gems**, and **Crafting Resources** (including optional gold/silver currency).
+- **Strict Equipment & Scroll Exclusions:** Strictly ignores and leaves untouched in the source container:
+  - All scrolls (Magery 1st–8th circle, Necromancy, Spellweaving, Mysticism, blank scrolls, recipe scrolls, power scrolls, and maps)
+  - All weapons (swords, axes, maces, staves, spears, bows, crossbows, wands, etc.)
+  - All wearable armor and clothing (helmets, gorgets, tunics, sleeves, gloves, leggings, shorts, pants, cloaks, footwear, shields)
+  - All wearable jewelry (rings, bracelets, necklaces, earrings) and spellbooks.
+- **Comprehensive Coverage:**
+  - **Reagents:** Full Magery (8 standard), Necromancy (5), Mysticism, and Pagan reagents.
+  - **Gems:** All standard gems (Amber, Amethyst, Citrine, Diamond, Emerald, Ruby, Sapphire, Star Sapphire, Tourmaline) and Mondain's Legacy / Stygian Abyss special gems.
+  - **Resources:** Ingots, ore, boards, logs, shafts, feathers, arrows, bolts, leather, hides, cloth, wool, cotton, scales, bones, granite, sand, bandages, empty bottles, cooking staples, and imbuing/special essences.
+- **Interactive Control Gump:** Movable, on-screen Gump displaying:
+  - Real-time action status (`Targeting...`, `Transferring...`, `Paused`, `Finished`)
+  - Live counters for **Reagents Moved**, **Gems Moved**, **Resources Moved**, **Total Moved**, and **Items Skipped** (equipment/scrolls preserved)
+  - Interactive **Pause/Resume** and **Stop** buttons.
+- **Container Pre-Opening & Validation:** Automatically opens both source and destination containers to force the game server to send full container contents before filtering, refusing to run if source and destination are identical.
+- **Attribution:** Created by FesterHead.
+
+#### [MoveArtifacts.py](FesterUO/MoveArtifacts.py)
+
+A targeted container-to-container equipment mover that scans items via active OPL tooltip inspection (`API.ItemNameAndProps`) to identify and transfer Weapons, Armor, Shields, and Jewelry matching configured Artifact and Magic Item rarity tiers:
+
+- **Comprehensive Artifact Tier Coverage:**
+  - Automatically identifies and moves all Artifact tiers: **Legendary Artifact**, **Major Artifact**, **Greater Artifact**, **Lesser Artifact**, **Minor Artifact**, and classic **Artifact Rarity** (Doom, Tokuno, Stealable, and Paragon artifacts).
+- **Magic Item Tier Support:**
+  - Transfers **Greater Magic Items** and **Major Magic Items** by default, with an optional toggle for **Lesser Magic Items**.
+- **Broad Equipment Support:**
+  - **Weapons:** One-handed, two-handed, swords, maces, fencing, axes, bows, crossbows, staves, wands, and throwing weapons.
+  - **Armor & Shields:** Helmets, caps, masks, gorgets, tunics, breastplates, arms, sleeves, gloves, gauntlets, leggings, pants, kilts, and shields.
+  - **Jewelry:** Rings, bracelets, necklaces, earrings, and talismans.
+- **Strict Non-Equipment Preservation:**
+  - Automatically skips and preserves non-qualifying items in the source container, including mundane equipment, low-tier magic items, crafting resources, ingots, ore, boards, leather, reagents, gems, spell scrolls, and books.
+- **Interactive Control Gump:** Movable, on-screen Gump featuring:
+  - Real-time status display (`Targeting...`, `Scanning equipment...`, `Moving <Item>...`, `Paused`, `Finished`)
+  - Running counters for **Weapons Moved**, **Armor & Shields**, **Jewelry Moved**, **Total Moved**, and **Items Skipped**
+  - Interactive **Pause/Resume** and **Stop** buttons
+- **Pre-Opening Synchronization & Safety:** Automatically opens both source and destination containers to ensure full server inventory synchronization, validating container uniqueness and respecting `API.StopRequested` cancellation.
 - **Attribution:** Created by FesterHead.
 
 ---

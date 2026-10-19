@@ -39,7 +39,7 @@ These files are provided by the TazUO client installation.
 
 To keep the repository clean and structured:
 
-- **Organize by Author or Shard:** All scripts must be placed in a subfolder named after the **author** (e.g., `FesterUO/`, `YourAuthorName/`) or target **shard name** (e.g., `Outlands/`, `UOAlive/`).
+- **Organize by Author or Shard:** All scripts must be placed in a subfolder named after the **author** (e.g., `FesterUO/`, `YourAuthorName/`) or target **shard name** (e.g., `Outlands/`, `ShardName/`).
 - **Keep the Root Clean:** Never place script files directly in the repository root directory. The root is strictly reserved for base client installation files, IDE configurations, and documentation.
 
 ---

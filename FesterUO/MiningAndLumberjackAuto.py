@@ -24,6 +24,7 @@ Description:
         * Live Mining and Lumberjacking skill tracking with automatic gain announcements.
         * Running statistics: Veins mined, Total ore, Trees chopped, Total logs/wood.
         * Character Strength, Dexterity, and Weight capacity monitoring.
+        * Live Tuning Controls: Interactive stepper buttons to tune Veins/Cycle and Trees/Cycle live in-game without editing code.
         * Interactive Pause / Resume and Stop buttons.
 """
 
@@ -36,11 +37,14 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.2"
+
 # Delay in seconds between harvesting swings (1.0s on fast shards, 4.5s on OSI)
 SWING_DELAY: float = 1.0
 
 # Harvesting ratio: trees to chop per mining spot (e.g. 4 trees to 1 mining spot)
-TREES_PER_MINING_SPOT: int = 8
+TREES_PER_MINING_SPOT: int = 4
 MINING_SPOTS_PER_CYCLE: int = 1
 
 # Dress configuration profiles configured in TazUO
@@ -128,7 +132,16 @@ BOULDER_GRAPHICS: List[int] = [
     0x136B, 0x136C, 0x136D, 0x134F, 0x1350, 0x1351, 0x1352,
 ]
 
-MINEABLE_GRAPHICS: set = set(SERVUO_MINEABLE_TILES) | set(BOULDER_GRAPHICS)
+CAVE_STATIC_GRAPHICS: List[int] = [
+    0x053B, 0x053C, 0x053D, 0x053E, 0x053F, 0x0540, 0x0541, 0x0542,
+    0x0543, 0x0544, 0x0545, 0x0546, 0x0547, 0x0548, 0x0549, 0x054A,
+    0x054B, 0x054C, 0x054D, 0x054E, 0x054F, 0x0550, 0x0551, 0x0552,
+    0x0553,
+]
+
+MINEABLE_LAND_TILES: set = set(SERVUO_MINEABLE_TILES)
+MINEABLE_STATIC_GRAPHICS: set = set(BOULDER_GRAPHICS) | set(CAVE_STATIC_GRAPHICS)
+MINEABLE_GRAPHICS: set = MINEABLE_LAND_TILES | MINEABLE_STATIC_GRAPHICS
 
 # Journal keywords for depletion
 MINING_DEPLETED_KEYWORDS = [
@@ -165,7 +178,24 @@ CHOP_DEPLETED_KEYWORDS = [
     "it appears immune to your blow",
     "cannot be chopped",
     "use an axe on that",
+    "cannot chop",
+    "can't chop",
+    "chop that",
+    "not a tree",
+    "cannot use",
+    "can't use",
+    "invalid",
+    "immune",
 ]
+
+# Headstones, gravestones, tombs, and cemetery monuments in UO artwork
+GRAVESTONE_GRAPHICS: set = (
+    set(range(0x1165, 0x1185)) |
+    set(range(0x1B01, 0x1B11)) |
+    set(range(0x1ED0, 0x1EE3)) |
+    set(range(0x1224, 0x122A)) |
+    set(range(0x1240, 0x1251))
+)
 
 TOOL_BROKEN_KEYWORDS = [
     "worn out",
@@ -186,11 +216,18 @@ lbl_mine_stats = None
 lbl_lumber_stats = None
 lbl_char_stats = None
 lbl_weight = None
+lbl_mine_spots = None
+lbl_tree_spots = None
+btn_mine_dec = None
+btn_mine_inc = None
+btn_tree_dec = None
+btn_tree_inc = None
 btn_pause = None
 btn_stop = None
 
 is_paused: bool = False
 is_stopped: bool = False
+current_mode: str = "mine"
 
 last_mining_skill: Optional[float] = None
 last_lumber_skill: Optional[float] = None
@@ -268,6 +305,54 @@ def update_stats() -> None:
         lbl_weight.Text = f"Weight: {w} / {w_max}"
 
 
+def on_mine_spots_dec() -> None:
+    global MINING_SPOTS_PER_CYCLE, lbl_mine_spots
+    if MINING_SPOTS_PER_CYCLE > 1:
+        MINING_SPOTS_PER_CYCLE -= 1
+        if lbl_mine_spots:
+            lbl_mine_spots.Text = str(MINING_SPOTS_PER_CYCLE)
+        API.SysMsg(f"[Config] Veins per cycle set to {MINING_SPOTS_PER_CYCLE}")
+
+
+def on_mine_spots_inc() -> None:
+    global MINING_SPOTS_PER_CYCLE, lbl_mine_spots
+    if MINING_SPOTS_PER_CYCLE < 50:
+        MINING_SPOTS_PER_CYCLE += 1
+        if lbl_mine_spots:
+            lbl_mine_spots.Text = str(MINING_SPOTS_PER_CYCLE)
+        API.SysMsg(f"[Config] Veins per cycle set to {MINING_SPOTS_PER_CYCLE}")
+
+
+def on_tree_spots_dec() -> None:
+    global TREES_PER_MINING_SPOT, lbl_tree_spots
+    if TREES_PER_MINING_SPOT > 1:
+        TREES_PER_MINING_SPOT -= 1
+        if lbl_tree_spots:
+            lbl_tree_spots.Text = str(TREES_PER_MINING_SPOT)
+        API.SysMsg(f"[Config] Trees per cycle set to {TREES_PER_MINING_SPOT}")
+
+
+def on_tree_spots_inc() -> None:
+    global TREES_PER_MINING_SPOT, lbl_tree_spots
+    if TREES_PER_MINING_SPOT < 50:
+        TREES_PER_MINING_SPOT += 1
+        if lbl_tree_spots:
+            lbl_tree_spots.Text = str(TREES_PER_MINING_SPOT)
+        API.SysMsg(f"[Config] Trees per cycle set to {TREES_PER_MINING_SPOT}")
+
+
+def check_stepper_clicks() -> None:
+    """Fallback click processing for Gump stepper buttons."""
+    if btn_mine_dec and getattr(btn_mine_dec, "HasBeenClicked", lambda: False)():
+        on_mine_spots_dec()
+    if btn_mine_inc and getattr(btn_mine_inc, "HasBeenClicked", lambda: False)():
+        on_mine_spots_inc()
+    if btn_tree_dec and getattr(btn_tree_dec, "HasBeenClicked", lambda: False)():
+        on_tree_spots_dec()
+    if btn_tree_inc and getattr(btn_tree_inc, "HasBeenClicked", lambda: False)():
+        on_tree_spots_inc()
+
+
 def on_pause_clicked() -> None:
     global is_paused, btn_pause
     is_paused = not is_paused
@@ -298,19 +383,23 @@ def create_control_gump() -> None:
     """Initializes and renders the combined Miner & Lumberjack Gump."""
     global gump, lbl_status, lbl_mine_skill, lbl_lumber_skill, lbl_mine_stats, lbl_lumber_stats
     global lbl_char_stats, lbl_weight, btn_pause, btn_stop
+    global lbl_mine_spots, lbl_tree_spots, btn_mine_dec, btn_mine_inc, btn_tree_dec, btn_tree_inc
 
     gump = API.Gumps.CreateGump(acceptMouseInput=True, canMove=True, keepOpen=False)
-    gump.SetRect(100, 100, 310, 220)
+    gump.SetRect(100, 100, 340, 242)
 
     # Semi-transparent dark background
     bg = API.Gumps.CreateGumpColorBox(0.8, "#1A1A1A")
-    bg.SetRect(0, 0, 310, 220)
+    bg.SetRect(0, 0, 340, 242)
     gump.Add(bg)
 
     # Title label (gold hue 53)
-    title = API.Gumps.CreateGumpLabel("FesterUO Miner & Lumberjack", 53)
+    title = API.Gumps.CreateGumpLabel("Miner & Lumberjack", 53)
     title.SetPos(10, 8)
     gump.Add(title)
+    lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)
+    lbl_author.SetPos(205, 8)
+    gump.Add(lbl_author)
 
     # Status
     lbl_status = API.Gumps.CreateGumpLabel("Status: Initializing...", 996)
@@ -344,14 +433,51 @@ def create_control_gump() -> None:
     lbl_weight.SetPos(10, 148)
     gump.Add(lbl_weight)
 
+    # Tuning: Veins/Cycle & Trees/Cycle
+    lbl_mine_title = API.Gumps.CreateGumpLabel("Veins/Cycle:", 88)
+    lbl_mine_title.SetPos(10, 173)
+    gump.Add(lbl_mine_title)
+
+    btn_mine_dec = API.Gumps.CreateSimpleButton("-", 20, 20)
+    btn_mine_dec.SetPos(95, 172)
+    API.Gumps.AddControlOnClick(btn_mine_dec, on_mine_spots_dec)
+    gump.Add(btn_mine_dec)
+
+    lbl_mine_spots = API.Gumps.CreateGumpLabel(str(MINING_SPOTS_PER_CYCLE), 53)
+    lbl_mine_spots.SetPos(120, 173)
+    gump.Add(lbl_mine_spots)
+
+    btn_mine_inc = API.Gumps.CreateSimpleButton("+", 20, 20)
+    btn_mine_inc.SetPos(142, 172)
+    API.Gumps.AddControlOnClick(btn_mine_inc, on_mine_spots_inc)
+    gump.Add(btn_mine_inc)
+
+    lbl_tree_title = API.Gumps.CreateGumpLabel("Trees/Cycle:", 88)
+    lbl_tree_title.SetPos(175, 173)
+    gump.Add(lbl_tree_title)
+
+    btn_tree_dec = API.Gumps.CreateSimpleButton("-", 20, 20)
+    btn_tree_dec.SetPos(260, 172)
+    API.Gumps.AddControlOnClick(btn_tree_dec, on_tree_spots_dec)
+    gump.Add(btn_tree_dec)
+
+    lbl_tree_spots = API.Gumps.CreateGumpLabel(str(TREES_PER_MINING_SPOT), 53)
+    lbl_tree_spots.SetPos(285, 173)
+    gump.Add(lbl_tree_spots)
+
+    btn_tree_inc = API.Gumps.CreateSimpleButton("+", 20, 20)
+    btn_tree_inc.SetPos(307, 172)
+    API.Gumps.AddControlOnClick(btn_tree_inc, on_tree_spots_inc)
+    gump.Add(btn_tree_inc)
+
     # Buttons: Pause / Stop
-    btn_pause = API.Gumps.CreateSimpleButton("Pause", 130, 24)
-    btn_pause.SetPos(15, 175)
+    btn_pause = API.Gumps.CreateSimpleButton("Pause", 150, 25)
+    btn_pause.SetPos(15, 204)
     API.Gumps.AddControlOnClick(btn_pause, on_pause_clicked)
     gump.Add(btn_pause)
 
-    btn_stop = API.Gumps.CreateSimpleButton("Stop", 135, 24)
-    btn_stop.SetPos(160, 175)
+    btn_stop = API.Gumps.CreateSimpleButton("Stop", 150, 25)
+    btn_stop.SetPos(175, 204)
     API.Gumps.AddControlOnClick(btn_stop, on_stop_clicked)
     gump.Add(btn_stop)
 
@@ -368,6 +494,7 @@ def dispose_gump() -> None:
 def check_ui_events() -> bool:
     global is_paused, is_stopped
     API.ProcessCallbacks()
+    check_stepper_clicks()
     update_stats()
 
     if is_stopped or API.StopRequested:
@@ -383,6 +510,7 @@ def check_ui_events() -> bool:
     while is_paused and not API.StopRequested and not is_stopped:
         API.Pause(0.2)
         API.ProcessCallbacks()
+        check_stepper_clicks()
         update_stats()
         if btn_stop and getattr(btn_stop, "HasBeenClicked", lambda: False)():
             on_stop_clicked()
@@ -410,6 +538,8 @@ def wait_with_ui(seconds: float) -> bool:
 # ==============================================================================
 
 def on_stop() -> None:
+    global is_stopped
+    is_stopped = True
     if API.Pathfinding():
         API.CancelPathfinding()
     dispose_gump()
@@ -469,7 +599,7 @@ def get_backpack_mining_tool():
         shovel = API.FindType(sg, API.Backpack)
         if shovel:
             return shovel
-    items = API.GetItems(API.Backpack)
+    items = API.ItemsInContainer(API.Backpack)
     if items:
         for item in items:
             if is_mining_tool(item):
@@ -515,7 +645,7 @@ def get_backpack_axe():
         item = API.FindType(g, API.Backpack)
         if item:
             return item
-    items = API.GetItems(API.Backpack)
+    items = API.ItemsInContainer(API.Backpack)
     if items:
         for item in items:
             if is_axe_item(item):
@@ -666,16 +796,23 @@ def find_nearby_deposits():
             if coord in unreachable_coords or is_vein_depleted(coord[0], coord[1]):
                 continue
 
-            is_mineable = getattr(s, "IsCave", False) or (s.Graphic in MINEABLE_GRAPHICS)
+            # Strict exclusion: NEVER treat a tree, foliage, or stump as a mining deposit
+            if getattr(s, "IsTree", False):
+                continue
+
+            is_mineable = getattr(s, "IsCave", False) or (s.Graphic in MINEABLE_STATIC_GRAPHICS)
             if not is_mineable and s.Name:
                 name = str(s.Name).lower()
-                if any(k in name for k in ["ore", "deposit", "cave", "mountain", "stone", "boulder"]):
+                # Exclude gravestones, headstones, dead trees, ruins, markers
+                if any(bad in name for bad in ["grave", "tomb", "headstone", "cobble", "mile", "stepping", "tree", "branch", "stump", "wood"]):
+                    is_mineable = False
+                elif any(k in name for k in ["ore", "deposit", "cave", "mountain", "boulder", "rock outcropping"]):
                     is_mineable = True
 
             if is_mineable and coord not in candidates:
                 candidates[coord] = s
 
-    # Scan terrain land tiles
+    # Scan terrain land tiles (mountains, rock slopes, cave floors)
     for dy in range(-SEARCH_RADIUS, SEARCH_RADIUS + 1):
         for dx in range(-SEARCH_RADIUS, SEARCH_RADIUS + 1):
             tx = px + dx
@@ -684,7 +821,7 @@ def find_nearby_deposits():
             if coord in unreachable_coords or coord in candidates or is_vein_depleted(tx, ty):
                 continue
             tile = API.GetTile(tx, ty)
-            if tile and tile.Graphic in MINEABLE_GRAPHICS:
+            if tile and tile.Graphic in MINEABLE_LAND_TILES:
                 candidates[coord] = tile
 
     dep_list = list(candidates.values())
@@ -743,6 +880,7 @@ def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
 
     veins_mined += 1
     swing = 0
+    no_harvest_swings = 0
 
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():
@@ -841,6 +979,7 @@ def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
         if not target_accepted and API.HasTarget():
             debug_msg(f"Target at ({tx}, {ty}) rel=({dx}, {dy}) not accepted, skipping deposit.")
             API.CancelTarget()
+            mark_vein_depleted(tx, ty)
             break
 
         API.Pause(SWING_DELAY)
@@ -854,8 +993,12 @@ def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
         delta = max(0, after_ore - before_ore)
         if delta > 0:
             total_ores += delta
+            no_harvest_swings = 0
         elif any("dig some" in t for t in recent_text) or API.InJournal("dig some"):
             total_ores += 1
+            no_harvest_swings = 0
+        else:
+            no_harvest_swings += 1
 
         # Check tool broken
         if any(any(kw in t for kw in TOOL_BROKEN_KEYWORDS) for t in recent_text):
@@ -878,10 +1021,43 @@ def mine_deposit(deposit, spot_index: int = 1, total_spots: int = 1) -> None:
             mark_vein_depleted(tx, ty)
             break
 
+        # Safety: skip deposit if no ore yielded after 5 consecutive attempts
+        if no_harvest_swings >= 5:
+            debug_msg(f"Deposit at ({tx}, {ty}) yielded no ore after {no_harvest_swings} swings, skipping.")
+            mark_vein_depleted(tx, ty)
+            break
+
+        # Safety: max swings per deposit
+        if swing >= 35:
+            debug_msg(f"Deposit at ({tx}, {ty}) reached max swing limit, skipping.")
+            mark_vein_depleted(tx, ty)
+            break
+
 
 # ==============================================================================
 # Lumberjacking Engine
 # ==============================================================================
+
+def is_valid_tree_static(s) -> bool:
+    """Verifies that a static object is a genuine harvestable tree, not a headstone or monument."""
+    if not getattr(s, "IsTree", False):
+        return False
+
+    g = int(getattr(s, "Graphic", 0))
+    if g in GRAVESTONE_GRAPHICS:
+        return False
+
+    name = str(getattr(s, "Name", "") or "").lower()
+    if name:
+        if any(bad in name for bad in [
+            "grave", "tomb", "headstone", "cross", "marker", "crypt",
+            "coffin", "sarcophagus", "statue", "monument", "memorial",
+            "stone", "rock", "boulder", "wall", "fence", "post", "sign"
+        ]):
+            return False
+
+    return True
+
 
 def find_nearby_trees():
     """Scans for nearby static trees within SEARCH_RADIUS."""
@@ -893,7 +1069,7 @@ def find_nearby_trees():
 
     candidates = {}
     for s in statics:
-        if not getattr(s, "IsTree", False):
+        if not is_valid_tree_static(s):
             continue
         coord = (int(s.X), int(s.Y))
         if coord in depleted_trees:
@@ -948,6 +1124,7 @@ def chop_tree(tree, tree_index: int = 1, total_trees: int = 1) -> None:
 
     trees_chopped += 1
     swing = 0
+    no_harvest_swings = 0
 
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():
@@ -1019,6 +1196,7 @@ def chop_tree(tree, tree_index: int = 1, total_trees: int = 1) -> None:
                 if API.HasTarget():
                     debug_msg(f"Target at tree ({tx}, {ty}) not accepted, skipping tree.")
                     API.CancelTarget()
+                    depleted_trees.append((tx, ty))
                     break
 
         API.Pause(SWING_DELAY)
@@ -1032,8 +1210,12 @@ def chop_tree(tree, tree_index: int = 1, total_trees: int = 1) -> None:
         delta = max(0, after_wood - before_wood)
         if delta > 0:
             total_wood += delta
+            no_harvest_swings = 0
         elif any("chop some" in t or "put some wood" in t for t in recent_text) or API.InJournal("chop some"):
             total_wood += 1
+            no_harvest_swings = 0
+        else:
+            no_harvest_swings += 1
 
         # Check depletion
         depleted = False
@@ -1044,6 +1226,18 @@ def chop_tree(tree, tree_index: int = 1, total_trees: int = 1) -> None:
                 break
 
         if depleted:
+            depleted_trees.append((tx, ty))
+            break
+
+        # Safety: abort if tree yields no wood after 5 consecutive attempts
+        if no_harvest_swings >= 5:
+            debug_msg(f"Tree at ({tx}, {ty}) yielded no wood after {no_harvest_swings} swings, skipping.")
+            depleted_trees.append((tx, ty))
+            break
+
+        # Safety: max swings per tree
+        if swing >= 35:
+            debug_msg(f"Tree at ({tx}, {ty}) reached max swing limit, skipping.")
             depleted_trees.append((tx, ty))
             break
 
@@ -1069,8 +1263,10 @@ def main():
     create_control_gump()
     update_stats()
     update_status("Started")
+
     API.SysMsg(f"Harvest engine started (Radius: {SEARCH_RADIUS} tiles, Ratio: {TREES_PER_MINING_SPOT} trees / {MINING_SPOTS_PER_CYCLE} mining spot).")
 
+    global current_mode
     mining_spots_done = 0
     trees_done = 0
     current_mode = "mine"

@@ -20,3 +20,9 @@ This repository contains automation scripts written for the TazUO Ultima Online 
    - Keep `README.md` updated with descriptions and usage guidelines for all scripts.
 6. **Script Organization:**
    - Always place contributed or generated scripts into a subfolder named after the **author** (e.g., `FesterUO/`) or target **shard name** (e.g., `Outlands/`). Never place script files in the repository root directory.
+7. **Markdown Formatting & Linting:**
+   - When creating or modifying Markdown files (`CHANGELOG.md`, `README.md`, etc.), strictly adhere to `.markdownlint.json` rules and resolve all formatting issues (equivalent to running `markdownlint: Fix all supported issues in file`).
+8. **Script Versioning & Mandatory Increments:**
+   - Every script must define an internal version constant: `SCRIPT_VERSION: str = "X.Y.Z"`.
+   - Always increment `SCRIPT_VERSION` on changes following SemVer (PATCH for bug fixes and pacing tweaks, MINOR for new features/options/modes, MAJOR for rewrites).
+   - Ensure the version is reflected in the Gump author label (`lbl_author = API.Gumps.CreateGumpLabel(f"by FesterHead v{SCRIPT_VERSION}", 996)`) and startup `API.SysMsg(...)`.

@@ -18,6 +18,7 @@ Usage:
 import API
 
 # Configuration
+SCRIPT_VERSION: str = "1.0.0"
 DEBUG: bool = False
 # Delay in seconds between swings. FesterUO allows fast chopping (1.0s).
 # For standard / default UO shards, set this to 4.5 or 5.0.

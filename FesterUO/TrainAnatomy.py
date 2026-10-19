@@ -22,6 +22,9 @@ import API
 # Configuration
 # ==============================================================================
 
+# Script version
+SCRIPT_VERSION: str = "1.0.0"
+
 # Standard UO skill wait timer in seconds.
 # Default is 10.0s (classic OSI / standard shard skill cooldown).
 # Can be reduced (e.g., 1.0s–5.0s) on fast custom shards.
