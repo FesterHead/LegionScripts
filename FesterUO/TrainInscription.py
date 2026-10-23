@@ -38,7 +38,7 @@ Description:
         * Interactive Pause / Resume, Set Recipe, Satchel, Storage, Trash Can, and Stop buttons.
 """
 
-from typing import List, Tuple, Optional, Set
+from typing import List, Tuple, Optional, Set, Dict
 import API
 
 # ==============================================================================
@@ -46,7 +46,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.0"
+SCRIPT_VERSION: str = "1.0.1"
 
 # Target Inscription skill to stop training (e.g. 100.0 for GM, 120.0 for Legendary)
 TARGET_SKILL = 120.0

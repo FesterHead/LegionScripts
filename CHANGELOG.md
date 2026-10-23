@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `FesterUO/TrainProvokeAndPeace.py` (v1.0.1):
+  - Resolved `NameError: name 'Tuple' is not defined` crash at script execution by importing `Tuple` from the standard `typing` library.
+- Fixed `FesterUO/TrainInscription.py` (v1.0.1):
+  - Resolved `NameError: name 'Dict' is not defined` by importing `Dict` from the standard `typing` library.
+
 ## [1.4.0] - 2026-10-18
 
 ### Added

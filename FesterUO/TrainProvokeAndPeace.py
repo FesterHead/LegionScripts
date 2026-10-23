@@ -36,7 +36,7 @@ Features:
         * Direct execution when double-clicked in TazUO.
 """
 
-from typing import Optional, List, Dict, Any, Set
+from typing import Optional, List, Dict, Any, Set, Tuple
 import API
 
 # ==============================================================================
@@ -44,7 +44,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.0"
+SCRIPT_VERSION: str = "1.0.1"
 
 # Target skill caps to stop training (None = train until character skill cap)
 TARGET_PROVOKING_SKILL: Optional[float] = None
