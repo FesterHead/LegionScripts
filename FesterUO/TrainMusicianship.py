@@ -36,7 +36,7 @@ Description:
         * Interactive Pause / Resume, Set Restock, and Stop buttons.
 """
 
-from typing import Optional, List
+from typing import Optional, List, Any
 import API
 
 # ==============================================================================
@@ -44,7 +44,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.0"
+SCRIPT_VERSION: str = "1.0.1"
 
 # Target skill level to stop training (e.g. 100.0 for GM, 120.0 for Legendary).
 # Set to None to automatically train until your character's skill cap.
@@ -372,7 +372,7 @@ def debug_msg(message: str) -> None:
         API.SysMsg(f"[DEBUG] {message}")
 
 
-def get_backpack_instruments() -> List[API.ApiItem]:
+def get_backpack_instruments() -> List[Any]:
     """Finds all musical instruments in the player's backpack."""
     if not API.Backpack:
         return []
@@ -380,7 +380,7 @@ def get_backpack_instruments() -> List[API.ApiItem]:
     return [item for item in items if item.Graphic in ALL_INSTRUMENT_GRAPHICS]
 
 
-def get_current_or_next_instrument() -> Optional[API.ApiItem]:
+def get_current_or_next_instrument() -> Optional[Any]:
     """Retrieves the active instrument, or selects the first available instrument in backpack."""
     global active_instrument_serial
 
@@ -494,7 +494,7 @@ def main():
     update_stats()
     update_status("Starting...")
 
-    API.SysMsg(f"[Musicianship] Training started (Current: {current_val:.1f}, Goal: {cap:.1f}, Delay: {PLAY_DELAY}s).", HUE_INFO)
+    API.SysMsg(f"[Musicianship v{SCRIPT_VERSION}] Training started (Current: {current_val:.1f}, Goal: {cap:.1f}, Delay: {PLAY_DELAY}s).", HUE_INFO)
 
     while not API.StopRequested and not is_stopped:
         if not check_ui_events():

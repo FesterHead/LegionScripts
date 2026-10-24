@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `FesterUO/TrainMusicianship.py` (v1.0.1):
+  - Resolved `AttributeError: 'LegionAPI' object has no attribute 'ApiItem'` crash at script execution by replacing `API.ApiItem` type annotations with `Any` imported from the standard `typing` library.
 - Fixed `FesterUO/TrainProvokeAndPeace.py` (v1.0.1):
   - Resolved `NameError: name 'Tuple' is not defined` crash at script execution by importing `Tuple` from the standard `typing` library.
 - Fixed `FesterUO/TrainInscription.py` (v1.0.1):
