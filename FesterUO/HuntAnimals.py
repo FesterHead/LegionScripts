@@ -45,7 +45,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.0"
+SCRIPT_VERSION: str = "1.0.1"
 
 # Search radius in tiles around the player to locate wildlife
 SEARCH_RADIUS: int = 15
@@ -124,7 +124,7 @@ KARMA_LOSS_GRAPHICS: Set[int] = {
     0x00D2, 0x00DB, 0x00DA,          # Desert Ostard, Forest Ostard, Frenzied Ostard
     0x0097,                          # Dolphin
     0x0062,                          # Cat
-    0x00E1,                          # Dog
+    0x00D9,                          # Dog
 }
 
 KARMA_LOSS_KEYWORDS: List[str] = [

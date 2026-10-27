@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `FesterUO/TrainAnimalTaming.py` (v1.0.4):
+  - Corrected Dog graphic ID in `KARMA_LOSS_GRAPHICS` from `0x00E1` (which is the Timber Wolf graphic in Ultima Online) to `0x00D9` (Dog), preventing Timber Wolves from being mistakenly classified as positive-karma animals and skipping Magery culling.
+- Fixed `FesterUO/HuntAnimals.py` (v1.0.1):
+  - Corrected Dog graphic ID in `KARMA_LOSS_GRAPHICS` from `0x00E1` to `0x00D9`, preventing Timber Wolves from being misclassified as karma-loss animals and skipped during predator hunting.
 - Fixed `FesterUO/TrainMusicianship.py` (v1.0.1):
   - Resolved `AttributeError: 'LegionAPI' object has no attribute 'ApiItem'` crash at script execution by replacing `API.ApiItem` type annotations with `Any` imported from the standard `typing` library.
 - Fixed `FesterUO/TrainProvokeAndPeace.py` (v1.0.1):

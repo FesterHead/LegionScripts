@@ -56,7 +56,7 @@ import API
 # ==============================================================================
 
 # Script version
-SCRIPT_VERSION: str = "1.0.3"
+SCRIPT_VERSION: str = "1.0.4"
 
 # Primary training mode:
 # "WILD_ROAM"     - Scans for and hunts wild animals in the area to tame and release.
@@ -266,7 +266,7 @@ KARMA_LOSS_GRAPHICS: Set[int] = {
     0x00D2, 0x00DB, 0x00DA,          # Desert Ostard, Forest Ostard, Frenzied Ostard
     0x0097,                          # Dolphin
     0x0062,                          # Cat
-    0x00E1,                          # Dog
+    0x00D9,                          # Dog
 }
 
 KARMA_LOSS_KEYWORDS: List[str] = [
